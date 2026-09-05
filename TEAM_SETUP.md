@@ -223,10 +223,10 @@ Visit: https://github.com/ZINC137/SIH26036
 
 | Phase | Duration | Key Deliverables |
 |-------|----------|------------------|
-| **Phase 1** | Sep 3-9 | Architecture, Auth, DB Schema |
-| **Phase 2** | Sep 10-16 | Core APIs, Dashboards |
-| **Phase 3** | Sep 17-23 | Certificates, Notifications |
-| **Phase 4** | Sep 24-30 | Testing, Deployment, Polish |
+| **Phase 1** | Week 1 | Architecture, Auth, DB Schema |
+| **Phase 2** | Week 2 | Core APIs, Dashboards |
+| **Phase 3** | Week 3 | Certificates, Notifications |
+| **Phase 4** | Week 4 | Testing, Deployment, Polish |
 
 ---
 

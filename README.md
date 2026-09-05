@@ -71,15 +71,13 @@ cd ../frontend && npm install
 5. After approval, merge to main
 
 ### 📅 Timeline
-- **Start Date:** 3 September 2026
-- **Deadline:** 30 September 2026
-- **Duration:** 27 days
+- **Duration:** 27 days (4 phases)
 
 ### 📊 Project Milestones
-- **Week 1 (Sep 3-9):** Architecture, database schema, API setup
-- **Week 2 (Sep 10-16):** Core APIs, authentication, user registration
-- **Week 3 (Sep 17-23):** Dashboards, workflows, digital certificates
-- **Week 4 (Sep 24-30):** Mobile app, testing, deployment, polish
+- **Week 1:** Architecture, database schema, API setup
+- **Week 2:** Core APIs, authentication, user registration
+- **Week 3:** Dashboards, workflows, digital certificates
+- **Week 4:** Mobile app, testing, deployment, polish
 
 ### 🔧 Tech Stack (Recommended)
 - **Backend:** Node.js + Express / Python + FastAPI
@@ -119,4 +117,4 @@ cd ../frontend && npm install
 
 ---
 
-**Last Updated:** 3 September 2026
+**Last Updated:** As development progresses

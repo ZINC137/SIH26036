@@ -2,7 +2,7 @@
 
 ## Team Task Distribution (27 Days)
 
-### Phase 1: Foundation (Sep 3-9)
+### Phase 1: Foundation
 
 #### Backend Lead
 - [ ] Set up Node.js/Express project structure
@@ -43,7 +43,7 @@
 
 ---
 
-### Phase 2: Core Features (Sep 10-16)
+### Phase 2: Core Features
 
 #### Backend Lead
 - [ ] User profile management API
@@ -84,7 +84,7 @@
 
 ---
 
-### Phase 3: Advanced Features (Sep 17-23)
+### Phase 3: Advanced Features
 
 #### Backend Lead
 - [ ] Verification workflow logic
@@ -126,7 +126,7 @@
 
 ---
 
-### Phase 4: Polish & Deployment (Sep 24-30)
+### Phase 4: Polish & Deployment
 
 #### Backend Lead
 - [ ] Code review & optimization
