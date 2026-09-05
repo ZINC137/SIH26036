@@ -6,6 +6,7 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import FieldOfficerDashboard from './pages/FieldOfficerDashboard';
 import AdminDashboard from './pages/AdminDashboard';
+import LMODashboard from './pages/LMODashboard';
 import RegisterInstrument from './pages/RegisterInstrument';
 import MyApplications from './pages/MyApplications';
 import Certificates from './pages/Certificates';
@@ -76,6 +77,8 @@ function App() {
                   ? <FieldOfficerDashboard userRole={userRole} />
                   : userRole === 'admin'
                   ? <AdminDashboard userRole={userRole} />
+                  : userRole === 'lmo'
+                  ? <LMODashboard userRole={userRole} />
                   : <Dashboard userRole={userRole} />
               } />
               <Route path="/register-instrument" element={<RegisterInstrument />} />
