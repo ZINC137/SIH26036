@@ -1,5 +1,4 @@
 import React from 'react';
-import PublicDashboard from './PublicDashboard';
 import {
   Box,
   Container,
@@ -16,35 +15,33 @@ import {
   TableRow,
   Paper,
   Chip,
-  LinearProgress,
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
-import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import AssignmentIcon from '@mui/icons-material/Assignment';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import PendingActionsIcon from '@mui/icons-material/PendingActions';
+import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutlined';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import DownloadIcon from '@mui/icons-material/Download';
 
-const mockApplications = [
+const mockPersonalApplications = [
   {
     id: 'APP001',
     instrumentType: 'Electronic Scale',
     status: 'Pending',
     submittedDate: '2026-09-01',
-    daysOld: 4,
   },
   {
     id: 'APP002',
     instrumentType: 'Weighing Balance',
     status: 'Under Review',
     submittedDate: '2026-08-28',
-    daysOld: 8,
   },
   {
     id: 'APP003',
     instrumentType: 'Pressure Gauge',
     status: 'Approved',
     submittedDate: '2026-08-15',
-    daysOld: 21,
   },
 ];
 
@@ -63,37 +60,27 @@ const getStatusColor = (status) => {
   }
 };
 
-export default function Dashboard({ userRole }) {
+export default function PublicDashboard() {
   const navigate = useNavigate();
-
-  if (userRole === 'user') {
-    return <PublicDashboard />;
-  }
 
   const stats = [
     {
       title: 'Total Applications',
-      value: '12',
+      value: '3',
       icon: <AssignmentIcon sx={{ fontSize: 40 }} />,
       color: '#0D47A1',
     },
     {
-      title: 'Pending Review',
-      value: '3',
+      title: 'Pending / Review',
+      value: '2',
       icon: <PendingActionsIcon sx={{ fontSize: 40 }} />,
       color: '#FF9800',
     },
     {
       title: 'Approved',
-      value: '8',
+      value: '1',
       icon: <CheckCircleIcon sx={{ fontSize: 40 }} />,
       color: '#4CAF50',
-    },
-    {
-      title: 'Processing Rate',
-      value: '92%',
-      icon: <TrendingUpIcon sx={{ fontSize: 40 }} />,
-      color: '#1565C0',
     },
   ];
 
@@ -102,17 +89,17 @@ export default function Dashboard({ userRole }) {
       {/* Welcome Section */}
       <Box sx={{ mb: 4 }}>
         <Typography variant="h4" sx={{ fontWeight: 700, color: '#0D47A1', mb: 1 }}>
-          Dashboard
+          My Dashboard
         </Typography>
         <Typography variant="body1" sx={{ color: '#757575' }}>
-          Welcome back! Here's your verification system overview.
+          Manage your instrument applications and certificates.
         </Typography>
       </Box>
 
       {/* Stats Grid */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
         {stats.map((stat, index) => (
-          <Grid item xs={12} sm={6} md={3} key={index}>
+          <Grid item xs={12} sm={4} key={index}>
             <Card
               sx={{
                 height: '100%',
@@ -152,10 +139,11 @@ export default function Dashboard({ userRole }) {
           Quick Actions
         </Typography>
         <Grid container spacing={2}>
-          <Grid item xs={12} sm={6} md={4}>
+          <Grid item xs={12} sm={4}>
             <Button
               variant="contained"
               fullWidth
+              startIcon={<AddCircleOutlineIcon />}
               sx={{
                 bgcolor: '#0D47A1',
                 py: 1.5,
@@ -163,13 +151,14 @@ export default function Dashboard({ userRole }) {
               }}
               onClick={() => navigate('/register-instrument')}
             >
-              Register New Instrument
+              Register New
             </Button>
           </Grid>
-          <Grid item xs={12} sm={6} md={4}>
+          <Grid item xs={12} sm={4}>
             <Button
               variant="outlined"
               fullWidth
+              startIcon={<VisibilityIcon />}
               sx={{
                 borderColor: '#0D47A1',
                 color: '#0D47A1',
@@ -177,13 +166,14 @@ export default function Dashboard({ userRole }) {
               }}
               onClick={() => navigate('/my-applications')}
             >
-              View Applications
+              My Applications
             </Button>
           </Grid>
-          <Grid item xs={12} sm={6} md={4}>
+          <Grid item xs={12} sm={4}>
             <Button
               variant="outlined"
               fullWidth
+              startIcon={<DownloadIcon />}
               sx={{
                 borderColor: '#0D47A1',
                 color: '#0D47A1',
@@ -191,7 +181,7 @@ export default function Dashboard({ userRole }) {
               }}
               onClick={() => navigate('/certificates')}
             >
-              Download Certificates
+              Certificates
             </Button>
           </Grid>
         </Grid>
@@ -210,14 +200,14 @@ export default function Dashboard({ userRole }) {
                   <TableCell sx={{ fontWeight: 700 }}>Application ID</TableCell>
                   <TableCell sx={{ fontWeight: 700 }}>Instrument Type</TableCell>
                   <TableCell sx={{ fontWeight: 700 }}>Status</TableCell>
-                  <TableCell sx={{ fontWeight: 700 }}>Submitted</TableCell>
+                  <TableCell sx={{ fontWeight: 700 }}>Submitted Date</TableCell>
                   <TableCell sx={{ fontWeight: 700 }} align="center">
                     Action
                   </TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
-                {mockApplications.map((app) => (
+                {mockPersonalApplications.map((app) => (
                   <TableRow key={app.id} sx={{ '&:hover': { bgcolor: '#F5F5F5' } }}>
                     <TableCell sx={{ fontWeight: 600 }}>{app.id}</TableCell>
                     <TableCell>{app.instrumentType}</TableCell>
@@ -229,15 +219,10 @@ export default function Dashboard({ userRole }) {
                         size="small"
                       />
                     </TableCell>
-                    <TableCell>
-                      <Typography variant="body2">{app.submittedDate}</Typography>
-                      <Typography variant="caption" sx={{ color: '#757575' }}>
-                        {app.daysOld} days ago
-                      </Typography>
-                    </TableCell>
+                    <TableCell>{app.submittedDate}</TableCell>
                     <TableCell align="center">
-                      <Button size="small" variant="text">
-                        View
+                      <Button size="small" variant="text" onClick={() => navigate('/my-applications')}>
+                        View Details
                       </Button>
                     </TableCell>
                   </TableRow>
@@ -247,61 +232,6 @@ export default function Dashboard({ userRole }) {
           </TableContainer>
         </CardContent>
       </Card>
-
-      {/* System Status */}
-      <Grid container spacing={3}>
-        <Grid item xs={12} md={6}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" sx={{ fontWeight: 700, mb: 2, color: '#0D47A1' }}>
-                System Status
-              </Typography>
-              <Box sx={{ mb: 2 }}>
-                <Typography variant="body2" sx={{ mb: 1 }}>
-                  Database Connection: <Chip label="Active" color="success" size="small" />
-                </Typography>
-              </Box>
-              <Box sx={{ mb: 2 }}>
-                <Typography variant="body2" sx={{ mb: 1 }}>
-                  API Server: <Chip label="Operational" color="success" size="small" />
-                </Typography>
-              </Box>
-              <Box>
-                <Typography variant="body2" sx={{ mb: 1 }}>
-                  Last Sync: 2026-09-05 11:25 AM
-                </Typography>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} md={6}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" sx={{ fontWeight: 700, mb: 2, color: '#0D47A1' }}>
-                Performance Metrics
-              </Typography>
-              <Box sx={{ mb: 3 }}>
-                <Typography variant="body2" sx={{ mb: 1 }}>
-                  Average Processing Time
-                </Typography>
-                <LinearProgress variant="determinate" value={65} sx={{ height: 8, borderRadius: 4 }} />
-                <Typography variant="caption" sx={{ color: '#757575' }}>
-                  4.2 days average
-                </Typography>
-              </Box>
-              <Box>
-                <Typography variant="body2" sx={{ mb: 1 }}>
-                  System Uptime
-                </Typography>
-                <LinearProgress variant="determinate" value={99.9} sx={{ height: 8, borderRadius: 4 }} />
-                <Typography variant="caption" sx={{ color: '#757575' }}>
-                  99.9% this month
-                </Typography>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
     </Container>
   );
 }
