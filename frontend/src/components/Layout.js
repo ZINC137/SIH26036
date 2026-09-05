@@ -53,13 +53,38 @@ export default function Layout({ userRole, onLogout }) {
     navigate('/login');
   };
 
-  const menuItems = [
-    { label: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
-    { label: 'Register Instrument', icon: <AddCircleIcon />, path: '/register-instrument' },
-    { label: 'My Applications', icon: <AssignmentIcon />, path: '/my-applications' },
-    { label: 'Certificates', icon: <CardGiftcardIcon />, path: '/certificates' },
-    { label: 'Settings', icon: <SettingsIcon />, path: '/settings' },
-  ];
+  const getMenuItems = () => {
+    const commonItems = [
+      { label: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
+    ];
+
+    const roleBasedItems = {
+      user: [
+        { label: 'Register Instrument', icon: <AddCircleIcon />, path: '/register-instrument' },
+        { label: 'My Applications', icon: <AssignmentIcon />, path: '/my-applications' },
+        { label: 'Certificates', icon: <CardGiftcardIcon />, path: '/certificates' },
+      ],
+      field_officer: [
+        { label: 'Verify Instruments', icon: <AssignmentIcon />, path: '/my-applications' },
+      ],
+      lmo: [
+        { label: 'Review Applications', icon: <AssignmentIcon />, path: '/my-applications' },
+        { label: 'Issue Certificates', icon: <CardGiftcardIcon />, path: '/certificates' },
+      ],
+      admin: [
+        { label: 'Users', icon: <AssignmentIcon />, path: '/my-applications' },
+        { label: 'Reports', icon: <CardGiftcardIcon />, path: '/certificates' },
+      ],
+    };
+
+    return [
+      ...commonItems,
+      ...(roleBasedItems[userRole] || roleBasedItems.user),
+      { label: 'Settings', icon: <SettingsIcon />, path: '/settings' },
+    ];
+  };
+
+  const menuItems = getMenuItems();
 
   const drawer = (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>

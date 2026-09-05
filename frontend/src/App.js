@@ -5,6 +5,7 @@ import Layout from './components/Layout';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import FieldOfficerDashboard from './pages/FieldOfficerDashboard';
+import AdminDashboard from './pages/AdminDashboard';
 import RegisterInstrument from './pages/RegisterInstrument';
 import MyApplications from './pages/MyApplications';
 import Certificates from './pages/Certificates';
@@ -70,7 +71,13 @@ function App() {
             <Route
               element={<Layout userRole={userRole} onLogout={handleLogout} />}
             >
-              <Route path="/dashboard" element={userRole === 'Field Officer' ? <FieldOfficerDashboard userRole={userRole} /> : <Dashboard userRole={userRole} />} />
+              <Route path="/dashboard" element={
+                userRole === 'field_officer'
+                  ? <FieldOfficerDashboard userRole={userRole} />
+                  : userRole === 'admin'
+                  ? <AdminDashboard userRole={userRole} />
+                  : <Dashboard userRole={userRole} />
+              } />
               <Route path="/register-instrument" element={<RegisterInstrument />} />
               <Route path="/my-applications" element={<MyApplications />} />
               <Route path="/certificates" element={<Certificates />} />
