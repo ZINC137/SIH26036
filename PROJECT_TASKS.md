@@ -1,6 +1,6 @@
 # Project Task Breakdown
 
-## Team Task Distribution (27 Days)
+## Team Task Distribution
 
 ### Phase 1: Foundation
 

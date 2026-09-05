@@ -219,14 +219,14 @@ Visit: https://github.com/ZINC137/SIH26036
 
 ---
 
-## 📅 Timeline & Milestones
+## 📅 Development Phases
 
-| Phase | Duration | Key Deliverables |
-|-------|----------|------------------|
-| **Phase 1** | Week 1 | Architecture, Auth, DB Schema |
-| **Phase 2** | Week 2 | Core APIs, Dashboards |
-| **Phase 3** | Week 3 | Certificates, Notifications |
-| **Phase 4** | Week 4 | Testing, Deployment, Polish |
+| Phase | Key Deliverables |
+|-------|------------------|
+| **Phase 1** | Architecture, Auth, DB Schema |
+| **Phase 2** | Core APIs, Dashboards |
+| **Phase 3** | Certificates, Notifications |
+| **Phase 4** | Testing, Deployment, Polish |
 
 ---
 

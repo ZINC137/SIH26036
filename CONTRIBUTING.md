@@ -143,12 +143,13 @@ After approval, merge to `develop` branch, then eventually to `main`.
 - Feature requests
 - Technical discussions
 
-## Deadlines
+## Project Phases
 
-- **Sep 9:** Architecture & database ready
-- **Sep 16:** Core APIs working
-- **Sep 23:** Dashboards & workflows complete
-- **Sep 30:** Final testing & presentation ready
+Build incrementally following these phases:
+1. **Foundation:** Architecture, database, API setup
+2. **Core Features:** APIs, authentication, dashboards
+3. **Advanced Features:** Certificates, notifications, workflows
+4. **Polish:** Testing, optimization, deployment
 
 ## Questions?
 Create a GitHub issue or ask in team chat.
