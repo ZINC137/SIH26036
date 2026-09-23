@@ -2,42 +2,52 @@ import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider, createTheme, CssBaseline } from '@mui/material';
 
-// Public Pages
+// ── Priyanshu's new components ──────────────────────────────────────────────
+import RoleLayout from './components/RoleLayout';
 import LandingPage from './pages/LandingPage';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import PublicDashboard from './pages/PublicDashboard';
 
-// Shared Layout
-import RoleLayout from './components/RoleLayout';
-
-// Shared Pages
-import PortalSettings from './pages/dashboards/shared/PortalSettings';
-
-// User Portal
+// ── Role-based dashboards (Priyanshu) ───────────────────────────────────────
 import UserDashboard from './pages/dashboards/UserDashboard';
+import LMODashboard from './pages/dashboards/LMODashboard';
+import FieldOfficerDashboard from './pages/dashboards/FieldOfficerDashboard';
+import AdminDashboard from './pages/dashboards/AdminDashboard';
+
+// ── Sub-pages: User portal ───────────────────────────────────────────────────
 import UserApply from './pages/dashboards/user/UserApply';
 import UserApplications from './pages/dashboards/user/UserApplications';
 import UserCertificates from './pages/dashboards/user/UserCertificates';
 
-// LMO Portal
-import LMODashboard from './pages/dashboards/LMODashboard';
+// ── Sub-pages: LMO portal ────────────────────────────────────────────────────
 import LMOPending from './pages/dashboards/lmo/LMOPending';
 import LMOOfficers from './pages/dashboards/lmo/LMOOfficers';
 
-// Field Officer Portal
-import FieldOfficerDashboard from './pages/dashboards/FieldOfficerDashboard';
+// ── Sub-pages: Field Officer portal ─────────────────────────────────────────
 import FOReport from './pages/dashboards/field_officer/FOReport';
 import FOHistory from './pages/dashboards/field_officer/FOHistory';
 
-// Admin Portal
-import AdminDashboard from './pages/dashboards/AdminDashboard';
+// ── Sub-pages: Admin portal ──────────────────────────────────────────────────
 import AdminUsers from './pages/dashboards/admin/AdminUsers';
 
-// Nav Icons
+// ── Shared sub-pages ─────────────────────────────────────────────────────────
+import PortalSettings from './pages/dashboards/shared/PortalSettings';
+
+// ── Legacy pages (from main branch) — kept to avoid breaking existing work ──
+import Layout from './components/Layout';
+import Dashboard from './pages/Dashboard';
+import RegisterInstrument from './pages/RegisterInstrument';
+import MyApplications from './pages/MyApplications';
+import Certificates from './pages/Certificates';
+import Settings from './pages/Settings';
+
+// ── Icons for nav ────────────────────────────────────────────────────────────
 import DashboardIcon from '@mui/icons-material/Dashboard';
+import AddCircleIcon from '@mui/icons-material/AddCircle';
 import AssignmentIcon from '@mui/icons-material/Assignment';
 import DownloadIcon from '@mui/icons-material/Download';
-import AddCircleIcon from '@mui/icons-material/AddCircle';
+import SettingsIcon from '@mui/icons-material/Settings';
 import PendingActionsIcon from '@mui/icons-material/PendingActions';
 import GroupIcon from '@mui/icons-material/Group';
 import VerifiedIcon from '@mui/icons-material/Verified';
@@ -45,10 +55,10 @@ import TodayIcon from '@mui/icons-material/Today';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
 import HistoryIcon from '@mui/icons-material/History';
 import PeopleIcon from '@mui/icons-material/People';
-import SettingsIcon from '@mui/icons-material/Settings';
 import BarChartIcon from '@mui/icons-material/BarChart';
 import SecurityIcon from '@mui/icons-material/Security';
 
+// ── Navigation items per role ────────────────────────────────────────────────
 const NAV = {
   user: [
     { label: 'Dashboard',       icon: <DashboardIcon />,  path: '/dashboard/user' },
@@ -58,11 +68,11 @@ const NAV = {
     { label: 'Settings',        icon: <SettingsIcon />,   path: '/dashboard/user/settings' },
   ],
   lmo: [
-    { label: 'Dashboard',       icon: <DashboardIcon />,      path: '/dashboard/lmo' },
-    { label: 'Pending Queue',   icon: <PendingActionsIcon />, path: '/dashboard/lmo/pending', badge: '24' },
-    { label: 'Field Officers',  icon: <GroupIcon />,          path: '/dashboard/lmo/officers' },
-    { label: 'Issue Certificate', icon: <VerifiedIcon />,     path: '/dashboard/lmo/certificates' },
-    { label: 'Settings',        icon: <SettingsIcon />,       path: '/dashboard/lmo/settings' },
+    { label: 'Dashboard',         icon: <DashboardIcon />,      path: '/dashboard/lmo' },
+    { label: 'Pending Queue',     icon: <PendingActionsIcon />, path: '/dashboard/lmo/pending', badge: '24' },
+    { label: 'Field Officers',    icon: <GroupIcon />,          path: '/dashboard/lmo/officers' },
+    { label: 'Issue Certificate', icon: <VerifiedIcon />,       path: '/dashboard/lmo/certificates' },
+    { label: 'Settings',          icon: <SettingsIcon />,       path: '/dashboard/lmo/settings' },
   ],
   field_officer: [
     { label: 'Dashboard',        icon: <DashboardIcon />,  path: '/dashboard/field-officer' },
@@ -72,14 +82,15 @@ const NAV = {
     { label: 'Settings',         icon: <SettingsIcon />,   path: '/dashboard/field-officer/settings' },
   ],
   admin: [
-    { label: 'Dashboard',      icon: <DashboardIcon />, path: '/dashboard/admin' },
-    { label: 'User Management',icon: <PeopleIcon />,    path: '/dashboard/admin/users' },
-    { label: 'Analytics',      icon: <BarChartIcon />,  path: '/dashboard/admin/analytics' },
-    { label: 'Security Logs',  icon: <SecurityIcon />,  path: '/dashboard/admin/logs' },
-    { label: 'System Settings',icon: <SettingsIcon />,  path: '/dashboard/admin/settings' },
+    { label: 'Dashboard',       icon: <DashboardIcon />, path: '/dashboard/admin' },
+    { label: 'User Management', icon: <PeopleIcon />,    path: '/dashboard/admin/users' },
+    { label: 'Analytics',       icon: <BarChartIcon />,  path: '/dashboard/admin/analytics' },
+    { label: 'Security Logs',   icon: <SecurityIcon />,  path: '/dashboard/admin/logs' },
+    { label: 'System Settings', icon: <SettingsIcon />,  path: '/dashboard/admin/settings' },
   ],
 };
 
+// Role → home path mapping
 const ROLE_HOME = {
   user: '/dashboard/user',
   lmo: '/dashboard/lmo',
@@ -87,6 +98,7 @@ const ROLE_HOME = {
   admin: '/dashboard/admin',
 };
 
+// ── Theme ────────────────────────────────────────────────────────────────────
 const theme = createTheme({
   palette: {
     primary: { main: '#0D47A1' },
@@ -97,15 +109,16 @@ const theme = createTheme({
   shape: { borderRadius: 10 },
 });
 
+// ── App ──────────────────────────────────────────────────────────────────────
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [userRole, setUserRole] = useState(null);
-  const [userEmail, setUserEmail] = useState('');
+  const [userRole, setUserRole]     = useState(null);
+  const [userEmail, setUserEmail]   = useState('');
 
-  const handleLogin = (role, email) => { setIsLoggedIn(true); setUserRole(role); setUserEmail(email); };
-  const handleLogout = () => { setIsLoggedIn(false); setUserRole(null); setUserEmail(''); };
+  const handleLogin  = (role, email) => { setIsLoggedIn(true); setUserRole(role); setUserEmail(email); };
+  const handleLogout = ()            => { setIsLoggedIn(false); setUserRole(null); setUserEmail(''); };
 
-  // Helper: wrap a route group in RoleLayout
+  // Helper: wrap a route group in RoleLayout (Priyanshu's sidebar shell)
   const portalLayout = (role) => (
     <RoleLayout
       userRole={role}
@@ -120,14 +133,15 @@ function App() {
       <CssBaseline />
       <Router>
         <Routes>
-          {/* Public */}
-          <Route path="/"         element={<LandingPage />} />
-          <Route path="/login"    element={<Login onLogin={handleLogin} />} />
-          <Route path="/register" element={<Register />} />
+          {/* ── Public routes ─────────────────────────────────────── */}
+          <Route path="/"            element={<LandingPage />} />
+          <Route path="/login"       element={<Login onLogin={handleLogin} />} />
+          <Route path="/register"    element={<Register />} />
+          <Route path="/public"      element={<PublicDashboard />} />
 
           {isLoggedIn ? (
             <>
-              {/* ── USER PORTAL ── */}
+              {/* ── USER PORTAL ─────────────────────────────────── */}
               <Route element={portalLayout('user')}>
                 <Route path="/dashboard/user"              element={<UserDashboard userEmail={userEmail} />} />
                 <Route path="/dashboard/user/apply"        element={<UserApply />} />
@@ -136,7 +150,7 @@ function App() {
                 <Route path="/dashboard/user/settings"     element={<PortalSettings userRole="user" userEmail={userEmail} />} />
               </Route>
 
-              {/* ── LMO PORTAL ── */}
+              {/* ── LMO PORTAL ──────────────────────────────────── */}
               <Route element={portalLayout('lmo')}>
                 <Route path="/dashboard/lmo"              element={<LMODashboard userEmail={userEmail} />} />
                 <Route path="/dashboard/lmo/pending"      element={<LMOPending />} />
@@ -145,7 +159,7 @@ function App() {
                 <Route path="/dashboard/lmo/settings"     element={<PortalSettings userRole="lmo" userEmail={userEmail} />} />
               </Route>
 
-              {/* ── FIELD OFFICER PORTAL ── */}
+              {/* ── FIELD OFFICER PORTAL ────────────────────────── */}
               <Route element={portalLayout('field_officer')}>
                 <Route path="/dashboard/field-officer"          element={<FieldOfficerDashboard userEmail={userEmail} />} />
                 <Route path="/dashboard/field-officer/schedule" element={<FieldOfficerDashboard userEmail={userEmail} />} />
@@ -154,13 +168,23 @@ function App() {
                 <Route path="/dashboard/field-officer/settings" element={<PortalSettings userRole="field_officer" userEmail={userEmail} />} />
               </Route>
 
-              {/* ── ADMIN PORTAL ── */}
+              {/* ── ADMIN PORTAL ────────────────────────────────── */}
               <Route element={portalLayout('admin')}>
-                <Route path="/dashboard/admin"          element={<AdminDashboard userEmail={userEmail} />} />
-                <Route path="/dashboard/admin/users"    element={<AdminUsers />} />
+                <Route path="/dashboard/admin"           element={<AdminDashboard userEmail={userEmail} />} />
+                <Route path="/dashboard/admin/users"     element={<AdminUsers />} />
                 <Route path="/dashboard/admin/analytics" element={<AdminDashboard userEmail={userEmail} />} />
-                <Route path="/dashboard/admin/logs"     element={<AdminDashboard userEmail={userEmail} />} />
-                <Route path="/dashboard/admin/settings" element={<PortalSettings userRole="admin" userEmail={userEmail} />} />
+                <Route path="/dashboard/admin/logs"      element={<AdminDashboard userEmail={userEmail} />} />
+                <Route path="/dashboard/admin/settings"  element={<PortalSettings userRole="admin" userEmail={userEmail} />} />
+              </Route>
+
+              {/* ── LEGACY routes (from main branch) ────────────── */}
+              {/* Kept so old pages (RegisterInstrument, MyApplications, Certificates, Settings) still work */}
+              <Route element={<Layout userRole={userRole} onLogout={handleLogout} />}>
+                <Route path="/register-instrument" element={<RegisterInstrument />} />
+                <Route path="/my-applications"     element={<MyApplications />} />
+                <Route path="/certificates"        element={<Certificates />} />
+                <Route path="/settings"            element={<Settings />} />
+                <Route path="/legacy-dashboard"    element={<Dashboard userRole={userRole} />} />
               </Route>
 
               {/* Redirect /dashboard → role home */}

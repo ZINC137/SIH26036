@@ -70,8 +70,6 @@ cd ../frontend && npm install
 4. Create a Pull Request for review
 5. After approval, merge to main
 
-### 📅 Timeline
-- **Duration:** 27 days (4 phases)
 
 ### 📊 Project Milestones
 - **Week 1:** Architecture, database schema, API setup

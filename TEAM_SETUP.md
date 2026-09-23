@@ -326,4 +326,4 @@ git commit -m "feat: my feature"
 
 **Questions?** Check [CONTRIBUTING.md](./CONTRIBUTING.md)
 
-Good luck! 🚀
+Good luck! 👍
