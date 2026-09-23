@@ -72,7 +72,7 @@ export default function Register() {
 
     setLoading(true);
     try {
-      const res = await fetch('http://localhost:5000/api/auth/register', {
+      const res = await fetch('http://localhost:5001/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
@@ -82,7 +82,7 @@ export default function Register() {
 
       if (res.ok) {
         // Auto-login to get a session cookie so we can save profile
-        const loginRes = await fetch('http://localhost:5000/api/auth/login', {
+        const loginRes = await fetch('http://localhost:5001/api/auth/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email, password }),
@@ -116,7 +116,7 @@ export default function Register() {
 
     setLoading(true);
     try {
-      const res = await fetch('http://localhost:5000/api/auth/profile', {
+      const res = await fetch('http://localhost:5001/api/auth/profile', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ full_name: fullName, phone, organization, address, city, state, pincode }),

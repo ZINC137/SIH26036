@@ -30,7 +30,7 @@ export default function RoleLayout({ userRole, userEmail, onLogout, navItems }) 
 
   const handleLogout = async () => {
     try {
-      await fetch('http://localhost:5000/api/auth/logout', { method: 'POST', credentials: 'include' });
+      await fetch('http://localhost:5001/api/auth/logout', { method: 'POST', credentials: 'include' });
     } catch (e) {}
     setAnchorEl(null);
     onLogout();
