@@ -8,18 +8,44 @@ datasource db {
 }
 
 model User {
-  id                            String       @id @default(uuid())
-  email                         String       @unique
-  role                          String       @default("user")
+  id                            String        @id @default(uuid())
+  email                         String        @unique
+  role                          String        @default("user")
   password_hash                 String
-  is_verified                   Boolean      @default(false)
+  is_verified                   Boolean       @default(false)
   verification_token            String?
   verification_token_expires_at DateTime?
-  failed_login_attempts         Int          @default(0)
+  failed_login_attempts         Int           @default(0)
   lockout_until                 DateTime?
-  created_at                    DateTime     @default(now())
-  updated_at                    DateTime     @updatedAt
+  created_at                    DateTime      @default(now())
+  updated_at                    DateTime      @updatedAt
   profile                       UserProfile?
+  applications                  Application[]
+}
+
+model Application {
+  id              String   @id @default(uuid())
+  app_number      String   @unique
+  user_id         String
+  user            User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  instrument_type String
+  make            String
+  model           String?
+  serial_no       String
+  capacity        String
+  unit            String
+  business_name   String
+  gst_no          String?
+  address         String
+  city            String
+  state           String
+  pincode         String
+  contact_name    String
+  contact_phone   String
+  contact_email   String
+  status          String   @default("Pending")
+  submitted_at    DateTime @default(now())
+  updated_at      DateTime @updatedAt
 }
 
 model UserProfile {

@@ -49,11 +49,9 @@ export default function Register() {
   const [state, setState] = useState('');
   const [pincode, setPincode] = useState('');
 
-  // After login, save the session token to submit profile
-  const [sessionCookie, setSessionCookie] = useState(false);
 
-  // --- Step 1: Register account ---
-  const handleRegister = async (e) => {
+  // --- Step 1: Validate credentials locally, no API call yet ---
+  const handleRegister = (e) => {
     e.preventDefault();
     setError('');
 
@@ -70,64 +68,54 @@ export default function Register() {
       return;
     }
 
-    setLoading(true);
-    try {
-      const res = await fetch('http://localhost:5000/api/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-        credentials: 'include',
-      });
-      const data = await res.json();
-
-      if (res.ok) {
-        // Auto-login to get a session cookie so we can save profile
-        const loginRes = await fetch('http://localhost:5000/api/auth/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password }),
-          credentials: 'include',
-        });
-
-        if (loginRes.ok) {
-          setSessionCookie(true);
-        }
-
-        setActiveStep(1);
-      } else {
-        setError(data.error || data.message || 'Registration failed.');
-      }
-    } catch (err) {
-      setError('Could not connect to server. Is the backend running?');
-    } finally {
-      setLoading(false);
-    }
+    // Move to profile step — actual API call happens at Step 2
+    setActiveStep(1);
   };
 
-  // --- Step 2: Save profile ---
+  // --- Step 2: Submit everything to /register in one call ---
   const handleSaveProfile = async (e) => {
     e.preventDefault();
     setError('');
 
-    if (!fullName) {
-      setError('Full name is required.');
+    // Validate all profile fields
+    const missing = [];
+    if (!fullName)       missing.push('Full Name');
+    if (!phone)          missing.push('Phone Number');
+    if (!organization)   missing.push('Organization');
+    if (!address)        missing.push('Address');
+    if (!city)           missing.push('City');
+    if (!state)          missing.push('State');
+    if (!pincode)        missing.push('Pincode');
+
+    if (missing.length > 0) {
+      setError(`Please fill in all required fields: ${missing.join(', ')}`);
       return;
     }
 
     setLoading(true);
     try {
-      const res = await fetch('http://localhost:5000/api/auth/profile', {
+      // Single call — creates user + profile atomically, sends verification email
+      const res = await fetch('http://localhost:5000/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ full_name: fullName, phone, organization, address, city, state, pincode }),
-        credentials: 'include',
+        body: JSON.stringify({
+          email,
+          password,
+          full_name: fullName,
+          phone,
+          organization,
+          address,
+          city,
+          state,
+          pincode,
+        }),
       });
       const data = await res.json();
 
       if (res.ok) {
         setActiveStep(2);
       } else {
-        setError(data.error || 'Could not save profile.');
+        setError(data.error || 'Registration failed.');
       }
     } catch (err) {
       setError('Could not connect to server.');
@@ -323,9 +311,10 @@ export default function Register() {
 
                 <TextField
                   id="profile-phone"
-                  label="Phone Number"
+                  label="Phone Number *"
                   variant="outlined"
                   fullWidth
+                  required
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   sx={inputSx}
@@ -334,9 +323,10 @@ export default function Register() {
 
                 <TextField
                   id="profile-organization"
-                  label="Organization / Company"
+                  label="Organization / Company *"
                   variant="outlined"
                   fullWidth
+                  required
                   value={organization}
                   onChange={(e) => setOrganization(e.target.value)}
                   sx={inputSx}
@@ -345,9 +335,10 @@ export default function Register() {
 
                 <TextField
                   id="profile-address"
-                  label="Address"
+                  label="Address *"
                   variant="outlined"
                   fullWidth
+                  required
                   multiline
                   rows={2}
                   value={address}
@@ -358,26 +349,17 @@ export default function Register() {
 
                 <Grid container spacing={2}>
                   <Grid item xs={12} sm={5}>
-                    <TextField id="profile-city" label="City" variant="outlined" fullWidth value={city} onChange={(e) => setCity(e.target.value)} sx={inputSx} />
+                    <TextField id="profile-city" label="City *" variant="outlined" fullWidth required value={city} onChange={(e) => setCity(e.target.value)} sx={inputSx} />
                   </Grid>
                   <Grid item xs={12} sm={4}>
-                    <TextField id="profile-state" label="State" variant="outlined" fullWidth value={state} onChange={(e) => setState(e.target.value)} sx={inputSx} />
+                    <TextField id="profile-state" label="State *" variant="outlined" fullWidth required value={state} onChange={(e) => setState(e.target.value)} sx={inputSx} />
                   </Grid>
                   <Grid item xs={12} sm={3}>
-                    <TextField id="profile-pincode" label="Pincode" variant="outlined" fullWidth value={pincode} onChange={(e) => setPincode(e.target.value)} sx={inputSx} inputProps={{ maxLength: 6 }} />
+                    <TextField id="profile-pincode" label="Pincode *" variant="outlined" fullWidth required value={pincode} onChange={(e) => setPincode(e.target.value)} sx={inputSx} inputProps={{ maxLength: 6 }} />
                   </Grid>
                 </Grid>
 
                 <Box sx={{ display: 'flex', gap: 2, mt: 1 }}>
-                  <Button
-                    id="profile-skip-btn"
-                    variant="outlined"
-                    fullWidth
-                    onClick={() => setActiveStep(2)}
-                    sx={{ py: 1.5, borderRadius: 2, color: '#757575', borderColor: '#BDBDBD' }}
-                  >
-                    Skip for Now
-                  </Button>
                   <Button
                     id="profile-save-btn"
                     type="submit"

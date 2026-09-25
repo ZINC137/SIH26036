@@ -7,46 +7,73 @@ const prisma = new PrismaClient();
 
 const register = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, full_name, phone, organization, address, city, state, pincode } = req.body;
 
-    // 1. Validate payload
+    // 1. Validate credentials
     if (!email || !password || password.length < 12) {
       return res.status(400).json({ error: 'Valid email and password (min 12 chars) are required.' });
     }
 
-    // 2. Check if email exists
-    const existingUser = await prisma.user.findUnique({ where: { email } });
+    // 2. Validate all profile fields
+    const missing = [];
+    if (!full_name)    missing.push('Full Name');
+    if (!phone)        missing.push('Phone Number');
+    if (!organization) missing.push('Organization');
+    if (!address)      missing.push('Address');
+    if (!city)         missing.push('City');
+    if (!state)        missing.push('State');
+    if (!pincode)      missing.push('Pincode');
 
+    if (missing.length > 0) {
+      return res.status(400).json({ error: `The following fields are required: ${missing.join(', ')}` });
+    }
+
+    // 3. Check if email already exists
+    const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) {
-      // Do not throw error stating email is taken
+      // Do not reveal whether email is taken
       return res.status(200).json({ message: 'If this email is eligible, a verification link has been sent.' });
     }
 
-    // 3. Create new user
-    // Hash password
+    // 4. Hash password
     const password_hash = await argon2.hash(password, {
       type: argon2.argon2id,
       memoryCost: 2 ** 16,
       hashLength: 50,
     });
 
-    // Generate token
+    // 5. Generate verification token
     const token = crypto.randomBytes(32).toString('hex');
     const expiresAt = new Date();
-    expiresAt.setHours(expiresAt.getHours() + 24); // 24 hours from now
+    expiresAt.setHours(expiresAt.getHours() + 24);
 
-    // Insert user
-    await prisma.user.create({
-      data: {
-        email,
-        password_hash,
-        is_verified: false,
-        verification_token: token,
-        verification_token_expires_at: expiresAt,
-      },
+    // 6. Create user + profile in a single transaction
+    await prisma.$transaction(async (tx) => {
+      const user = await tx.user.create({
+        data: {
+          email,
+          password_hash,
+          is_verified: false,
+          verification_token: token,
+          verification_token_expires_at: expiresAt,
+        },
+      });
+
+      await tx.userProfile.create({
+        data: {
+          user_id: user.id,
+          full_name,
+          phone,
+          organization,
+          address,
+          city,
+          state,
+          pincode,
+        },
+      });
     });
 
-    // Send email
+    // 7. Send verification email
     await sendVerificationEmail(email, token);
 
     return res.status(200).json({ message: 'If this email is eligible, a verification link has been sent.' });
@@ -200,8 +227,18 @@ const saveProfile = async (req, res) => {
   try {
     const { full_name, phone, address, city, state, pincode, organization } = req.body;
 
-    if (!full_name) {
-      return res.status(400).json({ error: 'Full name is required' });
+    // Validate all fields are required
+    const missing = [];
+    if (!full_name)    missing.push('Full Name');
+    if (!phone)        missing.push('Phone Number');
+    if (!organization) missing.push('Organization');
+    if (!address)      missing.push('Address');
+    if (!city)         missing.push('City');
+    if (!state)        missing.push('State');
+    if (!pincode)      missing.push('Pincode');
+
+    if (missing.length > 0) {
+      return res.status(400).json({ error: `The following fields are required: ${missing.join(', ')}` });
     }
 
     // Upsert profile (create or update)

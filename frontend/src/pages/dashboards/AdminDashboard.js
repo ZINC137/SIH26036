@@ -1,26 +1,74 @@
 import React, { useState } from 'react';
 import {
-  Box, Grid, Paper, Typography, Button, Chip, Divider, Avatar,
-  Table, TableBody, TableCell, TableHead, TableRow, IconButton, Tooltip, Switch, FormControlLabel,
+  Box,
+  Paper,
+  Typography,
+  Button,
+  Chip,
+  Avatar,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
+  IconButton,
+  Tooltip,
+  Switch,
+  FormControlLabel,
 } from '@mui/material';
-import PeopleIcon from '@mui/icons-material/People';
-import StorageIcon from '@mui/icons-material/Storage';
-import VerifiedUserIcon from '@mui/icons-material/VerifiedUser';
-import TrendingUpIcon from '@mui/icons-material/TrendingUp';
-import EditIcon from '@mui/icons-material/Edit';
-import BlockIcon from '@mui/icons-material/Block';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import DnsIcon from '@mui/icons-material/Dns';
-import SpeedIcon from '@mui/icons-material/Speed';
+import PeopleAltRoundedIcon from '@mui/icons-material/PeopleAltRounded';
+import StorageRoundedIcon from '@mui/icons-material/StorageRounded';
+import VerifiedUserRoundedIcon from '@mui/icons-material/VerifiedUserRounded';
+import TrendingUpRoundedIcon from '@mui/icons-material/TrendingUpRounded';
+import EditRoundedIcon from '@mui/icons-material/EditRounded';
+import BlockRoundedIcon from '@mui/icons-material/BlockRounded';
+import CheckCircleRoundedIcon from '@mui/icons-material/CheckCircleRounded';
+import SpeedRoundedIcon from '@mui/icons-material/SpeedRounded';
+import WarningAmberRoundedIcon from '@mui/icons-material/WarningAmberRounded';
+import PersonAddRoundedIcon from '@mui/icons-material/PersonAddRounded';
+import RefreshRoundedIcon from '@mui/icons-material/RefreshRounded';
+import SecurityRoundedIcon from '@mui/icons-material/SecurityRounded';
 
-const COLOR = '#B71C1C';
-const GRADIENT = 'linear-gradient(135deg, #C62828, #B71C1C)';
+const COLOR = '#B91C1C';
+const GRADIENT = 'linear-gradient(135deg, #EF4444 0%, #B91C1C 100%)';
 
 const stats = [
-  { label: 'Total Users', value: '1,284', icon: PeopleIcon, color: '#1565C0', bg: '#E3F2FD' },
-  { label: 'Certificates Issued', value: '9,471', icon: VerifiedUserIcon, color: '#2E7D32', bg: '#E8F5E9' },
-  { label: 'Applications Today', value: '143', icon: TrendingUpIcon, color: '#E65100', bg: '#FFF3E0' },
-  { label: 'DB Size', value: '2.4 GB', icon: StorageIcon, color: '#6A1B9A', bg: '#F3E5F5' },
+  {
+    label: 'Total Users',
+    value: '1,284',
+    change: '+14% this month',
+    icon: PeopleAltRoundedIcon,
+    color: '#0284C7',
+    bg: '#EFF6FF',
+    border: '#BFDBFE',
+  },
+  {
+    label: 'Certificates Issued',
+    value: '9,471',
+    change: '99.8% verified',
+    icon: VerifiedUserRoundedIcon,
+    color: '#16A34A',
+    bg: '#F0FDF4',
+    border: '#BBF7D0',
+  },
+  {
+    label: 'Applications Today',
+    value: '143',
+    change: '+22 vs yesterday',
+    icon: TrendingUpRoundedIcon,
+    color: '#D97706',
+    bg: '#FFFBEB',
+    border: '#FDE68A',
+  },
+  {
+    label: 'Master DB Size',
+    value: '2.4 GB',
+    change: 'Encrypted SHA-256',
+    icon: StorageRoundedIcon,
+    color: '#7E22CE',
+    bg: '#FAF5FF',
+    border: '#E9D5FF',
+  },
 ];
 
 const users = [
@@ -32,182 +80,552 @@ const users = [
 ];
 
 const roleColor = {
-  user: { color: '#E65100', bg: '#FFF3E0' },
-  lmo: { color: '#2E7D32', bg: '#E8F5E9' },
-  field_officer: { color: '#4A148C', bg: '#F3E5F5' },
-  admin: { color: '#B71C1C', bg: '#FFEBEE' },
+  user: { color: '#D97706', bg: '#FFFBEB', border: '#FDE68A', label: 'Citizen / User' },
+  lmo: { color: '#16A34A', bg: '#F0FDF4', border: '#BBF7D0', label: 'LMO Officer' },
+  field_officer: { color: '#7E22CE', bg: '#FAF5FF', border: '#E9D5FF', label: 'Field Officer' },
+  admin: { color: '#B91C1C', bg: '#FEF2F2', border: '#FECACA', label: 'System Admin' },
 };
 
 const systemHealth = [
-  { label: 'API Server', status: 'Online', uptime: '99.97%', color: '#2E7D32' },
-  { label: 'Database', status: 'Online', uptime: '100%', color: '#2E7D32' },
-  { label: 'Email Service', status: 'Online', uptime: '99.5%', color: '#2E7D32' },
-  { label: 'File Storage', status: 'Degraded', uptime: '97.2%', color: '#E65100' },
+  { label: 'API Gateway', status: 'Optimal', uptime: '99.97%', color: '#16A34A' },
+  { label: 'Master PostgreSQL DB', status: 'Synchronized', uptime: '100%', color: '#16A34A' },
+  { label: 'Gov Email Dispatcher', status: 'Active', uptime: '99.5%', color: '#16A34A' },
+  { label: 'Encrypted Certificate Vault', status: 'Syncing', uptime: '98.2%', color: '#D97706' },
 ];
 
 export default function AdminDashboard({ userEmail }) {
   const [maintenanceMode, setMaintenanceMode] = useState(false);
 
   return (
-    <Box sx={{ p: { xs: 2, md: 4 } }}>
-      {/* Header */}
-      <Box sx={{ mb: 4, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2 }}>
+    <Box sx={{ pb: 4 }}>
+      {/* ── Top Header Banner ── */}
+      <Box
+        sx={{
+          mb: 4,
+          p: { xs: 2.5, sm: 3.5 },
+          bgcolor: '#FFFFFF',
+          borderRadius: '20px',
+          border: '1.5px solid #E2E8F0',
+          boxShadow: '0 4px 20px -2px rgba(15, 23, 42, 0.04)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: 2.5,
+        }}
+      >
         <Box>
-          <Typography variant="overline" sx={{ color: COLOR, fontWeight: 700, letterSpacing: 1.5 }}>ADMINISTRATOR PORTAL</Typography>
-          <Typography variant="h4" sx={{ fontWeight: 900, color: '#1A1A2E', lineHeight: 1.2 }}>System Dashboard</Typography>
-          <Typography variant="body2" sx={{ color: '#757575', mt: 0.5 }}>Super Admin — {userEmail}</Typography>
-        </Box>
-        <FormControlLabel
-          control={
-            <Switch
-              checked={maintenanceMode}
-              onChange={(e) => setMaintenanceMode(e.target.checked)}
-              sx={{ '& .MuiSwitch-thumb': { bgcolor: maintenanceMode ? COLOR : '#BDBDBD' } }}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 0.5 }}>
+            <Chip
+              label="CENTRAL ADMINISTRATION"
+              size="small"
+              sx={{
+                bgcolor: '#FEF2F2',
+                color: '#B91C1C',
+                border: '1px solid #FECACA',
+                fontWeight: 800,
+                fontSize: '0.68rem',
+                borderRadius: '6px',
+              }}
             />
-          }
-          label={<Typography variant="body2" sx={{ fontWeight: 600, color: maintenanceMode ? COLOR : '#757575' }}>Maintenance Mode</Typography>}
-        />
+            <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 600 }}>
+              National Legal Metrology Control Node
+            </Typography>
+          </Box>
+          <Typography
+            variant="h4"
+            sx={{
+              fontWeight: 900,
+              color: '#0F172A',
+              fontSize: { xs: '1.5rem', sm: '1.9rem' },
+              letterSpacing: '-0.02em',
+            }}
+          >
+            System &amp; Infrastructure Dashboard
+          </Typography>
+          <Typography variant="body2" sx={{ color: '#64748B', mt: 0.5 }}>
+            Authenticated Super Administrator: <strong style={{ color: '#0F172A' }}>{userEmail || 'admin@example.com'}</strong>
+          </Typography>
+        </Box>
+
+        {/* Maintenance Mode & Controls */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Box
+            sx={{
+              bgcolor: maintenanceMode ? '#FEF2F2' : '#F8FAFC',
+              border: `1.5px solid ${maintenanceMode ? '#FECACA' : '#E2E8F0'}`,
+              borderRadius: '12px',
+              px: 2,
+              py: 0.75,
+            }}
+          >
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={maintenanceMode}
+                  onChange={(e) => setMaintenanceMode(e.target.checked)}
+                  sx={{
+                    '& .MuiSwitch-thumb': { bgcolor: maintenanceMode ? COLOR : '#94A3B8' },
+                    '& .MuiSwitch-track': { bgcolor: maintenanceMode ? '#FECACA !important' : '#CBD5E1 !important' },
+                  }}
+                />
+              }
+              label={
+                <Typography
+                  variant="body2"
+                  sx={{
+                    fontWeight: 700,
+                    color: maintenanceMode ? '#B91C1C' : '#475569',
+                    fontSize: '0.86rem',
+                  }}
+                >
+                  Maintenance Mode
+                </Typography>
+              }
+              sx={{ m: 0 }}
+            />
+          </Box>
+        </Box>
       </Box>
 
+      {/* Maintenance Mode Active Notice */}
       {maintenanceMode && (
-        <Paper elevation={0} sx={{ p: 2, mb: 3, borderRadius: 2, bgcolor: '#FFEBEE', border: '1px solid #EF9A9A', display: 'flex', alignItems: 'center', gap: 1.5 }}>
-          <BlockIcon sx={{ color: COLOR }} />
-          <Typography variant="body2" sx={{ color: '#C62828', fontWeight: 600 }}>
-            ⚠️ Maintenance mode is ON — public users cannot access the portal
-          </Typography>
+        <Paper
+          elevation={0}
+          sx={{
+            p: 2.5,
+            mb: 3.5,
+            borderRadius: '16px',
+            bgcolor: '#FEF2F2',
+            border: '1.5px solid #FECACA',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1.75,
+          }}
+        >
+          <WarningAmberRoundedIcon sx={{ color: '#B91C1C', fontSize: 28 }} />
+          <Box>
+            <Typography variant="subtitle2" sx={{ color: '#991B1B', fontWeight: 800 }}>
+              Statutory Platform Lock Active
+            </Typography>
+            <Typography variant="body2" sx={{ color: '#B91C1C', fontSize: '0.86rem' }}>
+              Maintenance mode is currently enabled. Public users, applicant filings, and non-admin queries are temporarily throttled.
+            </Typography>
+          </Box>
         </Paper>
       )}
 
-      {/* Stats */}
-      <Grid container spacing={2.5} sx={{ mb: 4 }}>
+      {/* ── 4 KPI Stats Grid ── */}
+      <Box
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', lg: 'repeat(4, 1fr)' },
+          gap: 2.5,
+          mb: 4,
+        }}
+      >
         {stats.map((s) => {
           const Icon = s.icon;
           return (
-            <Grid item xs={6} md={3} key={s.label}>
-              <Paper elevation={0} sx={{ p: 3, borderRadius: 3, border: '1px solid #E0E0E0', bgcolor: 'white' }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
-                  <Box sx={{ width: 44, height: 44, borderRadius: 2, bgcolor: s.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: s.color }}>
-                    <Icon />
-                  </Box>
+            <Paper
+              key={s.label}
+              elevation={0}
+              sx={{
+                p: 3,
+                borderRadius: '18px',
+                border: '1.5px solid #E2E8F0',
+                bgcolor: '#FFFFFF',
+                boxShadow: '0 4px 16px -2px rgba(15, 23, 42, 0.04)',
+                position: 'relative',
+                overflow: 'hidden',
+                transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+                '&:hover': {
+                  transform: 'translateY(-3px)',
+                  boxShadow: '0 12px 24px -6px rgba(15, 23, 42, 0.08)',
+                },
+              }}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 2 }}>
+                <Box
+                  sx={{
+                    width: 48,
+                    height: 48,
+                    borderRadius: '14px',
+                    bgcolor: s.bg,
+                    border: `1px solid ${s.border}`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: s.color,
+                  }}
+                >
+                  <Icon sx={{ fontSize: 24 }} />
                 </Box>
-                <Typography variant="h4" sx={{ fontWeight: 900, color: '#1A1A2E' }}>{s.value}</Typography>
-                <Typography variant="body2" sx={{ color: '#757575', fontWeight: 500 }}>{s.label}</Typography>
-              </Paper>
-            </Grid>
+                <Chip
+                  label={s.change}
+                  size="small"
+                  sx={{
+                    bgcolor: '#F8FAFC',
+                    color: '#475569',
+                    fontSize: '0.7rem',
+                    fontWeight: 700,
+                    border: '1px solid #E2E8F0',
+                    borderRadius: '6px',
+                  }}
+                />
+              </Box>
+
+              <Typography
+                variant="h3"
+                sx={{
+                  fontWeight: 900,
+                  color: '#0F172A',
+                  fontSize: '2rem',
+                  lineHeight: 1.1,
+                  mb: 0.5,
+                  letterSpacing: '-0.02em',
+                }}
+              >
+                {s.value}
+              </Typography>
+              <Typography variant="body2" sx={{ color: '#64748B', fontWeight: 600, fontSize: '0.88rem' }}>
+                {s.label}
+              </Typography>
+            </Paper>
           );
         })}
-      </Grid>
+      </Box>
 
-      <Grid container spacing={3}>
-        {/* Users Table */}
-        <Grid item xs={12} lg={8}>
-          <Paper elevation={0} sx={{ borderRadius: 3, border: '1px solid #E0E0E0', overflow: 'hidden' }}>
-            <Box sx={{ p: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <PeopleIcon sx={{ color: COLOR }} />
-                <Typography variant="h6" sx={{ fontWeight: 700 }}>User Management</Typography>
+      {/* ── Main Split Section: Users Table & System Health ── */}
+      <Box
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: { xs: '1fr', lg: '2.3fr 1fr' },
+          gap: 3.5,
+        }}
+      >
+        {/* User Management Card */}
+        <Paper
+          elevation={0}
+          sx={{
+            borderRadius: '20px',
+            border: '1.5px solid #E2E8F0',
+            bgcolor: '#FFFFFF',
+            overflow: 'hidden',
+            boxShadow: '0 4px 16px -2px rgba(15, 23, 42, 0.04)',
+          }}
+        >
+          <Box
+            sx={{
+              p: 3,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: 2,
+              borderBottom: '1px solid #E2E8F0',
+            }}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+              <Box
+                sx={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: '10px',
+                  bgcolor: '#FEF2F2',
+                  color: '#B91C1C',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <PeopleAltRoundedIcon sx={{ fontSize: 20 }} />
               </Box>
-              <Button size="small" variant="outlined" sx={{ borderColor: COLOR, color: COLOR, fontWeight: 600, borderRadius: 2 }}>
-                Add User
+              <Box>
+                <Typography variant="h6" sx={{ fontWeight: 800, color: '#0F172A', fontSize: '1.1rem' }}>
+                  User Management Registry
+                </Typography>
+                <Typography variant="caption" sx={{ color: '#64748B' }}>
+                  Statutory accounts across Citizen, Inspector &amp; Official roles
+                </Typography>
+              </Box>
+            </Box>
+
+            <Box sx={{ display: 'flex', gap: 1.5 }}>
+              <Button
+                size="small"
+                variant="contained"
+                startIcon={<PersonAddRoundedIcon />}
+                sx={{
+                  background: GRADIENT,
+                  color: '#FFFFFF',
+                  fontWeight: 700,
+                  fontSize: '0.84rem',
+                  borderRadius: '10px',
+                  textTransform: 'none',
+                  px: 2,
+                  boxShadow: '0 4px 12px rgba(185, 28, 28, 0.25)',
+                }}
+              >
+                Add User Account
               </Button>
             </Box>
-            <Divider />
-            <Box sx={{ overflowX: 'auto' }}>
-              <Table>
-                <TableHead>
-                  <TableRow sx={{ bgcolor: '#FAFAFA' }}>
-                    {['User', 'Role', 'Email Verified', 'Joined', 'Status', 'Actions'].map(h => (
-                      <TableCell key={h} sx={{ fontWeight: 700, fontSize: '0.78rem', color: '#424242' }}>{h}</TableCell>
-                    ))}
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {users.map((u) => (
-                    <TableRow key={u.email} hover>
-                      <TableCell>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <Avatar sx={{ width: 32, height: 32, background: roleColor[u.role]?.bg, color: roleColor[u.role]?.color, fontSize: '0.75rem', fontWeight: 700 }}>
-                            {u.name.charAt(0)}
-                          </Avatar>
-                          <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.82rem' }}>{u.name}</Typography>
-                        </Box>
-                      </TableCell>
-                      <TableCell>
-                        <Chip label={u.role} size="small" sx={{ bgcolor: roleColor[u.role]?.bg, color: roleColor[u.role]?.color, fontWeight: 700, fontSize: '0.68rem' }} />
-                      </TableCell>
-                      <TableCell>
-                        {u.verified
-                          ? <CheckCircleIcon sx={{ color: '#2E7D32', fontSize: 18 }} />
-                          : <BlockIcon sx={{ color: '#9E9E9E', fontSize: 18 }} />}
-                      </TableCell>
-                      <TableCell sx={{ fontSize: '0.8rem', color: '#757575' }}>{u.joined}</TableCell>
-                      <TableCell>
-                        <Chip
-                          label={u.status}
-                          size="small"
-                          sx={{
-                            bgcolor: u.status === 'Active' ? '#E8F5E9' : u.status === 'Suspended' ? '#FFEBEE' : '#FFF8E1',
-                            color: u.status === 'Active' ? '#2E7D32' : u.status === 'Suspended' ? '#B71C1C' : '#F57F17',
-                            fontWeight: 700, fontSize: '0.68rem',
-                          }}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Box sx={{ display: 'flex', gap: 0.5 }}>
-                          <Tooltip title="Edit Role">
-                            <IconButton size="small" sx={{ color: '#1565C0', '&:hover': { bgcolor: '#E3F2FD' } }}>
-                              <EditIcon fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
-                          <Tooltip title="Suspend">
-                            <IconButton size="small" sx={{ color: '#B71C1C', '&:hover': { bgcolor: '#FFEBEE' } }}>
-                              <BlockIcon fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
-                        </Box>
-                      </TableCell>
-                    </TableRow>
+          </Box>
+
+          <Box sx={{ overflowX: 'auto' }}>
+            <Table sx={{ minWidth: 640 }}>
+              <TableHead>
+                <TableRow sx={{ bgcolor: '#F8FAFC' }}>
+                  {['USER / APPLICANT', 'ASSIGNED ROLE', 'VERIFICATION', 'ENROLLED DATE', 'STATUS', 'ACTIONS'].map((h) => (
+                    <TableCell
+                      key={h}
+                      sx={{
+                        fontWeight: 800,
+                        fontSize: '0.72rem',
+                        color: '#475569',
+                        letterSpacing: '0.04em',
+                        py: 1.5,
+                      }}
+                    >
+                      {h}
+                    </TableCell>
                   ))}
-                </TableBody>
-              </Table>
-            </Box>
-          </Paper>
-        </Grid>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {users.map((u) => (
+                  <TableRow
+                    key={u.email}
+                    hover
+                    sx={{
+                      '&:last-child td, &:last-child th': { border: 0 },
+                      transition: 'background-color 0.15s',
+                    }}
+                  >
+                    <TableCell>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                        <Avatar
+                          sx={{
+                            width: 36,
+                            height: 36,
+                            bgcolor: roleColor[u.role]?.bg || '#F1F5F9',
+                            color: roleColor[u.role]?.color || '#0F172A',
+                            border: `1px solid ${roleColor[u.role]?.border || '#E2E8F0'}`,
+                            fontSize: '0.85rem',
+                            fontWeight: 800,
+                          }}
+                        >
+                          {u.name.charAt(0)}
+                        </Avatar>
+                        <Box>
+                          <Typography variant="body2" sx={{ fontWeight: 700, color: '#0F172A' }}>
+                            {u.name}
+                          </Typography>
+                          <Typography variant="caption" sx={{ color: '#64748B', display: 'block' }}>
+                            {u.email}
+                          </Typography>
+                        </Box>
+                      </Box>
+                    </TableCell>
 
-        {/* System Health */}
-        <Grid item xs={12} lg={4}>
-          <Paper elevation={0} sx={{ borderRadius: 3, border: '1px solid #E0E0E0', overflow: 'hidden' }}>
-            <Box sx={{ p: 3, display: 'flex', alignItems: 'center', gap: 1 }}>
-              <SpeedIcon sx={{ color: COLOR }} />
-              <Typography variant="h6" sx={{ fontWeight: 700 }}>System Health</Typography>
+                    <TableCell>
+                      <Chip
+                        label={roleColor[u.role]?.label || u.role}
+                        size="small"
+                        sx={{
+                          bgcolor: roleColor[u.role]?.bg,
+                          color: roleColor[u.role]?.color,
+                          border: `1px solid ${roleColor[u.role]?.border}`,
+                          fontWeight: 700,
+                          fontSize: '0.72rem',
+                          borderRadius: '6px',
+                        }}
+                      />
+                    </TableCell>
+
+                    <TableCell>
+                      {u.verified ? (
+                        <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.6, color: '#16A34A', fontSize: '0.8rem', fontWeight: 600 }}>
+                          <CheckCircleRoundedIcon sx={{ fontSize: 16 }} /> Verified
+                        </Box>
+                      ) : (
+                        <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.6, color: '#94A3B8', fontSize: '0.8rem', fontWeight: 500 }}>
+                          <BlockRoundedIcon sx={{ fontSize: 16 }} /> Pending
+                        </Box>
+                      )}
+                    </TableCell>
+
+                    <TableCell sx={{ fontSize: '0.84rem', color: '#64748B', fontWeight: 500 }}>
+                      {u.joined}
+                    </TableCell>
+
+                    <TableCell>
+                      <Chip
+                        label={u.status}
+                        size="small"
+                        sx={{
+                          bgcolor:
+                            u.status === 'Active'
+                              ? '#F0FDF4'
+                              : u.status === 'Suspended'
+                              ? '#FEF2F2'
+                              : '#FFFBEB',
+                          color:
+                            u.status === 'Active'
+                              ? '#15803D'
+                              : u.status === 'Suspended'
+                              ? '#B91C1C'
+                              : '#B45309',
+                          border: `1px solid ${
+                            u.status === 'Active'
+                              ? '#BBF7D0'
+                              : u.status === 'Suspended'
+                              ? '#FECACA'
+                              : '#FDE68A'
+                          }`,
+                          fontWeight: 800,
+                          fontSize: '0.7rem',
+                          borderRadius: '6px',
+                        }}
+                      />
+                    </TableCell>
+
+                    <TableCell>
+                      <Box sx={{ display: 'flex', gap: 0.75 }}>
+                        <Tooltip title="Edit Permissions">
+                          <IconButton
+                            size="small"
+                            sx={{
+                              color: '#0284C7',
+                              bgcolor: '#F0F9FF',
+                              border: '1px solid #BAE6FD',
+                              borderRadius: '8px',
+                              p: 0.7,
+                              '&:hover': { bgcolor: '#E0F2FE' },
+                            }}
+                          >
+                            <EditRoundedIcon sx={{ fontSize: 16 }} />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Suspend Account">
+                          <IconButton
+                            size="small"
+                            sx={{
+                              color: '#B91C1C',
+                              bgcolor: '#FEF2F2',
+                              border: '1px solid #FECACA',
+                              borderRadius: '8px',
+                              p: 0.7,
+                              '&:hover': { bgcolor: '#FEE2E2' },
+                            }}
+                          >
+                            <BlockRoundedIcon sx={{ fontSize: 16 }} />
+                          </IconButton>
+                        </Tooltip>
+                      </Box>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </Box>
+        </Paper>
+
+        {/* System Health Panel */}
+        <Paper
+          elevation={0}
+          sx={{
+            borderRadius: '20px',
+            border: '1.5px solid #E2E8F0',
+            bgcolor: '#FFFFFF',
+            overflow: 'hidden',
+            boxShadow: '0 4px 16px -2px rgba(15, 23, 42, 0.04)',
+            display: 'flex',
+            flexDirection: 'column',
+          }}
+        >
+          <Box
+            sx={{
+              p: 3,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              borderBottom: '1px solid #E2E8F0',
+            }}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
+              <SpeedRoundedIcon sx={{ color: '#B91C1C', fontSize: 22 }} />
+              <Typography variant="h6" sx={{ fontWeight: 800, color: '#0F172A', fontSize: '1.05rem' }}>
+                System Telemetry
+              </Typography>
             </Box>
-            <Divider />
-            <Box sx={{ p: 2 }}>
-              {systemHealth.map((s) => (
-                <Box key={s.label} sx={{ p: 2, mb: 1.5, borderRadius: 2, bgcolor: '#FAFAFA', border: '1px solid #E0E0E0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: s.color }} />
-                    <Box>
-                      <Typography variant="body2" sx={{ fontWeight: 700, color: '#1A1A2E', lineHeight: 1 }}>{s.label}</Typography>
-                      <Typography variant="caption" sx={{ color: s.color, fontWeight: 600 }}>{s.status}</Typography>
-                    </Box>
+            <IconButton size="small" sx={{ color: '#64748B' }}>
+              <RefreshRoundedIcon sx={{ fontSize: 18 }} />
+            </IconButton>
+          </Box>
+
+          <Box sx={{ p: 2.5, flex: 1, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+            {systemHealth.map((s) => (
+              <Box
+                key={s.label}
+                sx={{
+                  p: 1.75,
+                  borderRadius: '12px',
+                  bgcolor: '#F8FAFC',
+                  border: '1px solid #E2E8F0',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                }}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
+                  <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: s.color }} />
+                  <Box>
+                    <Typography variant="body2" sx={{ fontWeight: 700, color: '#0F172A', fontSize: '0.86rem' }}>
+                      {s.label}
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: s.color, fontWeight: 700 }}>
+                      {s.status}
+                    </Typography>
                   </Box>
-                  <Typography variant="caption" sx={{ color: '#757575', fontWeight: 600 }}>↑ {s.uptime}</Typography>
                 </Box>
-              ))}
+                <Typography variant="caption" sx={{ color: '#475569', fontWeight: 700, bgcolor: '#FFFFFF', px: 1, py: 0.25, borderRadius: '6px', border: '1px solid #E2E8F0' }}>
+                  ↑ {s.uptime}
+                </Typography>
+              </Box>
+            ))}
 
-              <Box sx={{ mt: 2, p: 2, borderRadius: 2, bgcolor: '#F3E5F5', border: '1px solid #CE93D8' }}>
-                <Typography variant="caption" sx={{ color: '#4A148C', fontWeight: 700 }}>📊 Platform Stats</Typography>
-                <Box sx={{ mt: 1 }}>
-                  <Typography variant="caption" sx={{ color: '#616161', display: 'block' }}>Avg response time: <strong>142ms</strong></Typography>
-                  <Typography variant="caption" sx={{ color: '#616161', display: 'block' }}>Active sessions: <strong>284</strong></Typography>
-                  <Typography variant="caption" sx={{ color: '#616161', display: 'block' }}>Server uptime: <strong>99.97%</strong></Typography>
-                </Box>
+            {/* Performance Diagnostic Box */}
+            <Box
+              sx={{
+                mt: 1,
+                p: 2.25,
+                borderRadius: '14px',
+                bgcolor: '#FAF5FF',
+                border: '1px solid #E9D5FF',
+              }}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.2 }}>
+                <SecurityRoundedIcon sx={{ fontSize: 18, color: '#7E22CE' }} />
+                <Typography variant="caption" sx={{ color: '#6B21A8', fontWeight: 800, letterSpacing: '0.04em' }}>
+                  SECURITY &amp; COMPLIANCE AUDIT
+                </Typography>
+              </Box>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.6 }}>
+                <Typography variant="caption" sx={{ color: '#475569', display: 'flex', justifyContent: 'space-between' }}>
+                  Average Latency: <strong style={{ color: '#0F172A' }}>142 ms</strong>
+                </Typography>
+                <Typography variant="caption" sx={{ color: '#475569', display: 'flex', justifyContent: 'space-between' }}>
+                  Concurrent Sessions: <strong style={{ color: '#0F172A' }}>284 Active</strong>
+                </Typography>
+                <Typography variant="caption" sx={{ color: '#475569', display: 'flex', justifyContent: 'space-between' }}>
+                  National Uptime SLA: <strong style={{ color: '#16A34A' }}>99.97% Verified</strong>
+                </Typography>
               </Box>
             </Box>
-          </Paper>
-        </Grid>
-      </Grid>
+          </Box>
+        </Paper>
+      </Box>
     </Box>
   );
 }
