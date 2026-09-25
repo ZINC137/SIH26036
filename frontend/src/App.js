@@ -101,12 +101,19 @@ const ROLE_HOME = {
 // ── Theme ────────────────────────────────────────────────────────────────────
 const theme = createTheme({
   palette: {
-    primary: { main: '#0D47A1' },
-    secondary: { main: '#FF9800' },
-    background: { default: '#F0F4FF', paper: '#FFFFFF' },
+    primary: { main: '#0F2B4E', light: '#1E3A8A', dark: '#06162D' },
+    secondary: { main: '#D97706', light: '#F59E0B', dark: '#B45309' },
+    background: { default: '#F8FAFC', paper: '#FFFFFF' },
+    text: { primary: '#0F172A', secondary: '#475569' },
   },
-  typography: { fontFamily: '"Inter", "Roboto", "Helvetica", sans-serif' },
-  shape: { borderRadius: 10 },
+  typography: {
+    fontFamily: '"Plus Jakarta Sans", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", sans-serif',
+    button: {
+      textTransform: 'none',
+      fontWeight: 600,
+    },
+  },
+  shape: { borderRadius: 12 },
 });
 
 // ── App ──────────────────────────────────────────────────────────────────────

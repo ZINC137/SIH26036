@@ -1,24 +1,34 @@
 import React, { useState } from 'react';
 import {
-  Box, Grid, Paper, Typography, Button, Chip, Divider, Avatar,
-  Table, TableBody, TableCell, TableHead, TableRow, IconButton, Tooltip,
+  Box,
+  Paper,
+  Typography,
+  Chip,
+  Avatar,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
+  IconButton,
+  Tooltip,
 } from '@mui/material';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import CancelIcon from '@mui/icons-material/Cancel';
-import AssignmentIndIcon from '@mui/icons-material/AssignmentInd';
-import PendingActionsIcon from '@mui/icons-material/PendingActions';
-import VerifiedIcon from '@mui/icons-material/Verified';
-import GroupIcon from '@mui/icons-material/Group';
-import VisibilityIcon from '@mui/icons-material/Visibility';
+import CheckCircleRoundedIcon from '@mui/icons-material/CheckCircleRounded';
+import CancelRoundedIcon from '@mui/icons-material/CancelRounded';
+import PendingActionsRoundedIcon from '@mui/icons-material/PendingActionsRounded';
+import GroupRoundedIcon from '@mui/icons-material/GroupRounded';
+import VisibilityRoundedIcon from '@mui/icons-material/VisibilityRounded';
+import VerifiedUserRoundedIcon from '@mui/icons-material/VerifiedUserRounded';
+import AssignmentTurnedInRoundedIcon from '@mui/icons-material/AssignmentTurnedInRounded';
+import HowToRegRoundedIcon from '@mui/icons-material/HowToRegRounded';
 
-const COLOR = '#1B5E20';
-const GRADIENT = 'linear-gradient(135deg, #2E7D32, #1B5E20)';
+const COLOR = '#15803D';
 
 const stats = [
-  { label: 'Pending Review', value: '24', color: '#E65100', bg: '#FFF3E0' },
-  { label: 'Approved This Month', value: '87', color: '#2E7D32', bg: '#E8F5E9' },
-  { label: 'Field Inspections', value: '13', color: '#1565C0', bg: '#E3F2FD' },
-  { label: 'Officers Under You', value: '6', color: '#6A1B9A', bg: '#F3E5F5' },
+  { label: 'Pending Review Queue', value: '24', detail: 'Requires statutory scrutiny', icon: PendingActionsRoundedIcon, color: '#D97706', bg: '#FFFBEB', border: '#FDE68A' },
+  { label: 'Approved This Month', value: '87', detail: 'Certificates issued', icon: VerifiedUserRoundedIcon, color: '#16A34A', bg: '#F0FDF4', border: '#BBF7D0' },
+  { label: 'Field Inspections', value: '13', detail: 'Dispatched to officers', icon: AssignmentTurnedInRoundedIcon, color: '#0284C7', bg: '#EFF6FF', border: '#BFDBFE' },
+  { label: 'Officers In Jurisdiction', value: '6', detail: 'Delhi North Zone', icon: HowToRegRoundedIcon, color: '#7E22CE', bg: '#FAF5FF', border: '#E9D5FF' },
 ];
 
 const applications = [
@@ -35,132 +45,449 @@ const officers = [
   { name: 'Ramesh Kumar', id: 'FO-003', assigned: 2, completed: 7, status: 'On Leave' },
 ];
 
-const priorityColor = { High: { color: '#B71C1C', bg: '#FFEBEE' }, Normal: { color: '#1565C0', bg: '#E3F2FD' }, Low: { color: '#2E7D32', bg: '#E8F5E9' } };
-const statusColor = { Pending: { color: '#E65100', bg: '#FFF3E0' }, 'Under Inspection': { color: '#1565C0', bg: '#E3F2FD' } };
+const priorityColor = {
+  High: { color: '#B91C1C', bg: '#FEF2F2', border: '#FECACA' },
+  Normal: { color: '#0284C7', bg: '#EFF6FF', border: '#BFDBFE' },
+  Low: { color: '#16A34A', bg: '#F0FDF4', border: '#BBF7D0' },
+};
+
+const statusColor = {
+  Pending: { color: '#B45309', bg: '#FFFBEB', border: '#FDE68A' },
+  'Under Inspection': { color: '#0284C7', bg: '#EFF6FF', border: '#BFDBFE' },
+  Approved: { color: '#15803D', bg: '#F0FDF4', border: '#BBF7D0' },
+  Rejected: { color: '#B91C1C', bg: '#FEF2F2', border: '#FECACA' },
+};
 
 export default function LMODashboard({ userEmail }) {
   const [applications2, setApplications2] = useState(applications);
 
   const handleAction = (id, action) => {
-    setApplications2(prev => prev.map(a => a.id === id ? { ...a, status: action === 'approve' ? 'Approved' : 'Rejected' } : a));
+    setApplications2((prev) =>
+      prev.map((a) => (a.id === id ? { ...a, status: action === 'approve' ? 'Approved' : 'Rejected' } : a))
+    );
   };
 
   return (
-    <Box sx={{ p: { xs: 2, md: 4 } }}>
-      {/* Header */}
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="overline" sx={{ color: COLOR, fontWeight: 700, letterSpacing: 1.5 }}>LMO OFFICER PORTAL</Typography>
-        <Typography variant="h4" sx={{ fontWeight: 900, color: '#1A1A2E', lineHeight: 1.2 }}>Officer Dashboard</Typography>
-        <Typography variant="body2" sx={{ color: '#757575', mt: 0.5 }}>Jurisdiction: Delhi North — {userEmail}</Typography>
+    <Box sx={{ pb: 4 }}>
+      {/* ── Top Header Banner ── */}
+      <Box
+        sx={{
+          mb: 4,
+          p: { xs: 2.5, sm: 3.5 },
+          bgcolor: '#FFFFFF',
+          borderRadius: '20px',
+          border: '1.5px solid #E2E8F0',
+          boxShadow: '0 4px 20px -2px rgba(15, 23, 42, 0.04)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: 2.5,
+        }}
+      >
+        <Box>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 0.5 }}>
+            <Chip
+              label="LEGAL METROLOGY OFFICIAL PORTAL"
+              size="small"
+              sx={{
+                bgcolor: '#F0FDF4',
+                color: '#15803D',
+                border: '1px solid #BBF7D0',
+                fontWeight: 800,
+                fontSize: '0.68rem',
+                borderRadius: '6px',
+              }}
+            />
+            <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 600 }}>
+              Jurisdictional Enforcement &amp; Issuance
+            </Typography>
+          </Box>
+          <Typography
+            variant="h4"
+            sx={{
+              fontWeight: 900,
+              color: '#0F172A',
+              fontSize: { xs: '1.5rem', sm: '1.9rem' },
+              letterSpacing: '-0.02em',
+            }}
+          >
+            LMO Jurisdictional Dashboard
+          </Typography>
+          <Typography variant="body2" sx={{ color: '#64748B', mt: 0.5 }}>
+            Designated Officer: <strong style={{ color: '#0F172A' }}>{userEmail || 'lmo@example.com'}</strong> &nbsp;|&nbsp; Jurisdiction: <strong>Delhi North Division</strong>
+          </Typography>
+        </Box>
       </Box>
 
-      {/* Stats */}
-      <Grid container spacing={2.5} sx={{ mb: 4 }}>
-        {stats.map((s) => (
-          <Grid item xs={6} md={3} key={s.label}>
-            <Paper elevation={0} sx={{ p: 3, borderRadius: 3, border: '1px solid #E0E0E0', bgcolor: 'white' }}>
-              <Typography variant="h4" sx={{ fontWeight: 900, color: s.color }}>{s.value}</Typography>
-              <Typography variant="body2" sx={{ color: '#757575', mt: 0.5, fontWeight: 500 }}>{s.label}</Typography>
-            </Paper>
-          </Grid>
-        ))}
-      </Grid>
-
-      <Grid container spacing={3}>
-        {/* Pending Applications Queue */}
-        <Grid item xs={12} lg={8}>
-          <Paper elevation={0} sx={{ borderRadius: 3, border: '1px solid #E0E0E0', overflow: 'hidden' }}>
-            <Box sx={{ p: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <PendingActionsIcon sx={{ color: COLOR }} />
-                <Typography variant="h6" sx={{ fontWeight: 700 }}>Pending Applications</Typography>
-              </Box>
-              <Chip label="Action Required" size="small" sx={{ bgcolor: '#FFEBEE', color: '#B71C1C', fontWeight: 700 }} />
-            </Box>
-            <Divider />
-            <Box sx={{ overflowX: 'auto' }}>
-              <Table>
-                <TableHead>
-                  <TableRow sx={{ bgcolor: '#FAFAFA' }}>
-                    {['ID', 'Applicant', 'Instrument', 'Priority', 'Status', 'Actions'].map(h => (
-                      <TableCell key={h} sx={{ fontWeight: 700, color: '#424242', fontSize: '0.8rem' }}>{h}</TableCell>
-                    ))}
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {applications2.map(app => (
-                    <TableRow key={app.id} hover>
-                      <TableCell sx={{ fontWeight: 600, color: COLOR, fontSize: '0.8rem' }}>{app.id}</TableCell>
-                      <TableCell sx={{ fontSize: '0.85rem', fontWeight: 600 }}>{app.applicant}</TableCell>
-                      <TableCell sx={{ fontSize: '0.8rem', color: '#616161' }}>{app.instrument}</TableCell>
-                      <TableCell>
-                        <Chip label={app.priority} size="small" sx={{ bgcolor: priorityColor[app.priority]?.bg, color: priorityColor[app.priority]?.color, fontWeight: 700, fontSize: '0.7rem' }} />
-                      </TableCell>
-                      <TableCell>
-                        <Chip label={app.status} size="small" sx={{ bgcolor: statusColor[app.status]?.bg || '#E8F5E9', color: statusColor[app.status]?.color || '#2E7D32', fontWeight: 600, fontSize: '0.7rem' }} />
-                      </TableCell>
-                      <TableCell>
-                        {(app.status === 'Pending' || app.status === 'Under Inspection') && (
-                          <Box sx={{ display: 'flex', gap: 0.5 }}>
-                            <Tooltip title="Approve">
-                              <IconButton size="small" onClick={() => handleAction(app.id, 'approve')} sx={{ color: '#2E7D32', '&:hover': { bgcolor: '#E8F5E9' } }}>
-                                <CheckCircleIcon fontSize="small" />
-                              </IconButton>
-                            </Tooltip>
-                            <Tooltip title="Reject">
-                              <IconButton size="small" onClick={() => handleAction(app.id, 'reject')} sx={{ color: '#B71C1C', '&:hover': { bgcolor: '#FFEBEE' } }}>
-                                <CancelIcon fontSize="small" />
-                              </IconButton>
-                            </Tooltip>
-                            <Tooltip title="View Details">
-                              <IconButton size="small" sx={{ color: '#1565C0', '&:hover': { bgcolor: '#E3F2FD' } }}>
-                                <VisibilityIcon fontSize="small" />
-                              </IconButton>
-                            </Tooltip>
-                          </Box>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </Box>
-          </Paper>
-        </Grid>
-
-        {/* Field Officers Panel */}
-        <Grid item xs={12} lg={4}>
-          <Paper elevation={0} sx={{ borderRadius: 3, border: '1px solid #E0E0E0', overflow: 'hidden' }}>
-            <Box sx={{ p: 3, display: 'flex', alignItems: 'center', gap: 1 }}>
-              <GroupIcon sx={{ color: COLOR }} />
-              <Typography variant="h6" sx={{ fontWeight: 700 }}>Field Officers</Typography>
-            </Box>
-            <Divider />
-            <Box sx={{ p: 2 }}>
-              {officers.map((o) => (
-                <Box key={o.id} sx={{ p: 2, mb: 1.5, borderRadius: 2, bgcolor: '#F9FBE7', border: '1px solid #C5E1A5' }}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Avatar sx={{ width: 32, height: 32, bgcolor: COLOR, fontSize: '0.75rem', fontWeight: 700 }}>
-                        {o.name.charAt(0)}
-                      </Avatar>
-                      <Box>
-                        <Typography variant="body2" sx={{ fontWeight: 700, color: '#1A1A2E', lineHeight: 1 }}>{o.name}</Typography>
-                        <Typography variant="caption" sx={{ color: '#757575' }}>{o.id}</Typography>
-                      </Box>
-                    </Box>
-                    <Chip label={o.status} size="small" sx={{ bgcolor: o.status === 'Active' ? '#E8F5E9' : '#FFF3E0', color: o.status === 'Active' ? '#2E7D32' : '#E65100', fontWeight: 600, fontSize: '0.65rem' }} />
-                  </Box>
-                  <Box sx={{ display: 'flex', gap: 2 }}>
-                    <Typography variant="caption" sx={{ color: '#616161' }}>Assigned: <strong>{o.assigned}</strong></Typography>
-                    <Typography variant="caption" sx={{ color: '#616161' }}>Completed: <strong>{o.completed}</strong></Typography>
-                  </Box>
+      {/* ── 4 KPI Stats Grid ── */}
+      <Box
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', lg: 'repeat(4, 1fr)' },
+          gap: 2.5,
+          mb: 4,
+        }}
+      >
+        {stats.map((s) => {
+          const Icon = s.icon;
+          return (
+            <Paper
+              key={s.label}
+              elevation={0}
+              sx={{
+                p: 3,
+                borderRadius: '18px',
+                border: '1.5px solid #E2E8F0',
+                bgcolor: '#FFFFFF',
+                boxShadow: '0 4px 16px -2px rgba(15, 23, 42, 0.04)',
+                transition: 'transform 0.2s, box-shadow 0.2s',
+                '&:hover': {
+                  transform: 'translateY(-3px)',
+                  boxShadow: '0 12px 24px -6px rgba(15, 23, 42, 0.08)',
+                },
+              }}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 2 }}>
+                <Box
+                  sx={{
+                    width: 48,
+                    height: 48,
+                    borderRadius: '14px',
+                    bgcolor: s.bg,
+                    border: `1px solid ${s.border}`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: s.color,
+                  }}
+                >
+                  <Icon sx={{ fontSize: 24 }} />
                 </Box>
-              ))}
+                <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 600, fontSize: '0.72rem' }}>
+                  {s.detail}
+                </Typography>
+              </Box>
+
+              <Typography
+                variant="h3"
+                sx={{
+                  fontWeight: 900,
+                  color: '#0F172A',
+                  fontSize: '2.1rem',
+                  lineHeight: 1.1,
+                  mb: 0.5,
+                  letterSpacing: '-0.02em',
+                }}
+              >
+                {s.value}
+              </Typography>
+              <Typography variant="body2" sx={{ color: '#64748B', fontWeight: 600, fontSize: '0.88rem' }}>
+                {s.label}
+              </Typography>
+            </Paper>
+          );
+        })}
+      </Box>
+
+      {/* ── Main Split Section: Pending Queue & Field Officers ── */}
+      <Box
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: { xs: '1fr', lg: '2.3fr 1fr' },
+          gap: 3.5,
+        }}
+      >
+        {/* Pending Applications Queue */}
+        <Paper
+          elevation={0}
+          sx={{
+            borderRadius: '20px',
+            border: '1.5px solid #E2E8F0',
+            bgcolor: '#FFFFFF',
+            overflow: 'hidden',
+            boxShadow: '0 4px 16px -2px rgba(15, 23, 42, 0.04)',
+          }}
+        >
+          <Box
+            sx={{
+              p: 3,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              borderBottom: '1px solid #E2E8F0',
+            }}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+              <Box
+                sx={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: '10px',
+                  bgcolor: '#F0FDF4',
+                  color: '#15803D',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <PendingActionsRoundedIcon sx={{ fontSize: 20 }} />
+              </Box>
+              <Box>
+                <Typography variant="h6" sx={{ fontWeight: 800, color: '#0F172A', fontSize: '1.1rem' }}>
+                  Statutory Application Queue
+                </Typography>
+                <Typography variant="caption" sx={{ color: '#64748B' }}>
+                  Pending scrutiny, verification and field assignment
+                </Typography>
+              </Box>
             </Box>
-          </Paper>
-        </Grid>
-      </Grid>
+
+            <Chip
+              label="Statutory Scrutiny"
+              size="small"
+              sx={{
+                bgcolor: '#FFFBEB',
+                color: '#B45309',
+                border: '1px solid #FDE68A',
+                fontWeight: 700,
+                fontSize: '0.72rem',
+              }}
+            />
+          </Box>
+
+          <Box sx={{ overflowX: 'auto' }}>
+            <Table sx={{ minWidth: 640 }}>
+              <TableHead>
+                <TableRow sx={{ bgcolor: '#F8FAFC' }}>
+                  {['APP ID', 'APPLICANT / FIRM', 'INSTRUMENT DETAILS', 'PRIORITY', 'STATUS', 'ACTION'].map((h) => (
+                    <TableCell
+                      key={h}
+                      sx={{
+                        fontWeight: 800,
+                        fontSize: '0.72rem',
+                        color: '#475569',
+                        letterSpacing: '0.04em',
+                        py: 1.5,
+                      }}
+                    >
+                      {h}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {applications2.map((app) => (
+                  <TableRow
+                    key={app.id}
+                    hover
+                    sx={{
+                      '&:last-child td, &:last-child th': { border: 0 },
+                      transition: 'background-color 0.15s',
+                    }}
+                  >
+                    <TableCell sx={{ fontWeight: 800, color: '#15803D', fontSize: '0.84rem' }}>
+                      {app.id}
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: 700, color: '#0F172A', fontSize: '0.88rem' }}>
+                      {app.applicant}
+                    </TableCell>
+                    <TableCell sx={{ color: '#64748B', fontSize: '0.84rem' }}>
+                      {app.instrument}
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        label={app.priority}
+                        size="small"
+                        sx={{
+                          bgcolor: priorityColor[app.priority]?.bg,
+                          color: priorityColor[app.priority]?.color,
+                          border: `1px solid ${priorityColor[app.priority]?.border}`,
+                          fontWeight: 800,
+                          fontSize: '0.7rem',
+                          borderRadius: '6px',
+                        }}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        label={app.status}
+                        size="small"
+                        sx={{
+                          bgcolor: statusColor[app.status]?.bg || '#F0FDF4',
+                          color: statusColor[app.status]?.color || '#15803D',
+                          border: `1px solid ${statusColor[app.status]?.border || '#BBF7D0'}`,
+                          fontWeight: 700,
+                          fontSize: '0.7rem',
+                          borderRadius: '6px',
+                        }}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      {(app.status === 'Pending' || app.status === 'Under Inspection') ? (
+                        <Box sx={{ display: 'flex', gap: 0.75 }}>
+                          <Tooltip title="Approve & Issue Stamp">
+                            <IconButton
+                              size="small"
+                              onClick={() => handleAction(app.id, 'approve')}
+                              sx={{
+                                color: '#15803D',
+                                bgcolor: '#F0FDF4',
+                                border: '1px solid #BBF7D0',
+                                borderRadius: '8px',
+                                p: 0.7,
+                                '&:hover': { bgcolor: '#DCFCE7' },
+                              }}
+                            >
+                              <CheckCircleRoundedIcon sx={{ fontSize: 16 }} />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Reject Application">
+                            <IconButton
+                              size="small"
+                              onClick={() => handleAction(app.id, 'reject')}
+                              sx={{
+                                color: '#B91C1C',
+                                bgcolor: '#FEF2F2',
+                                border: '1px solid #FECACA',
+                                borderRadius: '8px',
+                                p: 0.7,
+                                '&:hover': { bgcolor: '#FEE2E2' },
+                              }}
+                            >
+                              <CancelRoundedIcon sx={{ fontSize: 16 }} />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Inspect Dossier">
+                            <IconButton
+                              size="small"
+                              sx={{
+                                color: '#0284C7',
+                                bgcolor: '#F0F9FF',
+                                border: '1px solid #BAE6FD',
+                                borderRadius: '8px',
+                                p: 0.7,
+                                '&:hover': { bgcolor: '#E0F2FE' },
+                              }}
+                            >
+                              <VisibilityRoundedIcon sx={{ fontSize: 16 }} />
+                            </IconButton>
+                          </Tooltip>
+                        </Box>
+                      ) : (
+                        <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 600 }}>
+                          Processed
+                        </Typography>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </Box>
+        </Paper>
+
+        {/* Field Officers Roster */}
+        <Paper
+          elevation={0}
+          sx={{
+            borderRadius: '20px',
+            border: '1.5px solid #E2E8F0',
+            bgcolor: '#FFFFFF',
+            overflow: 'hidden',
+            boxShadow: '0 4px 16px -2px rgba(15, 23, 42, 0.04)',
+          }}
+        >
+          <Box
+            sx={{
+              p: 3,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              borderBottom: '1px solid #E2E8F0',
+            }}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
+              <GroupRoundedIcon sx={{ color: COLOR, fontSize: 22 }} />
+              <Typography variant="h6" sx={{ fontWeight: 800, color: '#0F172A', fontSize: '1.05rem' }}>
+                Field Inspectors
+              </Typography>
+            </Box>
+            <Chip
+              label="3 Active"
+              size="small"
+              sx={{ bgcolor: '#F0FDF4', color: '#15803D', fontWeight: 700, fontSize: '0.68rem' }}
+            />
+          </Box>
+
+          <Box sx={{ p: 2.5, display: 'flex', flexDirection: 'column', gap: 1.75 }}>
+            {officers.map((o) => (
+              <Box
+                key={o.id}
+                sx={{
+                  p: 2,
+                  borderRadius: '14px',
+                  bgcolor: '#F8FAFC',
+                  border: '1px solid #E2E8F0',
+                }}
+              >
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
+                    <Avatar
+                      sx={{
+                        width: 34,
+                        height: 34,
+                        bgcolor: '#15803D',
+                        color: '#FFFFFF',
+                        fontSize: '0.8rem',
+                        fontWeight: 800,
+                      }}
+                    >
+                      {o.name.charAt(0)}
+                    </Avatar>
+                    <Box>
+                      <Typography variant="body2" sx={{ fontWeight: 700, color: '#0F172A', lineHeight: 1.2 }}>
+                        {o.name}
+                      </Typography>
+                      <Typography variant="caption" sx={{ color: '#64748B' }}>
+                        ID: {o.id}
+                      </Typography>
+                    </Box>
+                  </Box>
+                  <Chip
+                    label={o.status}
+                    size="small"
+                    sx={{
+                      bgcolor: o.status === 'Active' ? '#F0FDF4' : '#FFFBEB',
+                      color: o.status === 'Active' ? '#15803D' : '#B45309',
+                      border: `1px solid ${o.status === 'Active' ? '#BBF7D0' : '#FDE68A'}`,
+                      fontWeight: 700,
+                      fontSize: '0.68rem',
+                      borderRadius: '6px',
+                    }}
+                  />
+                </Box>
+
+                <Box
+                  sx={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    pt: 1,
+                    borderTop: '1px solid #E2E8F0',
+                  }}
+                >
+                  <Typography variant="caption" sx={{ color: '#64748B' }}>
+                    Assigned Today: <strong style={{ color: '#0F172A' }}>{o.assigned}</strong>
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: '#64748B' }}>
+                    Completed: <strong style={{ color: '#15803D' }}>{o.completed}</strong>
+                  </Typography>
+                </Box>
+              </Box>
+            ))}
+          </Box>
+        </Paper>
+      </Box>
     </Box>
   );
 }
