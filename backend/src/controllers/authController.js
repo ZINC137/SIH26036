@@ -127,7 +127,16 @@ const login = async (req, res) => {
       return res.status(400).json({ error: 'Email and password are required' });
     }
 
-    const user = await prisma.user.findUnique({ where: { email } });
+    // Find user with specialized profiles
+    const user = await prisma.user.findUnique({
+      where: { email },
+      include: {
+        adminProfile: true,
+        lmoProfile: true,
+        fieldOfficerProfile: true,
+        profile: true,
+      },
+    });
 
     // 1. Check if user account is locked
     if (user && user.lockout_until && new Date() < user.lockout_until) {
@@ -163,6 +172,18 @@ const login = async (req, res) => {
     }
 
     // 4. Handle success
+    if (user.status === 'SUSPENDED') {
+      return res.status(403).json({ error: 'Account suspended. Contact the State Directorate Admin.' });
+    }
+
+    if (user.status === 'PENDING_VERIFICATION') {
+      return res.status(403).json({ error: 'Your officer dossier is awaiting Central Admin HRMS & Vigilance Clearance.' });
+    }
+
+    if (user.status === 'PENDING_ACTIVATION') {
+      return res.status(403).json({ error: 'Account clearance granted! First-time activation is required using your activation token.' });
+    }
+
     if (!user.is_verified) {
       return res.status(403).json({ error: 'Please verify your email before logging in' });
     }
@@ -175,6 +196,11 @@ const login = async (req, res) => {
         lockout_until: null,
       },
     });
+
+    // Extract specialized metadata from the appropriate profile table
+    const employeeCode = user.adminProfile?.employeeCode || user.lmoProfile?.employeeCode || user.fieldOfficerProfile?.employeeCode || null;
+    const assignedJurisdiction = user.adminProfile?.department || user.lmoProfile?.assignedJurisdiction || user.fieldOfficerProfile?.circleZone || null;
+    const dscKeyId = user.lmoProfile?.dscKeyId || null;
 
     // Generate JWT
     const token = jwt.sign(
@@ -193,8 +219,18 @@ const login = async (req, res) => {
 
     return res.status(200).json({ 
       message: 'Logged in successfully',
-      user: { id: user.id, email: user.email, role: user.role }
+      token,
+      user: { 
+        id: user.id, 
+        email: user.email, 
+        role: user.role,
+        status: user.status,
+        employeeCode,
+        assignedJurisdiction,
+        dscKeyId,
+      }
     });
+
   } catch (error) {
     console.error('Login error:', error);
     return res.status(500).json({ error: 'Internal Server Error' });
@@ -215,9 +251,31 @@ const me = async (req, res) => {
   try {
     const user = await prisma.user.findUnique({
       where: { id: req.user.id },
-      include: { profile: true },
+      include: {
+        adminProfile: true,
+        lmoProfile: true,
+        fieldOfficerProfile: true,
+        profile: true,
+      },
     });
-    return res.status(200).json({ user: { id: user.id, email: user.email, profile: user.profile } });
+
+    const employeeCode = user.adminProfile?.employeeCode || user.lmoProfile?.employeeCode || user.fieldOfficerProfile?.employeeCode || null;
+    const assignedJurisdiction = user.adminProfile?.department || user.lmoProfile?.assignedJurisdiction || user.fieldOfficerProfile?.circleZone || null;
+    const dscKeyId = user.lmoProfile?.dscKeyId || null;
+
+    return res.status(200).json({ 
+      user: { 
+        id: user.id, 
+        email: user.email, 
+        role: user.role,
+        status: user.status,
+        employeeCode,
+        assignedJurisdiction,
+        dscKeyId,
+        profile: user.profile || user.adminProfile || user.lmoProfile || user.fieldOfficerProfile,
+      } 
+    });
+
   } catch (error) {
     return res.status(500).json({ error: 'Internal Server Error' });
   }
@@ -255,11 +313,112 @@ const saveProfile = async (req, res) => {
   }
 };
 
+// First-time Field Officer Activation with Admin-issued single-use token
+const activateFieldOfficer = async (req, res) => {
+  try {
+    const { email, activationToken, newPassword } = req.body;
+
+    if (!email || !activationToken || !newPassword) {
+      return res.status(400).json({ error: 'Official email, single-use activation token, and new password are required.' });
+    }
+
+    if (newPassword.length < 12) {
+      return res.status(400).json({ error: 'Password must be at least 12 characters long.' });
+    }
+
+    const user = await prisma.user.findFirst({
+      where: {
+        email: email.toLowerCase(),
+        role: 'field_officer',
+      },
+      include: { fieldOfficerProfile: true },
+    });
+
+    if (!user || !user.fieldOfficerProfile) {
+      return res.status(404).json({ error: 'No Field Officer profile found with this email address.' });
+    }
+
+    if (!user.fieldOfficerProfile.activationToken || user.fieldOfficerProfile.activationToken.trim().toUpperCase() !== activationToken.trim().toUpperCase()) {
+      return res.status(400).json({ error: 'Invalid or expired activation token. Please verify with Central Admin.' });
+    }
+
+    // Hash permanent password
+    const password_hash = await argon2.hash(newPassword, {
+      type: argon2.argon2id,
+      memoryCost: 2 ** 16,
+      hashLength: 50,
+    });
+
+    // Activate officer in User and clear activationToken in FieldOfficerProfile
+    await prisma.$transaction([
+      prisma.user.update({
+        where: { id: user.id },
+        data: {
+          password_hash,
+          status: 'ACTIVE',
+          is_verified: true,
+        },
+      }),
+      prisma.fieldOfficerProfile.update({
+        where: { user_id: user.id },
+        data: {
+          activationToken: null,
+          activatedAt: new Date(),
+        },
+      }),
+    ]);
+
+    // Audit log
+    await prisma.auditLog.create({
+      data: {
+        action: 'FIELD_OFFICER_ACTIVATED',
+        actor: user.email,
+        target: user.email,
+        details: `Field Officer ${user.fieldOfficerProfile.full_name} (${user.fieldOfficerProfile.employeeCode}) completed first-time token activation.`,
+      },
+    });
+
+    // Session token
+    const token = jwt.sign(
+      { id: user.id, email: user.email, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: '1d' }
+    );
+
+    res.cookie('sessionId', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'Lax',
+      maxAge: 24 * 60 * 60 * 1000,
+    });
+
+    return res.status(200).json({
+      message: 'Account successfully activated.',
+      token,
+      user: {
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        status: 'ACTIVE',
+        employeeCode: user.fieldOfficerProfile.employeeCode,
+        assignedJurisdiction: user.fieldOfficerProfile.circleZone,
+      },
+    });
+  } catch (error) {
+    console.error('Officer activation error:', error);
+    return res.status(500).json({ error: 'Internal Server Error during officer activation.' });
+  }
+};
+
+
+
 module.exports = {
   register,
   verify,
   login,
   logout,
   me,
-  saveProfile
+  saveProfile,
+  activateFieldOfficer,
 };
+

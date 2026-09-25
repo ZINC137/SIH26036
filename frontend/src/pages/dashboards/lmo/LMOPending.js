@@ -44,13 +44,27 @@ export default function LMOPending() {
 
   return (
     <Box sx={{ p: { xs: 2, md: 4 } }}>
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="overline" sx={{ color: COLOR, fontWeight: 700, letterSpacing: 1.5 }}>LMO PORTAL</Typography>
-        <Typography variant="h4" sx={{ fontWeight: 900, color: '#1A1A2E' }}>Pending Applications Queue</Typography>
-        <Typography variant="body2" sx={{ color: '#757575', mt: 0.5 }}>
-          {apps.filter(a => a.status === 'Pending').length} applications awaiting your review
-        </Typography>
+      <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 2 }}>
+        <Box>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1, flexWrap: 'wrap' }}>
+            <Chip
+              label="JURISDICTION LOCK: DELHI NORTH DIVISION"
+              size="small"
+              sx={{ bgcolor: '#E8F5E9', color: COLOR, fontWeight: 800, fontSize: '0.7rem' }}
+            />
+            <Chip
+              label="DSC: DSC-DL-2026-SHA256 [CLASS-3 ACTIVE]"
+              size="small"
+              sx={{ bgcolor: '#E3F2FD', color: '#1565C0', fontWeight: 700, fontSize: '0.7rem' }}
+            />
+          </Box>
+          <Typography variant="h4" sx={{ fontWeight: 900, color: '#1A1A2E' }}>Pending Applications Queue</Typography>
+          <Typography variant="body2" sx={{ color: '#757575', mt: 0.5 }}>
+            Geofenced territorial review &amp; Class-3 digital stamping for North Delhi jurisdiction. ({apps.filter(a => a.status === 'Pending').length} pending)
+          </Typography>
+        </Box>
       </Box>
+
 
       <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap' }}>
         <TextField

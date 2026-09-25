@@ -3,6 +3,8 @@ const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const dotenv = require('dotenv');
 const authRoutes = require('./routes/auth');
+const adminRoutes = require('./routes/admin');
+const lmoRoutes = require('./routes/lmo');
 
 dotenv.config();
 
@@ -18,6 +20,9 @@ app.use(cors({
 
 // Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/lmo', lmoRoutes);
+
 
 // Global Error Handler
 app.use((err, req, res, next) => {

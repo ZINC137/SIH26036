@@ -22,6 +22,7 @@ import HourglassTopRoundedIcon from '@mui/icons-material/HourglassTopRounded';
 import CalendarMonthRoundedIcon from '@mui/icons-material/CalendarMonthRounded';
 import { useNavigate } from 'react-router-dom';
 
+
 const COLOR = '#7E22CE';
 const GRADIENT = 'linear-gradient(135deg, #A855F7 0%, #7E22CE 100%)';
 
@@ -75,7 +76,7 @@ export default function FieldOfficerDashboard({ userEmail }) {
         }}
       >
         <Box>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 0.5 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 0.5, flexWrap: 'wrap' }}>
             <Chip
               label="ON-GROUND INSPECTION STAFF"
               size="small"
@@ -88,9 +89,19 @@ export default function FieldOfficerDashboard({ userEmail }) {
                 borderRadius: '6px',
               }}
             />
-            <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 600 }}>
-              GPS-Geotagged Verification Roster
-            </Typography>
+            <Chip
+              icon={<CheckCircleRoundedIcon sx={{ fontSize: '13px !important' }} />}
+              label="GEOFENCE UNLOCKED: KAROL BAGH CIRCLE"
+              size="small"
+              sx={{
+                bgcolor: '#F0FDF4',
+                color: '#15803D',
+                border: '1px solid #BBF7D0',
+                fontWeight: 800,
+                fontSize: '0.68rem',
+                borderRadius: '6px',
+              }}
+            />
           </Box>
           <Typography
             variant="h4"
@@ -104,9 +115,10 @@ export default function FieldOfficerDashboard({ userEmail }) {
             Field Inspector Operations
           </Typography>
           <Typography variant="body2" sx={{ color: '#64748B', mt: 0.5 }}>
-            Field Officer: <strong style={{ color: '#0F172A' }}>{userEmail || 'inspector@example.com'}</strong> &nbsp;|&nbsp; Operating Zone: <strong>Delhi Central</strong>
+            Field Officer: <strong style={{ color: '#0F172A' }}>{userEmail || 'anjali@example.com'}</strong> &nbsp;|&nbsp; Operating Circle: <strong>Karol Bagh Circle (Pin: 110005)</strong> &nbsp;|&nbsp; Recommending LMO: <strong>Shri Rajesh Kumar</strong>
           </Typography>
         </Box>
+
 
         <Button
           variant="contained"

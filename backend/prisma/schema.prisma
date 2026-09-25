@@ -8,19 +8,86 @@ datasource db {
 }
 
 model User {
-  id                            String        @id @default(uuid())
-  email                         String        @unique
-  role                          String        @default("user")
+  id                            String                @id @default(uuid())
+  email                         String                @unique
+  role                          String                @default("user") // 'admin' | 'lmo' | 'field_officer' | 'user'
+  status                        String                @default("ACTIVE") // ACTIVE | PENDING_VERIFICATION | PENDING_ACTIVATION | SUSPENDED | REJECTED
   password_hash                 String
-  is_verified                   Boolean       @default(false)
+  is_verified                   Boolean               @default(false)
   verification_token            String?
   verification_token_expires_at DateTime?
-  failed_login_attempts         Int           @default(0)
+  failed_login_attempts         Int                   @default(0)
   lockout_until                 DateTime?
-  created_at                    DateTime      @default(now())
-  updated_at                    DateTime      @updatedAt
+  created_at                    DateTime              @default(now())
+  updated_at                    DateTime              @updatedAt
+
+  // 1-to-1 Specialized Role Profiles
+  adminProfile                  AdminProfile?
+  lmoProfile                    LmoProfile?
+  fieldOfficerProfile           FieldOfficerProfile?
   profile                       UserProfile?
+
   applications                  Application[]
+}
+
+model LmoProfile {
+  id                    String   @id @default(uuid())
+  user_id               String   @unique
+  user                  User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  full_name             String
+  employeeCode          String   @unique
+  gazetteOrderRef       String
+  state                 String   @default("Delhi")
+  districtDivision      String   @default("North Delhi")
+  zoneSubDivision       String   @default("Zone 1")
+  assignedJurisdiction  String
+  dscKeyId              String   @unique
+  phone                 String?
+  appointedBy           String?  // Admin User ID or email
+  appointedAt           DateTime @default(now())
+  updated_at            DateTime @updatedAt
+}
+
+model FieldOfficerProfile {
+  id                    String    @id @default(uuid())
+  user_id               String    @unique
+  user                  User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  full_name             String
+  employeeCode          String    @unique
+  designation           String    @default("Field Verification Inspector")
+  circleZone            String
+  circlePincode         String    @default("110001")
+  activationToken       String?   // Single-use token issued upon clearance
+  phone                 String?
+  recommendingLmoId     String?   // Recommending LMO user ID
+  recommendingLmoName   String?
+  activatedAt           DateTime?
+  created_at            DateTime  @default(now())
+  updated_at            DateTime  @updatedAt
+}
+
+
+model AdminProfile {
+  id                    String   @id @default(uuid())
+  user_id               String   @unique
+  user                  User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  full_name             String
+  employeeCode          String?  @unique
+  clearanceLevel        String   @default("TIER_1_DIRECTORATE")
+  designation           String   @default("Super Administrator")
+  phone                 String?
+  department            String   @default("State Directorate of Legal Metrology")
+  created_at            DateTime @default(now())
+  updated_at            DateTime @updatedAt
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  action    String
+  actor     String
+  target    String?
+  details   String?
+  timestamp DateTime @default(now())
 }
 
 model Application {

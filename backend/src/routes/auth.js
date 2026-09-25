@@ -1,5 +1,5 @@
 const express = require('express');
-const { register, verify, login, logout, me, saveProfile } = require('../controllers/authController');
+const { register, verify, login, logout, me, saveProfile, activateFieldOfficer } = require('../controllers/authController');
 const { submitApplication, getMyApplications, getDashboardStats } = require('../controllers/applicationController');
 const { authRateLimiter } = require('../middleware/rateLimiter');
 const { authMiddleware } = require('../middleware/authMiddleware');
@@ -13,6 +13,8 @@ router.post('/register', register);
 router.get('/verify', verify);
 router.post('/login', login);
 router.post('/logout', logout);
+router.post('/field-officer/activate', activateFieldOfficer);
+
 
 // Protected routes
 router.get('/me', authMiddleware, me);

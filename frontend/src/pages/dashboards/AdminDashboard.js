@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Paper,
@@ -28,6 +29,9 @@ import WarningAmberRoundedIcon from '@mui/icons-material/WarningAmberRounded';
 import PersonAddRoundedIcon from '@mui/icons-material/PersonAddRounded';
 import RefreshRoundedIcon from '@mui/icons-material/RefreshRounded';
 import SecurityRoundedIcon from '@mui/icons-material/SecurityRounded';
+import GavelRoundedIcon from '@mui/icons-material/GavelRounded';
+import KeyRoundedIcon from '@mui/icons-material/KeyRounded';
+
 
 const COLOR = '#B91C1C';
 const GRADIENT = 'linear-gradient(135deg, #EF4444 0%, #B91C1C 100%)';
@@ -94,6 +98,7 @@ const systemHealth = [
 ];
 
 export default function AdminDashboard({ userEmail }) {
+  const navigate = useNavigate();
   const [maintenanceMode, setMaintenanceMode] = useState(false);
 
   return (
@@ -101,7 +106,7 @@ export default function AdminDashboard({ userEmail }) {
       {/* ── Top Header Banner ── */}
       <Box
         sx={{
-          mb: 4,
+          mb: 3,
           p: { xs: 2.5, sm: 3.5 },
           bgcolor: '#FFFFFF',
           borderRadius: '20px',
@@ -150,6 +155,15 @@ export default function AdminDashboard({ userEmail }) {
 
         {/* Maintenance Mode & Controls */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Button
+            variant="contained"
+            startIcon={<GavelRoundedIcon />}
+            onClick={() => navigate('/dashboard/admin/users')}
+            sx={{ background: GRADIENT, borderRadius: '12px', fontWeight: 700, px: 2.5 }}
+          >
+            Provisioning &amp; Clearances
+          </Button>
+
           <Box
             sx={{
               bgcolor: maintenanceMode ? '#FEF2F2' : '#F8FAFC',
@@ -187,6 +201,56 @@ export default function AdminDashboard({ userEmail }) {
           </Box>
         </Box>
       </Box>
+
+      {/* ── Government Identity & Credential Hierarchy Quick Action Banner ── */}
+      <Paper
+        elevation={0}
+        sx={{
+          mb: 4,
+          p: 2.5,
+          borderRadius: '18px',
+          background: 'linear-gradient(135deg, #0F2B4E 0%, #1E3A8A 100%)',
+          color: '#FFFFFF',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: 2,
+          boxShadow: '0 8px 24px -4px rgba(15, 43, 78, 0.25)',
+        }}
+      >
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Box sx={{ p: 1.5, bgcolor: 'rgba(255,255,255,0.1)', borderRadius: '14px' }}>
+            <KeyRoundedIcon sx={{ fontSize: 32, color: '#F59E0B' }} />
+          </Box>
+          <Box>
+            <Typography variant="subtitle1" sx={{ fontWeight: 800, color: '#FFFFFF', letterSpacing: '-0.01em' }}>
+              Multi-Tier Government Identity &amp; Credential Provisioning Hierarchy
+            </Typography>
+            <Typography variant="body2" sx={{ color: '#CBD5E1', fontSize: '0.88rem' }}>
+              Super Administrator commissions District LMOs (with Class-3 DSC) and clears Field Inspector security dossiers.
+            </Typography>
+          </Box>
+        </Box>
+        <Box sx={{ display: 'flex', gap: 1.5 }}>
+          <Button
+            variant="contained"
+            onClick={() => navigate('/dashboard/admin/users')}
+            sx={{
+              bgcolor: '#F59E0B',
+              color: '#0F172A',
+              fontWeight: 800,
+              borderRadius: '10px',
+              textTransform: 'none',
+              px: 2.5,
+              '&:hover': { bgcolor: '#D97706' },
+            }}
+          >
+            Review Clearances &amp; Commission LMO
+          </Button>
+        </Box>
+      </Paper>
+
 
       {/* Maintenance Mode Active Notice */}
       {maintenanceMode && (

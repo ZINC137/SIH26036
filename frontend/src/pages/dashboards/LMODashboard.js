@@ -86,7 +86,7 @@ export default function LMODashboard({ userEmail }) {
         }}
       >
         <Box>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 0.5 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 0.5, flexWrap: 'wrap' }}>
             <Chip
               label="LEGAL METROLOGY OFFICIAL PORTAL"
               size="small"
@@ -99,9 +99,30 @@ export default function LMODashboard({ userEmail }) {
                 borderRadius: '6px',
               }}
             />
-            <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 600 }}>
-              Jurisdictional Enforcement &amp; Issuance
-            </Typography>
+            <Chip
+              label="JURISDICTION LOCK: DELHI NORTH DIVISION"
+              size="small"
+              sx={{
+                bgcolor: '#DCFCE7',
+                color: '#166534',
+                border: '1px solid #86EFAC',
+                fontWeight: 800,
+                fontSize: '0.68rem',
+                borderRadius: '6px',
+              }}
+            />
+            <Chip
+              label="DSC: DSC-DL-2026-SHA256 [CLASS-3 ACTIVE]"
+              size="small"
+              sx={{
+                bgcolor: '#EFF6FF',
+                color: '#1D4ED8',
+                border: '1px solid #BFDBFE',
+                fontWeight: 700,
+                fontSize: '0.68rem',
+                borderRadius: '6px',
+              }}
+            />
           </Box>
           <Typography
             variant="h4"
@@ -115,10 +136,11 @@ export default function LMODashboard({ userEmail }) {
             LMO Jurisdictional Dashboard
           </Typography>
           <Typography variant="body2" sx={{ color: '#64748B', mt: 0.5 }}>
-            Designated Officer: <strong style={{ color: '#0F172A' }}>{userEmail || 'lmo@example.com'}</strong> &nbsp;|&nbsp; Jurisdiction: <strong>Delhi North Division</strong>
+            Designated Officer: <strong style={{ color: '#0F172A' }}>{userEmail || 'rajesh@example.com'}</strong> &nbsp;|&nbsp; Gazette Order: <strong>GOV/NOTIF/2026/89</strong> &nbsp;|&nbsp; Territorial Boundary: <strong>Delhi North Division (Zone 1 &amp; 2)</strong>
           </Typography>
         </Box>
       </Box>
+
 
       {/* ── 4 KPI Stats Grid ── */}
       <Box
