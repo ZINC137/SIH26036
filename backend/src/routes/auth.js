@@ -24,4 +24,3 @@ router.get('/applications', authMiddleware, getMyApplications);
 router.get('/dashboard-stats', authMiddleware, getDashboardStats);
 
 module.exports = router;
-
