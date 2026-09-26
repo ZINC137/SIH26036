@@ -2,6 +2,10 @@ const express = require('express');
 const {
   nominateOfficer,
   getOfficers,
+  getLmoApplications,
+  getLmoStats,
+  assignFieldOfficer,
+  reviewApplication,
 } = require('../controllers/lmoController');
 const { authMiddleware, requireRole } = require('../middleware/authMiddleware');
 
@@ -15,5 +19,11 @@ router.post('/officer/nominate', nominateOfficer);
 
 // Get Field Officers in Jurisdiction
 router.get('/officers', getOfficers);
+
+// Applications Queue & Management
+router.get('/applications', getLmoApplications);
+router.get('/stats', getLmoStats);
+router.post('/applications/:id/assign', assignFieldOfficer);
+router.post('/applications/:id/review', reviewApplication);
 
 module.exports = router;

@@ -127,9 +127,11 @@ const login = async (req, res) => {
       return res.status(400).json({ error: 'Email and password are required' });
     }
 
+    const normalizedEmail = (email || '').toLowerCase().trim();
+
     // Find user with specialized profiles
     const user = await prisma.user.findUnique({
-      where: { email },
+      where: { email: normalizedEmail },
       include: {
         adminProfile: true,
         lmoProfile: true,

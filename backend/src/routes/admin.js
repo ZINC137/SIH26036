@@ -7,6 +7,7 @@ const {
   getAuditLogs,
   getAllUsers,
   updateUserStatus,
+  getAdminAnalytics,
 } = require('../controllers/adminController');
 const { authMiddleware, requireRole } = require('../middleware/authMiddleware');
 
@@ -26,6 +27,9 @@ router.post('/officers/clear', clearInspector);
 
 // System security audit logs
 router.get('/audit-logs', getAuditLogs);
+
+// System analytics & metrics
+router.get('/analytics', getAdminAnalytics);
 
 // System user management
 router.get('/users', getAllUsers);

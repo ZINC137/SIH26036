@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Paper,
@@ -12,6 +12,9 @@ import {
   TableRow,
   IconButton,
   Tooltip,
+  CircularProgress,
+  Button,
+  Alert,
 } from '@mui/material';
 import CheckCircleRoundedIcon from '@mui/icons-material/CheckCircleRounded';
 import CancelRoundedIcon from '@mui/icons-material/CancelRounded';
@@ -21,29 +24,13 @@ import VisibilityRoundedIcon from '@mui/icons-material/VisibilityRounded';
 import VerifiedUserRoundedIcon from '@mui/icons-material/VerifiedUserRounded';
 import AssignmentTurnedInRoundedIcon from '@mui/icons-material/AssignmentTurnedInRounded';
 import HowToRegRoundedIcon from '@mui/icons-material/HowToRegRounded';
+import ArrowForwardRoundedIcon from '@mui/icons-material/ArrowForwardRounded';
+import RefreshRoundedIcon from '@mui/icons-material/RefreshRounded';
+import AssignmentIndIcon from '@mui/icons-material/AssignmentInd';
+import { useNavigate } from 'react-router-dom';
 
 const COLOR = '#15803D';
-
-const stats = [
-  { label: 'Pending Review Queue', value: '24', detail: 'Requires statutory scrutiny', icon: PendingActionsRoundedIcon, color: '#D97706', bg: '#FFFBEB', border: '#FDE68A' },
-  { label: 'Approved This Month', value: '87', detail: 'Certificates issued', icon: VerifiedUserRoundedIcon, color: '#16A34A', bg: '#F0FDF4', border: '#BBF7D0' },
-  { label: 'Field Inspections', value: '13', detail: 'Dispatched to officers', icon: AssignmentTurnedInRoundedIcon, color: '#0284C7', bg: '#EFF6FF', border: '#BFDBFE' },
-  { label: 'Officers In Jurisdiction', value: '6', detail: 'Delhi North Zone', icon: HowToRegRoundedIcon, color: '#7E22CE', bg: '#FAF5FF', border: '#E9D5FF' },
-];
-
-const applications = [
-  { id: 'APP-2026-019', applicant: 'Raj Traders', instrument: 'Platform Balance (200kg)', submitted: '20 Sep 2026', priority: 'High', status: 'Pending' },
-  { id: 'APP-2026-018', applicant: 'Gupta Mart', instrument: 'Weighing Scale (50kg)', submitted: '19 Sep 2026', priority: 'Normal', status: 'Pending' },
-  { id: 'APP-2026-017', applicant: 'Singh Fuels', instrument: 'Fuel Dispenser', submitted: '18 Sep 2026', priority: 'High', status: 'Under Inspection' },
-  { id: 'APP-2026-016', applicant: 'Patel Agro', instrument: 'Moisture Meter', submitted: '17 Sep 2026', priority: 'Normal', status: 'Pending' },
-  { id: 'APP-2026-015', applicant: 'Kumar Stores', instrument: 'Counter Scale (5kg)', submitted: '16 Sep 2026', priority: 'Low', status: 'Pending' },
-];
-
-const officers = [
-  { name: 'Suresh Verma', id: 'FO-001', assigned: 4, completed: 12, status: 'Active' },
-  { name: 'Meena Sharma', id: 'FO-002', assigned: 3, completed: 9, status: 'Active' },
-  { name: 'Ramesh Kumar', id: 'FO-003', assigned: 2, completed: 7, status: 'On Leave' },
-];
+const GRADIENT = 'linear-gradient(135deg, #16A34A 0%, #15803D 100%)';
 
 const priorityColor = {
   High: { color: '#B91C1C', bg: '#FEF2F2', border: '#FECACA' },
@@ -59,13 +46,105 @@ const statusColor = {
 };
 
 export default function LMODashboard({ userEmail }) {
-  const [applications2, setApplications2] = useState(applications);
+  const navigate = useNavigate();
+  const [stats, setStats] = useState({
+    pending: 0,
+    underInspection: 0,
+    approved: 0,
+    rejected: 0,
+    officers: 0,
+    total: 0,
+  });
+  const [applications, setApplications] = useState([]);
+  const [officers, setOfficers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [feedback, setFeedback] = useState('');
 
-  const handleAction = (id, action) => {
-    setApplications2((prev) =>
-      prev.map((a) => (a.id === id ? { ...a, status: action === 'approve' ? 'Approved' : 'Rejected' } : a))
-    );
+  const fetchDashboardData = async () => {
+    setLoading(true);
+    try {
+      const [statsRes, appsRes, officersRes] = await Promise.all([
+        fetch('http://localhost:5000/api/lmo/stats', { credentials: 'include' }),
+        fetch('http://localhost:5000/api/lmo/applications', { credentials: 'include' }),
+        fetch('http://localhost:5000/api/lmo/officers', { credentials: 'include' }),
+      ]);
+
+      const statsData = await statsRes.json();
+      const appsData = await appsRes.json();
+      const officersData = await officersRes.json();
+
+      if (statsData.stats) setStats(statsData.stats);
+      if (appsData.applications) setApplications(appsData.applications);
+      if (officersData.officers) setOfficers(officersData.officers);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
   };
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
+
+  const handleAction = async (id, action) => {
+    try {
+      const res = await fetch(`http://localhost:5000/api/lmo/applications/${id}/review`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          action,
+          notes: action === 'approve' ? 'Direct LMO Stamping Approval' : 'Rejected after territorial scrutiny.',
+        }),
+      });
+      if (res.ok) {
+        setFeedback(`Application ${action === 'approve' ? 'approved & certificate issued' : 'rejected'}.`);
+        fetchDashboardData();
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const statCards = [
+    {
+      label: 'Pending Review Queue',
+      value: stats.pending,
+      detail: 'Requires statutory scrutiny',
+      icon: PendingActionsRoundedIcon,
+      color: '#D97706',
+      bg: '#FFFBEB',
+      border: '#FDE68A',
+    },
+    {
+      label: 'Certificates Issued',
+      value: stats.approved,
+      detail: 'Passed on-site stamping',
+      icon: VerifiedUserRoundedIcon,
+      color: '#16A34A',
+      bg: '#F0FDF4',
+      border: '#BBF7D0',
+    },
+    {
+      label: 'Field Inspections Active',
+      value: stats.underInspection,
+      detail: 'Dispatched to officers',
+      icon: AssignmentTurnedInRoundedIcon,
+      color: '#0284C7',
+      bg: '#EFF6FF',
+      border: '#BFDBFE',
+    },
+    {
+      label: 'Officers In Jurisdiction',
+      value: officers.length,
+      detail: 'Delhi North Zone Staff',
+      icon: HowToRegRoundedIcon,
+      color: '#7E22CE',
+      bg: '#FAF5FF',
+      border: '#E9D5FF',
+    },
+  ];
 
   return (
     <Box sx={{ pb: 4 }}>
@@ -100,25 +179,13 @@ export default function LMODashboard({ userEmail }) {
               }}
             />
             <Chip
-              label="JURISDICTION LOCK: DELHI NORTH DIVISION"
-              size="small"
-              sx={{
-                bgcolor: '#DCFCE7',
-                color: '#166534',
-                border: '1px solid #86EFAC',
-                fontWeight: 800,
-                fontSize: '0.68rem',
-                borderRadius: '6px',
-              }}
-            />
-            <Chip
               label="DSC: DSC-DL-2026-SHA256 [CLASS-3 ACTIVE]"
               size="small"
               sx={{
                 bgcolor: '#EFF6FF',
                 color: '#1D4ED8',
                 border: '1px solid #BFDBFE',
-                fontWeight: 700,
+                fontWeight: 800,
                 fontSize: '0.68rem',
                 borderRadius: '6px',
               }}
@@ -133,14 +200,45 @@ export default function LMODashboard({ userEmail }) {
               letterSpacing: '-0.02em',
             }}
           >
-            LMO Jurisdictional Dashboard
+            District Metrology Directorate
           </Typography>
           <Typography variant="body2" sx={{ color: '#64748B', mt: 0.5 }}>
-            Designated Officer: <strong style={{ color: '#0F172A' }}>{userEmail || 'rajesh@example.com'}</strong> &nbsp;|&nbsp; Gazette Order: <strong>GOV/NOTIF/2026/89</strong> &nbsp;|&nbsp; Territorial Boundary: <strong>Delhi North Division (Zone 1 &amp; 2)</strong>
+            Officer-in-Charge: <strong style={{ color: '#0F172A' }}>{userEmail || 'rajesh@example.com'}</strong> &nbsp;|&nbsp; Jurisdiction: <strong>Delhi North Division</strong> &nbsp;|&nbsp; Gazette: <strong>GOV/NOTIF/2026/89</strong>
           </Typography>
+        </Box>
+
+        <Box sx={{ display: 'flex', gap: 1.5 }}>
+          <Button
+            variant="outlined"
+            startIcon={<RefreshRoundedIcon />}
+            onClick={fetchDashboardData}
+            sx={{ borderColor: '#E2E8F0', color: '#475569', fontWeight: 700 }}
+          >
+            Refresh
+          </Button>
+          <Button
+            variant="contained"
+            startIcon={<AssignmentIndIcon />}
+            onClick={() => navigate('/dashboard/lmo/pending')}
+            sx={{
+              background: GRADIENT,
+              color: '#FFFFFF',
+              borderRadius: '12px',
+              fontWeight: 700,
+              px: 3,
+              boxShadow: '0 6px 20px rgba(22, 163, 74, 0.25)',
+            }}
+          >
+            Manage Applications Queue
+          </Button>
         </Box>
       </Box>
 
+      {feedback && (
+        <Alert severity="success" sx={{ mb: 3, borderRadius: 2 }} onClose={() => setFeedback('')}>
+          {feedback}
+        </Alert>
+      )}
 
       {/* ── 4 KPI Stats Grid ── */}
       <Box
@@ -151,7 +249,7 @@ export default function LMODashboard({ userEmail }) {
           mb: 4,
         }}
       >
-        {stats.map((s) => {
+        {statCards.map((s) => {
           const Icon = s.icon;
           return (
             <Paper
@@ -202,7 +300,7 @@ export default function LMODashboard({ userEmail }) {
                   letterSpacing: '-0.02em',
                 }}
               >
-                {s.value}
+                {loading ? <CircularProgress size={24} sx={{ color: s.color }} /> : s.value}
               </Typography>
               <Typography variant="body2" sx={{ color: '#64748B', fontWeight: 600, fontSize: '0.88rem' }}>
                 {s.label}
@@ -260,22 +358,18 @@ export default function LMODashboard({ userEmail }) {
                   Statutory Application Queue
                 </Typography>
                 <Typography variant="caption" sx={{ color: '#64748B' }}>
-                  Pending scrutiny, verification and field assignment
+                  Real-time applications requiring territorial verification
                 </Typography>
               </Box>
             </Box>
 
-            <Chip
-              label="Statutory Scrutiny"
+            <Button
               size="small"
-              sx={{
-                bgcolor: '#FFFBEB',
-                color: '#B45309',
-                border: '1px solid #FDE68A',
-                fontWeight: 700,
-                fontSize: '0.72rem',
-              }}
-            />
+              onClick={() => navigate('/dashboard/lmo/pending')}
+              sx={{ color: COLOR, fontWeight: 700, fontSize: '0.78rem' }}
+            >
+              View All ({applications.length}) →
+            </Button>
           </Box>
 
           <Box sx={{ overflowX: 'auto' }}>
@@ -299,23 +393,26 @@ export default function LMODashboard({ userEmail }) {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {applications2.map((app) => (
-                  <TableRow
-                    key={app.id}
-                    hover
-                    sx={{
-                      '&:last-child td, &:last-child th': { border: 0 },
-                      transition: 'background-color 0.15s',
-                    }}
-                  >
-                    <TableCell sx={{ fontWeight: 800, color: '#15803D', fontSize: '0.84rem' }}>
-                      {app.id}
+                {applications.slice(0, 5).map((app) => (
+                  <TableRow key={app.id} hover sx={{ '&:last-child td': { border: 0 } }}>
+                    <TableCell sx={{ fontWeight: 800, color: '#0F172A', fontSize: '0.82rem', fontFamily: 'monospace' }}>
+                      {app.appNumber}
                     </TableCell>
-                    <TableCell sx={{ fontWeight: 700, color: '#0F172A', fontSize: '0.88rem' }}>
-                      {app.applicant}
+                    <TableCell>
+                      <Typography variant="body2" sx={{ fontWeight: 700, color: '#0F172A', fontSize: '0.86rem' }}>
+                        {app.applicant}
+                      </Typography>
+                      <Typography variant="caption" sx={{ color: '#64748B' }}>
+                        Submitted {app.submitted}
+                      </Typography>
                     </TableCell>
-                    <TableCell sx={{ color: '#64748B', fontSize: '0.84rem' }}>
-                      {app.instrument}
+                    <TableCell>
+                      <Typography variant="body2" sx={{ color: '#334155', fontWeight: 600, fontSize: '0.82rem' }}>
+                        {app.instrument}
+                      </Typography>
+                      <Typography variant="caption" sx={{ color: '#64748B' }}>
+                        S/N: {app.serial}
+                      </Typography>
                     </TableCell>
                     <TableCell>
                       <Chip
@@ -324,9 +421,8 @@ export default function LMODashboard({ userEmail }) {
                         sx={{
                           bgcolor: priorityColor[app.priority]?.bg,
                           color: priorityColor[app.priority]?.color,
-                          border: `1px solid ${priorityColor[app.priority]?.border}`,
                           fontWeight: 800,
-                          fontSize: '0.7rem',
+                          fontSize: '0.68rem',
                           borderRadius: '6px',
                         }}
                       />
@@ -336,24 +432,31 @@ export default function LMODashboard({ userEmail }) {
                         label={app.status}
                         size="small"
                         sx={{
-                          bgcolor: statusColor[app.status]?.bg || '#F0FDF4',
-                          color: statusColor[app.status]?.color || '#15803D',
-                          border: `1px solid ${statusColor[app.status]?.border || '#BBF7D0'}`,
-                          fontWeight: 700,
-                          fontSize: '0.7rem',
+                          bgcolor: statusColor[app.status]?.bg || '#F8FAFC',
+                          color: statusColor[app.status]?.color || '#475569',
+                          fontWeight: 800,
+                          fontSize: '0.68rem',
                           borderRadius: '6px',
                         }}
                       />
                     </TableCell>
                     <TableCell>
-                      {(app.status === 'Pending' || app.status === 'Under Inspection') ? (
-                        <Box sx={{ display: 'flex', gap: 0.75 }}>
-                          <Tooltip title="Approve & Issue Stamp">
+                      {app.status === 'Pending' ? (
+                        <Box sx={{ display: 'flex', gap: 1 }}>
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            onClick={() => navigate('/dashboard/lmo/pending')}
+                            sx={{ fontSize: '0.72rem', fontWeight: 700, color: '#7E22CE', borderColor: '#D8B4FE' }}
+                          >
+                            Assign FO
+                          </Button>
+                          <Tooltip title="Direct Stamping Clearance">
                             <IconButton
                               size="small"
                               onClick={() => handleAction(app.id, 'approve')}
                               sx={{
-                                color: '#15803D',
+                                color: '#16A34A',
                                 bgcolor: '#F0FDF4',
                                 border: '1px solid #BBF7D0',
                                 borderRadius: '8px',
@@ -364,46 +467,22 @@ export default function LMODashboard({ userEmail }) {
                               <CheckCircleRoundedIcon sx={{ fontSize: 16 }} />
                             </IconButton>
                           </Tooltip>
-                          <Tooltip title="Reject Application">
-                            <IconButton
-                              size="small"
-                              onClick={() => handleAction(app.id, 'reject')}
-                              sx={{
-                                color: '#B91C1C',
-                                bgcolor: '#FEF2F2',
-                                border: '1px solid #FECACA',
-                                borderRadius: '8px',
-                                p: 0.7,
-                                '&:hover': { bgcolor: '#FEE2E2' },
-                              }}
-                            >
-                              <CancelRoundedIcon sx={{ fontSize: 16 }} />
-                            </IconButton>
-                          </Tooltip>
-                          <Tooltip title="Inspect Dossier">
-                            <IconButton
-                              size="small"
-                              sx={{
-                                color: '#0284C7',
-                                bgcolor: '#F0F9FF',
-                                border: '1px solid #BAE6FD',
-                                borderRadius: '8px',
-                                p: 0.7,
-                                '&:hover': { bgcolor: '#E0F2FE' },
-                              }}
-                            >
-                              <VisibilityRoundedIcon sx={{ fontSize: 16 }} />
-                            </IconButton>
-                          </Tooltip>
                         </Box>
                       ) : (
                         <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 600 }}>
-                          Processed
+                          {app.assignedFoName ? `Assigned (${app.assignedFoName.split(' ')[1] || 'FO'})` : 'Completed'}
                         </Typography>
                       )}
                     </TableCell>
                   </TableRow>
                 ))}
+                {applications.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={6} sx={{ textAlign: 'center', py: 4, color: '#9E9E9E' }}>
+                      No pending applications in your jurisdiction.
+                    </TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
           </Box>
@@ -436,43 +515,53 @@ export default function LMODashboard({ userEmail }) {
               </Typography>
             </Box>
             <Chip
-              label="3 Active"
+              label={`${officers.filter((o) => o.status === 'Active').length} Active`}
               size="small"
               sx={{ bgcolor: '#F0FDF4', color: '#15803D', fontWeight: 700, fontSize: '0.68rem' }}
             />
           </Box>
 
           <Box sx={{ p: 2.5, display: 'flex', flexDirection: 'column', gap: 1.75 }}>
-            {officers.map((o) => (
-              <Box
-                key={o.id}
-                sx={{
-                  p: 2,
-                  borderRadius: '14px',
-                  bgcolor: '#F8FAFC',
-                  border: '1px solid #E2E8F0',
-                }}
-              >
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
+            {officers.length === 0 ? (
+              <Box sx={{ py: 3, textAlign: 'center' }}>
+                <Typography variant="body2" sx={{ color: '#64748B', fontWeight: 600, mb: 0.5 }}>
+                  No field inspectors registered yet.
+                </Typography>
+                <Typography variant="caption" sx={{ color: '#94A3B8' }}>
+                  Nominate inspectors to assign field inspection tasks.
+                </Typography>
+              </Box>
+            ) : (
+              officers.map((o) => (
+                <Box
+                  key={o.id}
+                  sx={{
+                    p: 2,
+                    borderRadius: '14px',
+                    bgcolor: '#F8FAFC',
+                    border: '1px solid #E2E8F0',
+                  }}
+                >
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
                     <Avatar
                       sx={{
                         width: 34,
                         height: 34,
-                        bgcolor: '#15803D',
-                        color: '#FFFFFF',
-                        fontSize: '0.8rem',
+                        bgcolor: '#EFF6FF',
+                        color: '#1D4ED8',
                         fontWeight: 800,
+                        fontSize: '0.8rem',
                       }}
                     >
-                      {o.name.charAt(0)}
+                      {o.name.split(' ').map((n) => n[0]).join('')}
                     </Avatar>
                     <Box>
-                      <Typography variant="body2" sx={{ fontWeight: 700, color: '#0F172A', lineHeight: 1.2 }}>
+                      <Typography variant="body2" sx={{ fontWeight: 800, color: '#0F172A', fontSize: '0.86rem' }}>
                         {o.name}
                       </Typography>
-                      <Typography variant="caption" sx={{ color: '#64748B' }}>
-                        ID: {o.id}
+                      <Typography variant="caption" sx={{ color: '#64748B', display: 'block', fontSize: '0.72rem' }}>
+                        {o.id} · {o.zone}
                       </Typography>
                     </Box>
                   </Box>
@@ -482,31 +571,22 @@ export default function LMODashboard({ userEmail }) {
                     sx={{
                       bgcolor: o.status === 'Active' ? '#F0FDF4' : '#FFFBEB',
                       color: o.status === 'Active' ? '#15803D' : '#B45309',
-                      border: `1px solid ${o.status === 'Active' ? '#BBF7D0' : '#FDE68A'}`,
-                      fontWeight: 700,
-                      fontSize: '0.68rem',
-                      borderRadius: '6px',
+                      fontWeight: 800,
+                      fontSize: '0.65rem',
+                      height: 20,
                     }}
                   />
                 </Box>
-
-                <Box
-                  sx={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    pt: 1,
-                    borderTop: '1px solid #E2E8F0',
-                  }}
-                >
-                  <Typography variant="caption" sx={{ color: '#64748B' }}>
-                    Assigned Today: <strong style={{ color: '#0F172A' }}>{o.assigned}</strong>
-                  </Typography>
-                  <Typography variant="caption" sx={{ color: '#64748B' }}>
-                    Completed: <strong style={{ color: '#15803D' }}>{o.completed}</strong>
-                  </Typography>
-                </Box>
               </Box>
-            ))}
+            )))}
+            <Button
+              fullWidth
+              variant="outlined"
+              onClick={() => navigate('/dashboard/lmo/officers')}
+              sx={{ mt: 1, borderColor: '#CBD5E1', color: '#475569', fontWeight: 700 }}
+            >
+              Nominate &amp; View All Officers
+            </Button>
           </Box>
         </Paper>
       </Box>

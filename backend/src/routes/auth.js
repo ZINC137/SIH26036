@@ -1,6 +1,12 @@
 const express = require('express');
 const { register, verify, login, logout, me, saveProfile, activateFieldOfficer } = require('../controllers/authController');
-const { submitApplication, getMyApplications, getDashboardStats } = require('../controllers/applicationController');
+const {
+  submitApplication,
+  getMyApplications,
+  getApplicationById,
+  getMyCertificates,
+  getDashboardStats,
+} = require('../controllers/applicationController');
 const { authRateLimiter } = require('../middleware/rateLimiter');
 const { authMiddleware } = require('../middleware/authMiddleware');
 
@@ -23,6 +29,8 @@ router.post('/profile', authMiddleware, saveProfile);
 // Application routes (protected)
 router.post('/applications', authMiddleware, submitApplication);
 router.get('/applications', authMiddleware, getMyApplications);
+router.get('/applications/:id', authMiddleware, getApplicationById);
+router.get('/certificates', authMiddleware, getMyCertificates);
 router.get('/dashboard-stats', authMiddleware, getDashboardStats);
 
 module.exports = router;

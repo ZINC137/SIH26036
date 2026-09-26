@@ -60,8 +60,8 @@ const PORTAL_CONFIG = {
     lightBg: '#F0FDF4',
     accentBorder: '#BBF7D0',
     hint: 'Restricted access for jurisdictional Legal Metrology Officers & State Regulators',
-    demoEmail: 'rajesh@example.com',
-    demoPass: 'LmoPassword123!',
+    demoEmail: 'lmo1@gov.in',
+    demoPass: 'LmoPassword2026!',
   },
   field_officer: {
     label: 'Field Officer Portal',

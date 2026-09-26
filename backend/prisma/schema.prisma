@@ -91,28 +91,60 @@ model AuditLog {
 }
 
 model Application {
-  id              String   @id @default(uuid())
-  app_number      String   @unique
-  user_id         String
-  user            User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  instrument_type String
-  make            String
-  model           String?
-  serial_no       String
-  capacity        String
-  unit            String
-  business_name   String
-  gst_no          String?
-  address         String
-  city            String
-  state           String
-  pincode         String
-  contact_name    String
-  contact_phone   String
-  contact_email   String
-  status          String   @default("Pending")
-  submitted_at    DateTime @default(now())
-  updated_at      DateTime @updatedAt
+  id                    String    @id @default(uuid())
+  app_number            String    @unique
+  user_id               String
+  user                  User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  instrument_type       String
+  make                  String
+  model                 String?
+  serial_no             String
+  capacity              String
+  unit                  String
+  accuracy_class        String?   @default("Class III (Medium Accuracy)")
+  business_name         String
+  trade_type            String?   @default("Commercial Trader")
+  gst_no                String?
+  address               String
+  city                  String
+  state                 String
+  pincode               String
+  contact_name          String
+  contact_phone         String
+  contact_email         String
+  priority              String    @default("Normal") // High | Normal | Low
+  fee_amount            Float     @default(500.0)
+  payment_status        String    @default("PAID") // PAID | PENDING
+  payment_ref           String?
+  status                String    @default("Pending") // Pending | Under Inspection | Approved | Rejected
+
+  // LMO & Field Officer Assignment
+  assigned_lmo_id       String?
+  assigned_fo_id        String?
+  assigned_fo_name      String?
+  assigned_fo_code      String?
+  assigned_at           DateTime?
+  scheduled_date        String?
+  scheduled_time        String?
+
+  // Inspection & Stamping Details
+  inspection_date       DateTime?
+  test_error_percentage Float?
+  environmental_temp    String?
+  test_readings         String?   // JSON representation of test points
+  security_seal_no      String?
+  inspection_notes      String?
+  inspection_result     String?   // Pass | Fail | Conditional
+  rejection_reason      String?
+
+  // Statutory Legal Metrology Certificate (Form D - Rule 11)
+  certificate_no        String?
+  certificate_issued_at DateTime?
+  certificate_valid_until DateTime?
+  stamped_by            String?
+
+  submitted_at          DateTime  @default(now())
+  updated_at            DateTime  @updatedAt
 }
 
 model UserProfile {

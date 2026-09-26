@@ -59,14 +59,14 @@ const NAV = {
   ],
   lmo: [
     { label: 'Dashboard',       icon: <DashboardIcon />,      path: '/dashboard/lmo' },
-    { label: 'Pending Queue',   icon: <PendingActionsIcon />, path: '/dashboard/lmo/pending', badge: '24' },
+    { label: 'Pending Queue',   icon: <PendingActionsIcon />, path: '/dashboard/lmo/pending' },
     { label: 'Field Officers',  icon: <GroupIcon />,          path: '/dashboard/lmo/officers' },
     { label: 'Issue Certificate', icon: <VerifiedIcon />,     path: '/dashboard/lmo/certificates' },
     { label: 'Settings',        icon: <SettingsIcon />,       path: '/dashboard/lmo/settings' },
   ],
   field_officer: [
     { label: 'Dashboard',        icon: <DashboardIcon />,  path: '/dashboard/field-officer' },
-    { label: "Today's Schedule", icon: <TodayIcon />,      path: '/dashboard/field-officer/schedule', badge: '4' },
+    { label: "Today's Schedule", icon: <TodayIcon />,      path: '/dashboard/field-officer/schedule' },
     { label: 'Submit Report',    icon: <UploadFileIcon />, path: '/dashboard/field-officer/report' },
     { label: 'Report History',   icon: <HistoryIcon />,    path: '/dashboard/field-officer/history' },
     { label: 'Settings',         icon: <SettingsIcon />,   path: '/dashboard/field-officer/settings' },
@@ -105,12 +105,56 @@ const theme = createTheme({
 });
 
 function App() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [userRole, setUserRole] = useState(null);
-  const [userEmail, setUserEmail] = useState('');
+  const [isLoggedIn, setIsLoggedIn] = useState(() => {
+    return localStorage.getItem('isLoggedIn') === 'true';
+  });
+  const [userRole, setUserRole] = useState(() => {
+    return localStorage.getItem('userRole') || null;
+  });
+  const [userEmail, setUserEmail] = useState(() => {
+    return localStorage.getItem('userEmail') || '';
+  });
 
-  const handleLogin = (role, email) => { setIsLoggedIn(true); setUserRole(role); setUserEmail(email); };
-  const handleLogout = () => { setIsLoggedIn(false); setUserRole(null); setUserEmail(''); };
+  // Check backend session on mount
+  React.useEffect(() => {
+    fetch('http://localhost:5000/api/auth/me', { credentials: 'include' })
+      .then((res) => {
+        if (res.ok) return res.json();
+        throw new Error('Unauthenticated');
+      })
+      .then((data) => {
+        if (data.user) {
+          setIsLoggedIn(true);
+          setUserRole(data.user.role);
+          setUserEmail(data.user.email);
+          localStorage.setItem('isLoggedIn', 'true');
+          localStorage.setItem('userRole', data.user.role);
+          localStorage.setItem('userEmail', data.user.email);
+        }
+      })
+      .catch(() => {
+        // Only reset if backend session is completely dead
+      });
+  }, []);
+
+  const handleLogin = (role, email) => {
+    setIsLoggedIn(true);
+    setUserRole(role);
+    setUserEmail(email);
+    localStorage.setItem('isLoggedIn', 'true');
+    localStorage.setItem('userRole', role);
+    localStorage.setItem('userEmail', email);
+  };
+
+  const handleLogout = () => {
+    fetch('http://localhost:5000/api/auth/logout', { method: 'POST', credentials: 'include' }).catch(() => {});
+    setIsLoggedIn(false);
+    setUserRole(null);
+    setUserEmail('');
+    localStorage.removeItem('isLoggedIn');
+    localStorage.removeItem('userRole');
+    localStorage.removeItem('userEmail');
+  };
 
   // Helper: wrap a route group in RoleLayout
   const portalLayout = (role) => (

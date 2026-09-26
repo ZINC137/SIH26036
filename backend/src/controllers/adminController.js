@@ -363,6 +363,52 @@ const updateUserStatus = async (req, res) => {
   }
 };
 
+// 8. Admin Analytics & State-Wide KPIs
+const getAdminAnalytics = async (req, res) => {
+  try {
+    const [
+      totalApps,
+      pendingApps,
+      inspectingApps,
+      approvedApps,
+      lmoCount,
+      foCount,
+      revenueResult,
+      recentApps,
+    ] = await Promise.all([
+      prisma.application.count(),
+      prisma.application.count({ where: { status: 'Pending' } }),
+      prisma.application.count({ where: { status: 'Under Inspection' } }),
+      prisma.application.count({ where: { status: 'Approved' } }),
+      prisma.user.count({ where: { role: 'lmo' } }),
+      prisma.user.count({ where: { role: 'field_officer', status: 'ACTIVE' } }),
+      prisma.application.aggregate({ _sum: { fee_amount: true } }),
+      prisma.application.findMany({
+        take: 5,
+        orderBy: { submitted_at: 'desc' },
+      }),
+    ]);
+
+    const totalRevenue = revenueResult._sum.fee_amount || 0;
+
+    return res.status(200).json({
+      analytics: {
+        totalApplications: totalApps,
+        pendingReview: pendingApps,
+        underInspection: inspectingApps,
+        certificatesIssued: approvedApps,
+        activeLMOs: lmoCount,
+        activeFieldOfficers: foCount,
+        revenueCollected: totalRevenue,
+        recentApplications: recentApps,
+      },
+    });
+  } catch (error) {
+    console.error('Admin analytics error:', error);
+    return res.status(500).json({ error: 'Failed to load analytics.' });
+  }
+};
+
 module.exports = {
   appointLMO,
   listLMOs,
@@ -371,5 +417,6 @@ module.exports = {
   getAuditLogs,
   getAllUsers,
   updateUserStatus,
+  getAdminAnalytics,
   recordAuditLog,
 };

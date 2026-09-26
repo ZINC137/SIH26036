@@ -17,16 +17,8 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 const COLOR = '#1B5E20';
 const GRADIENT = 'linear-gradient(135deg, #2E7D32, #1B5E20)';
 
-const INITIAL_OFFICERS = [
-  { id: 'FO-DEL-102', name: 'Inspector Anjali Singh', phone: '9876500002', email: 'anjali@example.com', zone: 'Karol Bagh Circle (Pin: 110005)', assigned: 4, completed: 38, monthly: 17, target: 20, status: 'Active', joined: 'Mar 2024' },
-  { id: 'FO-DEL-105', name: 'Inspector Vikram Malhotra', phone: '9876500005', email: 'vikram.fo@gov.in', zone: 'Rohini Sector 14 Circle (Pin: 110085)', assigned: 0, completed: 0, monthly: 0, target: 20, status: 'Pending Admin Clearance', joined: 'Sep 2026' },
-  { id: 'FO-DEL-106', name: 'Inspector Neha Joshi', phone: '9876500006', email: 'neha.fo@gov.in', zone: 'Chandni Chowk Zone (Pin: 110006)', assigned: 0, completed: 0, monthly: 0, target: 20, status: 'Activation Pending', joined: 'Aug 2026' },
-  { id: 'FO-DEL-001', name: 'Inspector Suresh Verma', phone: '9876500001', email: 'suresh@lm.gov.in', zone: 'Civil Lines Circle (Pin: 110054)', assigned: 4, completed: 42, monthly: 15, target: 20, status: 'Active', joined: 'Jan 2024' },
-  { id: 'FO-DEL-004', name: 'Inspector Anita Patel', phone: '9876500004', email: 'anita@lm.gov.in', zone: 'Narela Industrial Zone (Pin: 110040)', assigned: 2, completed: 51, monthly: 19, target: 20, status: 'Active', joined: 'Aug 2022' },
-];
-
 export default function LMOOfficers() {
-  const [officers, setOfficers] = useState(INITIAL_OFFICERS);
+  const [officers, setOfficers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [feedback, setFeedback] = useState({ type: '', message: '' });
 
@@ -51,9 +43,7 @@ export default function LMOOfficers() {
       const res = await fetch('http://localhost:5000/api/lmo/officers', { credentials: 'include' });
       if (res.ok) {
         const data = await res.json();
-        if (data.officers && data.officers.length > 0) {
-          setOfficers(data.officers);
-        }
+        setOfficers(data.officers || []);
       }
     } catch (err) {
       console.warn('LMO officers fetch fallback:', err);
@@ -232,7 +222,37 @@ export default function LMOOfficers() {
 
       {/* Grid of Officer Dossier Cards */}
       <Grid container spacing={3}>
-        {officers.map((o) => {
+        {officers.length === 0 ? (
+          <Grid item xs={12}>
+            <Paper
+              elevation={0}
+              sx={{
+                p: { xs: 4, md: 6 },
+                textAlign: 'center',
+                borderRadius: 3,
+                border: '1.5px dashed #CBD5E1',
+                bgcolor: '#F8FAFC',
+              }}
+            >
+              <SecurityIcon sx={{ fontSize: 56, color: '#94A3B8', mb: 1.5 }} />
+              <Typography variant="h6" sx={{ fontWeight: 800, color: '#1E293B', mb: 0.5 }}>
+                No Field Inspectors in Roster
+              </Typography>
+              <Typography variant="body2" sx={{ color: '#64748B', maxWidth: 460, mx: 'auto', mb: 3 }}>
+                There are currently no Field Officers registered in this jurisdiction. Nominate an officer below to begin the state clearance and onboarding flow.
+              </Typography>
+              <Button
+                variant="contained"
+                startIcon={<PersonAddIcon />}
+                onClick={() => setOpenNominate(true)}
+                sx={{ background: GRADIENT, fontWeight: 700, px: 3, borderRadius: 2 }}
+              >
+                Nominate Field Inspector
+              </Button>
+            </Paper>
+          </Grid>
+        ) : (
+          officers.map((o) => {
           const isPending = o.status === 'Pending Admin Clearance' || o.status === 'PENDING_VERIFICATION';
           const isActivation = o.status === 'Activation Pending' || o.status === 'PENDING_ACTIVATION';
 
@@ -345,7 +365,7 @@ export default function LMOOfficers() {
               </Paper>
             </Grid>
           );
-        })}
+        }))}
       </Grid>
 
       {/* ── MODAL: NOMINATE FIELD INSPECTOR ── */}

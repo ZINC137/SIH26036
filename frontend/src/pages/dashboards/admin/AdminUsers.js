@@ -31,20 +31,9 @@ const roleColor = {
 };
 const roleLabel = { user: 'Public User', lmo: 'LMO Officer', field_officer: 'Field Officer', admin: 'Admin' };
 
-// Initial Fallback Mock Users
-const INITIAL_USERS = [
-  { id: '1', name: 'Dr. R. K. Mathur', email: 'admin@example.com', role: 'admin', verified: true, joined: '14 Sep 2026', status: 'ACTIVE', employeeCode: 'ADM-DEL-01' },
-  { id: '2', name: 'Shri Rajesh Kumar', email: 'rajesh@example.com', role: 'lmo', verified: true, joined: '05 Sep 2026', status: 'ACTIVE', employeeCode: 'LMO-DEL-04', assignedJurisdiction: 'Delhi North Division', dscKeyId: 'DSC-DL-2026-SHA256' },
-  { id: '3', name: 'Inspector Anjali Singh', email: 'anjali@example.com', role: 'field_officer', verified: true, joined: '01 Sep 2026', status: 'ACTIVE', employeeCode: 'FO-DEL-102', assignedJurisdiction: 'Karol Bagh Circle - North Delhi' },
-  { id: '4', name: 'Inspector Vikram Malhotra', email: 'vikram.fo@gov.in', role: 'field_officer', verified: false, joined: '22 Sep 2026', status: 'PENDING_VERIFICATION', employeeCode: 'FO-DEL-105', assignedJurisdiction: 'Rohini Sector 14 Circle' },
-  { id: '5', name: 'Inspector Neha Joshi', email: 'neha.fo@gov.in', role: 'field_officer', verified: false, joined: '20 Sep 2026', status: 'PENDING_ACTIVATION', employeeCode: 'FO-DEL-106', assignedJurisdiction: 'Chandni Chowk Zone', activationToken: 'ACT-FO-9E41-7B22' },
-  { id: '6', name: 'Priya Sharma (Trader)', email: 'priya@example.com', role: 'user', verified: true, joined: '10 Sep 2026', status: 'ACTIVE' },
-  { id: '7', name: 'Mohit Gupta', email: 'mohit@example.com', role: 'user', verified: false, joined: '20 Aug 2026', status: 'UNVERIFIED' },
-];
-
 export default function AdminUsers() {
   const [tabIndex, setTabIndex] = useState(0);
-  const [users, setUsers] = useState(INITIAL_USERS);
+  const [users, setUsers] = useState([]);
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('All');
   const [loading, setLoading] = useState(false);
@@ -62,6 +51,13 @@ export default function AdminUsers() {
     district: 'North Delhi',
     zone: 'Zone 1 (Civil Lines & Sadar)',
     dscKeyId: '',
+    initialPassword: 'LmoPassword2026!',
+  });
+
+  // Commissioned LMO Credentials Dialog
+  const [commissionedLmoModal, setCommissionedLmoModal] = useState({
+    open: false,
+    lmo: null,
   });
 
   // Officer Clearance Modal State
@@ -87,7 +83,7 @@ export default function AdminUsers() {
       const usersRes = await fetch('http://localhost:5000/api/admin/users', { credentials: 'include' });
       if (usersRes.ok) {
         const data = await usersRes.json();
-        if (data.users && data.users.length > 0) setUsers(data.users);
+        if (data.users) setUsers(data.users);
       }
 
       // 2. Fetch pending officers
@@ -104,7 +100,7 @@ export default function AdminUsers() {
         setAuditLogs(logData.logs || []);
       }
     } catch (err) {
-      console.warn('Backend sync warning (using cached data):', err);
+      console.warn('Backend sync warning:', err);
     } finally {
       setLoading(false);
     }
@@ -131,6 +127,7 @@ export default function AdminUsers() {
 
     const payload = {
       ...lmoForm,
+      initialPassword: lmoForm.initialPassword || 'LmoPassword2026!',
       dscKeyId: lmoForm.dscKeyId || `DSC-${lmoForm.state.substring(0, 2).toUpperCase()}-2026-SHA256`,
       jurisdiction: `${lmoForm.district}, ${lmoForm.state} (${lmoForm.zone})`,
     };
@@ -147,9 +144,20 @@ export default function AdminUsers() {
       if (res.ok) {
         setFeedback({
           type: 'success',
-          message: `LMO ${payload.name} gazetted successfully with DSC: ${payload.dscKeyId}. Default temporary password: ${data.lmo?.defaultPassword || 'LmoPassword2026!'}`,
+          message: `LMO ${payload.name} gazetted successfully with DSC: ${payload.dscKeyId}.`,
         });
         setOpenAppointLMO(false);
+        setCommissionedLmoModal({
+          open: true,
+          lmo: {
+            name: payload.name,
+            email: payload.email,
+            employeeCode: payload.employeeCode,
+            password: data.lmo?.defaultPassword || payload.initialPassword || 'LmoPassword2026!',
+            dscKeyId: data.lmo?.dscKeyId || payload.dscKeyId,
+            jurisdiction: payload.jurisdiction,
+          },
+        });
         setLmoForm({
           name: '',
           email: '',
@@ -160,29 +168,14 @@ export default function AdminUsers() {
           district: 'North Delhi',
           zone: 'Zone 1 (Civil Lines & Sadar)',
           dscKeyId: '',
+          initialPassword: 'LmoPassword2026!',
         });
         refreshData();
       } else {
         setFeedback({ type: 'error', message: data.error || 'Failed to appoint LMO.' });
       }
     } catch (err) {
-      // Fallback update
-      const newMockLmo = {
-        id: Date.now().toString(),
-        name: payload.name,
-        email: payload.email,
-        role: 'lmo',
-        verified: true,
-        status: 'ACTIVE',
-        employeeCode: payload.employeeCode,
-        gazetteOrderRef: payload.gazetteOrderRef,
-        assignedJurisdiction: payload.jurisdiction,
-        dscKeyId: payload.dscKeyId,
-        joined: 'Just now',
-      };
-      setUsers((prev) => [newMockLmo, ...prev]);
-      setFeedback({ type: 'success', message: `LMO ${payload.name} appointed successfully (Local Registry).` });
-      setOpenAppointLMO(false);
+      setFeedback({ type: 'error', message: 'Network error commissioning officer.' });
     }
   };
 
@@ -923,6 +916,26 @@ export default function AdminUsers() {
                 </FormControl>
               </Grid>
 
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  label="Official Contact Phone"
+                  fullWidth
+                  placeholder="+91 98765 43210"
+                  value={lmoForm.phone}
+                  onChange={(e) => setLmoForm({ ...lmoForm, phone: e.target.value })}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  label="Initial Temporary Password"
+                  fullWidth
+                  required
+                  value={lmoForm.initialPassword}
+                  onChange={(e) => setLmoForm({ ...lmoForm, initialPassword: e.target.value })}
+                  helperText="Officer uses this password to log in for the first time at /login"
+                />
+              </Grid>
+
               {/* DSC Key Enrollment */}
               <Grid item xs={12}>
                 <Paper variant="outlined" sx={{ p: 2, bgcolor: '#FAFAFA', borderRadius: 2 }}>
@@ -960,6 +973,96 @@ export default function AdminUsers() {
             </Button>
           </DialogActions>
         </Box>
+      </Dialog>
+
+      {/* ── MODAL: LMO COMMISSIONED & CREDENTIALS ISSUED ── */}
+      <Dialog
+        open={commissionedLmoModal.open}
+        onClose={() => setCommissionedLmoModal({ open: false, lmo: null })}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ fontWeight: 800, color: '#2E7D32', display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <VerifiedUserIcon /> Legal Metrology Officer Commissioned!
+        </DialogTitle>
+        <DialogContent dividers>
+          <Alert severity="success" sx={{ mb: 2.5, borderRadius: 2 }}>
+            Officer has been provisioned into the Government Registry and granted statutory stamping authority.
+          </Alert>
+
+          <Paper sx={{ p: 2.5, bgcolor: '#F8FAFC', borderRadius: 2.5, border: '1.5px dashed #81C784', mb: 2.5 }}>
+            <Typography variant="caption" sx={{ color: '#2E7D32', fontWeight: 800, letterSpacing: 1 }}>
+              OFFICIAL ONBOARDING CREDENTIALS
+            </Typography>
+
+            <Box sx={{ mt: 1.5, display: 'flex', flexDirection: 'column', gap: 1 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', py: 0.5, borderBottom: '1px solid #E2E8F0' }}>
+                <Typography variant="body2" sx={{ color: '#64748B', fontWeight: 600 }}>Officer Name:</Typography>
+                <Typography variant="body2" sx={{ fontWeight: 700, color: '#1E293B' }}>{commissionedLmoModal.lmo?.name}</Typography>
+              </Box>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', py: 0.5, borderBottom: '1px solid #E2E8F0' }}>
+                <Typography variant="body2" sx={{ color: '#64748B', fontWeight: 600 }}>Employee Code:</Typography>
+                <Typography variant="body2" sx={{ fontFamily: 'monospace', fontWeight: 700, color: '#1E293B' }}>{commissionedLmoModal.lmo?.employeeCode}</Typography>
+              </Box>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', py: 0.5, borderBottom: '1px solid #E2E8F0' }}>
+                <Typography variant="body2" sx={{ color: '#64748B', fontWeight: 600 }}>Official Login Email:</Typography>
+                <Typography variant="body2" sx={{ fontFamily: 'monospace', fontWeight: 700, color: '#0F2B4E' }}>{commissionedLmoModal.lmo?.email}</Typography>
+              </Box>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', py: 0.5, borderBottom: '1px solid #E2E8F0' }}>
+                <Typography variant="body2" sx={{ color: '#64748B', fontWeight: 600 }}>First-Time Password:</Typography>
+                <Typography variant="body2" sx={{ fontFamily: 'monospace', fontWeight: 800, color: '#C62828', bgcolor: '#FFEBEE', px: 1, py: 0.2, borderRadius: 1 }}>
+                  {commissionedLmoModal.lmo?.password}
+                </Typography>
+              </Box>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', py: 0.5, borderBottom: '1px solid #E2E8F0' }}>
+                <Typography variant="body2" sx={{ color: '#64748B', fontWeight: 600 }}>Assigned DSC Key:</Typography>
+                <Typography variant="caption" sx={{ fontFamily: 'monospace', color: '#2E7D32', fontWeight: 700 }}>{commissionedLmoModal.lmo?.dscKeyId}</Typography>
+              </Box>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', py: 0.5 }}>
+                <Typography variant="body2" sx={{ color: '#64748B', fontWeight: 600 }}>Jurisdiction:</Typography>
+                <Typography variant="caption" sx={{ color: '#334155', fontWeight: 600 }}>{commissionedLmoModal.lmo?.jurisdiction}</Typography>
+              </Box>
+            </Box>
+
+            <Button
+              variant="contained"
+              fullWidth
+              startIcon={<ContentCopyIcon />}
+              onClick={() => {
+                const creds = `LMO Login Credentials:\nPortal: http://localhost:3000/login\nEmail: ${commissionedLmoModal.lmo?.email}\nPassword: ${commissionedLmoModal.lmo?.password}\nDSC Key: ${commissionedLmoModal.lmo?.dscKeyId}\nJurisdiction: ${commissionedLmoModal.lmo?.jurisdiction}`;
+                copyToClipboard(creds);
+                setFeedback({ type: 'success', message: 'Credentials copied to clipboard!' });
+              }}
+              sx={{ bgcolor: '#2E7D32', '&:hover': { bgcolor: '#1B5E20' }, fontWeight: 700, mt: 2 }}
+            >
+              Copy Login Credentials
+            </Button>
+          </Paper>
+
+          <Box sx={{ p: 2, bgcolor: '#FAFAFA', borderRadius: 2 }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#37474F', mb: 1 }}>
+              How the LMO Logs In:
+            </Typography>
+            <Typography variant="body2" sx={{ color: '#546E7A', mb: 0.5 }}>
+              1. Officer opens <strong>http://localhost:3000/login</strong>.
+            </Typography>
+            <Typography variant="body2" sx={{ color: '#546E7A', mb: 0.5 }}>
+              2. Signs in with official email (<code>{commissionedLmoModal.lmo?.email}</code>) and temporary password (<code>{commissionedLmoModal.lmo?.password}</code>).
+            </Typography>
+            <Typography variant="body2" sx={{ color: '#546E7A' }}>
+              3. Upon authentication, the officer is directed straight to their <strong>LMO Officer Dashboard</strong> to review and assign applications.
+            </Typography>
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button
+            variant="contained"
+            onClick={() => setCommissionedLmoModal({ open: false, lmo: null })}
+            sx={{ fontWeight: 700, bgcolor: '#0F2B4E' }}
+          >
+            Done &amp; Dismiss
+          </Button>
+        </DialogActions>
       </Dialog>
 
       {/* ── MODAL 2: ACTIVATION TOKEN GENERATED HANDOVER ── */}

@@ -5,6 +5,7 @@ const dotenv = require('dotenv');
 const authRoutes = require('./routes/auth');
 const adminRoutes = require('./routes/admin');
 const lmoRoutes = require('./routes/lmo');
+const fieldOfficerRoutes = require('./routes/fieldOfficer');
 
 dotenv.config();
 
@@ -22,6 +23,7 @@ app.use(cors({
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/lmo', lmoRoutes);
+app.use('/api/field-officer', fieldOfficerRoutes);
 
 
 // Global Error Handler
