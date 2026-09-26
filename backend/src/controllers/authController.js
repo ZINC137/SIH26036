@@ -121,13 +121,15 @@ const verify = async (req, res) => {
 
 const login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, role, portalRole } = req.body;
 
     if (!email || !password) {
       return res.status(400).json({ error: 'Email and password are required' });
     }
 
     const normalizedEmail = (email || '').toLowerCase().trim();
+    // Portal role requested (defaults to 'user' for public citizen portal)
+    const requestedRole = (role || portalRole || 'user').toLowerCase().trim();
 
     // Find user with specialized profiles
     const user = await prisma.user.findUnique({
@@ -151,7 +153,7 @@ const login = async (req, res) => {
       isPasswordValid = await argon2.verify(user.password_hash, password);
     }
 
-    // 3. Handle failure
+    // 3. Handle credential failure
     if (!user || !isPasswordValid) {
       if (user) {
         let newAttempts = user.failed_login_attempts + 1;
@@ -173,7 +175,36 @@ const login = async (req, res) => {
       return res.status(401).json({ error: 'Invalid email or password' });
     }
 
-    // 4. Handle success
+    // 3.5. Strictly validate portal & role match
+    const ROLE_LABELS = {
+      user: 'Public Citizen / Trader',
+      lmo: 'Legal Metrology Officer (LMO)',
+      field_officer: 'Field Verification Officer',
+      admin: 'Administrator',
+    };
+
+    const PORTAL_LABELS = {
+      user: 'Public User Portal',
+      lmo: 'LMO Officer Portal',
+      field_officer: 'Field Officer Portal',
+      admin: 'Administrator Portal',
+    };
+
+    if (requestedRole && user.role !== requestedRole) {
+      const userRoleLabel = ROLE_LABELS[user.role] || user.role;
+      const attemptedPortal = PORTAL_LABELS[requestedRole] || `${requestedRole} portal`;
+      const correctPortal = PORTAL_LABELS[user.role] || `${user.role} portal`;
+
+      return res.status(403).json({
+        error: `Portal Access Restricted: This account belongs to a ${userRoleLabel}. You cannot log in through the ${attemptedPortal}. Please switch to the ${correctPortal}.`,
+        code: 'PORTAL_ROLE_MISMATCH',
+        expectedRole: requestedRole,
+        actualRole: user.role,
+        suggestedPortalUrl: `/login?role=${user.role}`,
+      });
+    }
+
+    // 4. Handle success and account status
     if (user.status === 'SUSPENDED') {
       return res.status(403).json({ error: 'Account suspended. Contact the State Directorate Admin.' });
     }

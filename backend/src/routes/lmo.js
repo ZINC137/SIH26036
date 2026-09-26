@@ -6,6 +6,7 @@ const {
   getLmoStats,
   assignFieldOfficer,
   reviewApplication,
+  getLmoCertificates,
 } = require('../controllers/lmoController');
 const { authMiddleware, requireRole } = require('../middleware/authMiddleware');
 
@@ -25,5 +26,8 @@ router.get('/applications', getLmoApplications);
 router.get('/stats', getLmoStats);
 router.post('/applications/:id/assign', assignFieldOfficer);
 router.post('/applications/:id/review', reviewApplication);
+
+// Certificate Registry & Verification History
+router.get('/certificates', getLmoCertificates);
 
 module.exports = router;

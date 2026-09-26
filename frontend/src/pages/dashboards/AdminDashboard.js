@@ -57,21 +57,25 @@ export default function AdminDashboard({ userEmail }) {
     revenueCollected: 0,
   });
   const [users, setUsers] = useState([]);
+  const [recentVerifications, setRecentVerifications] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const fetchAdminData = async () => {
     setLoading(true);
     try {
-      const [analyticsRes, usersRes] = await Promise.all([
+      const [analyticsRes, usersRes, verifsRes] = await Promise.all([
         fetch('http://localhost:5000/api/admin/analytics', { credentials: 'include' }),
         fetch('http://localhost:5000/api/admin/users', { credentials: 'include' }),
+        fetch('http://localhost:5000/api/admin/verifications', { credentials: 'include' }),
       ]);
 
       const analyticsData = await analyticsRes.json();
       const usersData = await usersRes.json();
+      const verifsData = await verifsRes.json();
 
       if (analyticsData.analytics) setAnalytics(analyticsData.analytics);
       if (usersData.users) setUsers(usersData.users);
+      if (verifsData.verifications) setRecentVerifications(verifsData.verifications);
     } catch (err) {
       console.error('Failed to load admin analytics:', err);
     } finally {
@@ -92,6 +96,7 @@ export default function AdminDashboard({ userEmail }) {
       color: '#0284C7',
       bg: '#EFF6FF',
       border: '#BFDBFE',
+      path: '/dashboard/admin/users',
     },
     {
       label: 'Certificates Issued',
@@ -101,6 +106,7 @@ export default function AdminDashboard({ userEmail }) {
       color: '#16A34A',
       bg: '#F0FDF4',
       border: '#BBF7D0',
+      path: '/dashboard/admin/certificates',
     },
     {
       label: 'Pending & Inspecting Apps',
@@ -110,6 +116,7 @@ export default function AdminDashboard({ userEmail }) {
       color: '#D97706',
       bg: '#FFFBEB',
       border: '#FDE68A',
+      path: '/dashboard/admin/certificates',
     },
     {
       label: 'Revenue Settled (Fees)',
@@ -311,6 +318,7 @@ export default function AdminDashboard({ userEmail }) {
             <Paper
               key={s.label}
               elevation={0}
+              onClick={() => s.path && navigate(s.path)}
               sx={{
                 p: 3,
                 borderRadius: '18px',
@@ -319,6 +327,7 @@ export default function AdminDashboard({ userEmail }) {
                 boxShadow: '0 4px 16px -2px rgba(15, 23, 42, 0.04)',
                 position: 'relative',
                 overflow: 'hidden',
+                cursor: s.path ? 'pointer' : 'default',
                 transition: 'transform 0.2s ease, box-shadow 0.2s ease',
                 '&:hover': {
                   transform: 'translateY(-3px)',
@@ -606,6 +615,136 @@ export default function AdminDashboard({ userEmail }) {
           </Box>
         </Paper>
       </Box>
+
+      {/* ── State-Wide Verification & Certificate Registry Snapshot ── */}
+      <Paper
+        elevation={0}
+        sx={{
+          mt: 4,
+          borderRadius: '20px',
+          border: '1.5px solid #E2E8F0',
+          bgcolor: '#FFFFFF',
+          overflow: 'hidden',
+          boxShadow: '0 4px 16px -2px rgba(15, 23, 42, 0.04)',
+        }}
+      >
+        <Box
+          sx={{
+            p: 3,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            borderBottom: '1px solid #E2E8F0',
+            flexWrap: 'wrap',
+            gap: 2,
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <Box
+              sx={{
+                width: 36,
+                height: 36,
+                borderRadius: '10px',
+                bgcolor: '#FEF2F2',
+                color: '#B91C1C',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <VerifiedUserRoundedIcon sx={{ fontSize: 20 }} />
+            </Box>
+            <Box>
+              <Typography variant="h6" sx={{ fontWeight: 800, color: '#0F172A', fontSize: '1.05rem' }}>
+                State-Wide Verification &amp; Form D Certificate Records
+              </Typography>
+              <Typography variant="caption" sx={{ color: '#64748B' }}>
+                Central supervisory tracking across all district jurisdictions ({recentVerifications.length} verified applications)
+              </Typography>
+            </Box>
+          </Box>
+
+          <Button
+            size="small"
+            onClick={() => navigate('/dashboard/admin/certificates')}
+            sx={{ color: '#B91C1C', fontWeight: 700, fontSize: '0.78rem' }}
+          >
+            Open Full Certificate Registry ({recentVerifications.length}) →
+          </Button>
+        </Box>
+
+        {recentVerifications.length === 0 ? (
+          <Box sx={{ p: 4, textAlign: 'center' }}>
+            <Typography variant="body2" sx={{ color: '#64748B', fontWeight: 600 }}>
+              No completed verification records yet.
+            </Typography>
+            <Typography variant="caption" sx={{ color: '#94A3B8', display: 'block', mt: 0.5 }}>
+              Once Field Inspectors complete testing and LMOs issue stamping orders, records will appear here.
+            </Typography>
+          </Box>
+        ) : (
+          <Box sx={{ overflowX: 'auto' }}>
+            <Table sx={{ minWidth: 700 }}>
+              <TableHead>
+                <TableRow sx={{ bgcolor: '#F8FAFC' }}>
+                  {['CERTIFICATE / APP REF', 'APPLICANT FIRM', 'LOCATION', 'INSTRUMENT', 'INSPECTOR FO', 'STATUS'].map((h) => (
+                    <TableCell key={h} sx={{ fontWeight: 800, fontSize: '0.72rem', color: '#475569', py: 1.5 }}>
+                      {h}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {recentVerifications.slice(0, 6).map((v) => (
+                  <TableRow key={v.id} hover sx={{ '&:last-child td': { border: 0 } }}>
+                    <TableCell>
+                      {v.certificateNo ? (
+                        <Box>
+                          <Typography variant="body2" sx={{ fontWeight: 800, color: '#15803D', fontFamily: 'monospace' }}>
+                            {v.certificateNo}
+                          </Typography>
+                          <Typography variant="caption" sx={{ color: '#64748B', fontFamily: 'monospace' }}>
+                            {v.appNumber}
+                          </Typography>
+                        </Box>
+                      ) : (
+                        <Typography variant="body2" sx={{ fontWeight: 700, color: '#64748B', fontFamily: 'monospace' }}>
+                          {v.appNumber}
+                        </Typography>
+                      )}
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: 700, color: '#0F172A', fontSize: '0.85rem' }}>
+                      {v.businessName}
+                    </TableCell>
+                    <TableCell sx={{ color: '#475569', fontSize: '0.82rem' }}>
+                      {v.city}, {v.state}
+                    </TableCell>
+                    <TableCell sx={{ color: '#334155', fontSize: '0.82rem' }}>
+                      {v.instrumentType} ({v.capacity})
+                    </TableCell>
+                    <TableCell sx={{ color: '#475569', fontSize: '0.82rem' }}>
+                      {v.assignedFoName || 'Field Officer'}
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        label={v.status === 'Approved' ? 'Certificate Issued' : v.status}
+                        size="small"
+                        sx={{
+                          bgcolor: v.status === 'Approved' ? '#F0FDF4' : v.status === 'Rejected' ? '#FEF2F2' : '#EFF6FF',
+                          color: v.status === 'Approved' ? '#15803D' : v.status === 'Rejected' ? '#B91C1C' : '#1D4ED8',
+                          border: `1px solid ${v.status === 'Approved' ? '#BBF7D0' : v.status === 'Rejected' ? '#FECACA' : '#BFDBFE'}`,
+                          fontWeight: 800,
+                          fontSize: '0.65rem',
+                        }}
+                      />
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </Box>
+        )}
+      </Paper>
     </Box>
   );
 }

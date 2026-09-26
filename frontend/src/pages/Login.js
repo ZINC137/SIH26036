@@ -102,7 +102,14 @@ export default function Login({ onLogin }) {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
+  const [roleMismatch, setRoleMismatch] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+
+  const switchRole = (newRole) => {
+    setError('');
+    setRoleMismatch(null);
+    navigate(`/login?role=${newRole}`);
+  };
 
   // Field Officer Activation State
   const [openActivation, setOpenActivation] = useState(false);
@@ -120,11 +127,14 @@ export default function Login({ onLogin }) {
   const fillDemoCredentials = () => {
     setEmail(portal.demoEmail);
     setPassword(portal.demoPass);
+    setError('');
+    setRoleMismatch(null);
   };
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
+    setRoleMismatch(null);
 
     if (!email || !password) {
       setError('Please enter both your official email and password.');
@@ -139,12 +149,24 @@ export default function Login({ onLogin }) {
           'Content-Type': 'application/json',
         },
         credentials: 'include',
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, role: roleFromUrl }),
       });
 
       const data = await response.json();
 
       if (response.ok) {
+        // Enforce client-side role match
+        if (data.user?.role && data.user.role !== roleFromUrl) {
+          setError(
+            `Portal Mismatch: Your account is registered as ${PORTAL_CONFIG[data.user.role]?.label || data.user.role}. You cannot sign in through the ${portal.label}.`
+          );
+          setRoleMismatch({
+            actualRole: data.user.role,
+            actualPortalName: PORTAL_CONFIG[data.user.role]?.label || data.user.role,
+          });
+          return;
+        }
+
         onLogin(data.user?.role || roleFromUrl, data.user?.email || email);
         const targetDashboard =
           data.user?.role === 'lmo'
@@ -156,21 +178,17 @@ export default function Login({ onLogin }) {
             : '/dashboard/user';
         navigate(targetDashboard);
       } else {
+        if (data.code === 'PORTAL_ROLE_MISMATCH' && data.actualRole) {
+          setRoleMismatch({
+            actualRole: data.actualRole,
+            actualPortalName: PORTAL_CONFIG[data.actualRole]?.label || data.actualRole,
+          });
+        }
         setError(data.error || 'Authentication failed. Please verify your credentials.');
       }
     } catch (err) {
       console.error('Login error:', err);
-      // Fallback for seamless testing
-      onLogin(roleFromUrl, email);
-      navigate(
-        roleFromUrl === 'lmo'
-          ? '/dashboard/lmo'
-          : roleFromUrl === 'field_officer'
-          ? '/dashboard/field-officer'
-          : roleFromUrl === 'admin'
-          ? '/dashboard/admin'
-          : '/dashboard/user'
-      );
+      setError('Unable to reach the authentication service. Please verify that the backend server is running and try again.');
     } finally {
       setSubmitting(false);
     }
@@ -398,7 +416,7 @@ export default function Login({ onLogin }) {
               return (
                 <Button
                   key={roleKey}
-                  onClick={() => navigate(`/login?role=${roleKey}`)}
+                  onClick={() => switchRole(roleKey)}
                   sx={{
                     py: 1,
                     px: 1,
@@ -539,9 +557,42 @@ export default function Login({ onLogin }) {
                   borderRadius: '12px',
                   fontSize: '0.88rem',
                   fontWeight: 500,
+                  alignItems: 'center',
+                  '& .MuiAlert-message': {
+                    width: '100%',
+                  },
                 }}
               >
-                {error}
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                    {error}
+                  </Typography>
+                  {roleMismatch && (
+                    <Box sx={{ pt: 0.5 }}>
+                      <Button
+                        size="small"
+                        variant="contained"
+                        onClick={() => switchRole(roleMismatch.actualRole)}
+                        sx={{
+                          bgcolor: PORTAL_CONFIG[roleMismatch.actualRole]?.color || '#0F2B4E',
+                          color: '#FFFFFF',
+                          fontWeight: 700,
+                          fontSize: '0.78rem',
+                          textTransform: 'none',
+                          borderRadius: '8px',
+                          px: 2,
+                          py: 0.6,
+                          boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                          '&:hover': {
+                            bgcolor: PORTAL_CONFIG[roleMismatch.actualRole]?.darkColor || '#06162D',
+                          },
+                        }}
+                      >
+                        Switch to {roleMismatch.actualPortalName} &amp; Sign In →
+                      </Button>
+                    </Box>
+                  )}
+                </Box>
               </Alert>
             )}
 

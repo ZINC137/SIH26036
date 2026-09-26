@@ -10,6 +10,8 @@ import AssignmentIndIcon from '@mui/icons-material/AssignmentInd';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import PersonIcon from '@mui/icons-material/Person';
+import GavelIcon from '@mui/icons-material/Gavel';
+import VerifiedIcon from '@mui/icons-material/Verified';
 
 const COLOR = '#15803D';
 
@@ -22,6 +24,7 @@ const priorityColor = {
 const statusColor = {
   Pending: { color: '#B45309', bg: '#FFFBEB' },
   'Under Inspection': { color: '#0284C7', bg: '#EFF6FF' },
+  'Inspection Reported': { color: '#7E22CE', bg: '#FAF5FF' }, // FO submitted — awaiting LMO sign
   Approved: { color: '#15803D', bg: '#F0FDF4' },
   Rejected: { color: '#B91C1C', bg: '#FEF2F2' },
 };
@@ -132,7 +135,7 @@ export default function LMOPending() {
     }
   };
 
-  const handleDirectAction = async (appId, action) => {
+  const handleDirectAction = async (appId, action, notes) => {
     try {
       const res = await fetch(`http://localhost:5000/api/lmo/applications/${appId}/review`, {
         method: 'POST',
@@ -140,12 +143,16 @@ export default function LMOPending() {
         credentials: 'include',
         body: JSON.stringify({
           action,
-          notes: action === 'approve' ? 'Direct LMO Stamping Approval' : 'Rejected after territorial review.',
+          notes: notes || (action === 'approve'
+            ? 'FO inspection report reviewed and verified by LMO. Certificate issued under Section 24 of Legal Metrology Act.'
+            : 'Rejected after territorial review.'),
         }),
       });
       const data = await res.json();
       if (res.ok) {
-        setSuccess(`Application marked as ${action === 'approve' ? 'Approved & Stamped' : 'Rejected'}.`);
+        setSuccess(action === 'approve'
+          ? `Certificate issued! ${data.message}`
+          : `Application rejected.`);
         setSelectedApp(null);
         fetchData();
       } else {
@@ -218,7 +225,7 @@ export default function LMOPending() {
         <FormControl size="small" sx={{ minWidth: 150 }}>
           <InputLabel>Status</InputLabel>
           <Select value={statusFilter} label="Status" onChange={(e) => setStatusFilter(e.target.value)} sx={{ borderRadius: 2 }}>
-            {['All', 'Pending', 'Under Inspection', 'Approved', 'Rejected'].map((s) => (
+            {['All', 'Pending', 'Under Inspection', 'Inspection Reported', 'Approved', 'Rejected'].map((s) => (
               <MenuItem key={s} value={s}>{s}</MenuItem>
             ))}
           </Select>
@@ -315,7 +322,7 @@ export default function LMOPending() {
                       )}
                     </TableCell>
                     <TableCell>
-                      <Box sx={{ display: 'flex', gap: 0.5 }}>
+                      <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
                         <Tooltip title="View Full Dossier">
                           <IconButton size="small" onClick={() => setSelectedApp(app)} sx={{ color: '#1565C0' }}>
                             <VisibilityIcon fontSize="small" />
@@ -339,6 +346,27 @@ export default function LMOPending() {
                               }}
                             >
                               Assign FO
+                            </Button>
+                          </Tooltip>
+                        )}
+
+                        {app.status === 'Inspection Reported' && (
+                          <Tooltip title="Review FO Report & Issue Certificate (LMO Sign)">
+                            <Button
+                              size="small"
+                              variant="contained"
+                              startIcon={<GavelIcon />}
+                              onClick={() => setSelectedApp(app)}
+                              sx={{
+                                background: 'linear-gradient(135deg, #15803D 0%, #166534 100%)',
+                                fontSize: '0.72rem',
+                                fontWeight: 700,
+                                py: 0.4,
+                                px: 1.2,
+                                textTransform: 'none',
+                              }}
+                            >
+                              Sign & Issue
                             </Button>
                           </Tooltip>
                         )}
@@ -513,15 +541,59 @@ export default function LMOPending() {
             </Box>
           )}
         </DialogContent>
+        {/* Show FO inspection findings for Inspection Reported apps */}
+        {selectedApp?.status === 'Inspection Reported' && (
+          <Box sx={{ px: 3, pb: 1 }}>
+            <Divider sx={{ mb: 2 }} />
+            <Typography variant="caption" sx={{ fontWeight: 800, color: '#7E22CE', display: 'block', mb: 1 }}>
+              📋 FIELD OFFICER INSPECTION REPORT (Awaiting Your Signature)
+            </Typography>
+            {[
+              ['FO Inspector', selectedApp.raw?.stamped_by || 'Not recorded'],
+              ['Inspection Date', selectedApp.raw?.inspection_date ? new Date(selectedApp.raw.inspection_date).toLocaleDateString('en-IN') : '—'],
+              ['Test Result', selectedApp.raw?.inspection_result || '—'],
+              ['Error Margin', selectedApp.raw?.test_error_percentage != null ? `${selectedApp.raw.test_error_percentage}%` : '—'],
+              ['Environment', selectedApp.raw?.environmental_temp || '—'],
+              ['Security Seal No', selectedApp.raw?.security_seal_no || '—'],
+              ['FO Notes', selectedApp.raw?.inspection_notes || '—'],
+            ].map(([k, v]) => (
+              <Box key={k} sx={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #F1F5F9', pb: 1, mb: 1 }}>
+                <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 600 }}>{k}</Typography>
+                <Typography variant="caption" sx={{ fontWeight: 700, color: '#0F172A', textAlign: 'right', maxWidth: '60%' }}>{String(v)}</Typography>
+              </Box>
+            ))}
+            <Alert severity="info" sx={{ mt: 1, borderRadius: 2, fontSize: '0.78rem' }}>
+              As the gazetted Legal Metrology Officer, your signature authorises this certificate under Section 24 of the Legal Metrology Act, 2009.
+            </Alert>
+          </Box>
+        )}
         <DialogActions sx={{ p: 2, gap: 1 }}>
           <Button onClick={() => setSelectedApp(null)} sx={{ color: '#64748B' }}>Close</Button>
           {selectedApp?.status === 'Pending' && (
             <>
               <Button onClick={() => handleDirectAction(selectedApp?.id, 'reject')} variant="outlined" color="error" sx={{ fontWeight: 700 }}>
-                Reject
+                Reject Application
               </Button>
               <Button onClick={() => handleOpenAssign(selectedApp)} variant="contained" sx={{ background: 'linear-gradient(135deg, #7E22CE 0%, #581C87 100%)', fontWeight: 700 }}>
                 Assign Inspector
+              </Button>
+            </>
+          )}
+          {selectedApp?.status === 'Inspection Reported' && (
+            <>
+              <Button
+                onClick={() => handleDirectAction(selectedApp?.id, 'reject')}
+                variant="outlined" color="error" sx={{ fontWeight: 700 }}
+              >
+                Reject Report
+              </Button>
+              <Button
+                onClick={() => handleDirectAction(selectedApp?.id, 'approve')}
+                variant="contained"
+                startIcon={<VerifiedIcon />}
+                sx={{ background: 'linear-gradient(135deg, #15803D 0%, #166534 100%)', fontWeight: 700 }}
+              >
+                Sign & Issue Certificate
               </Button>
             </>
           )}

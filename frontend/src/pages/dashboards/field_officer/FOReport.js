@@ -87,16 +87,23 @@ export default function FOReport() {
   if (submittedReport) {
     return (
       <Box sx={{ p: 4, display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '80vh' }}>
-        <Paper elevation={0} sx={{ p: 6, borderRadius: 4, border: '2px solid #4CAF50', textAlign: 'center', maxWidth: 520 }}>
+        <Paper elevation={0} sx={{ p: 6, borderRadius: 4, border: '2px solid #4CAF50', textAlign: 'center', maxWidth: 560 }}>
           <CheckCircleIcon sx={{ fontSize: 72, color: '#2E7D32', mb: 2 }} />
-          <Typography variant="h5" sx={{ fontWeight: 800, mb: 1 }}>Inspection Dossier Submitted!</Typography>
+          <Typography variant="h5" sx={{ fontWeight: 800, mb: 1 }}>Inspection Report Submitted!</Typography>
           <Chip
-            label={submittedReport.certificate_no ? `CERT: ${submittedReport.certificate_no}` : `APP: ${submittedReport.app_number}`}
+            label={`APP: ${submittedReport.app_number}`}
             sx={{ bgcolor: '#F3E5F5', color: COLOR, fontWeight: 800, fontSize: '0.95rem', px: 2, py: 2.5, mb: 3 }}
           />
+          <Typography variant="body1" sx={{ color: '#1A1A2E', fontWeight: 700, mb: 1 }}>
+            📋 Report forwarded to LMO for statutory signing
+          </Typography>
+          <Typography variant="body2" sx={{ color: '#64748B', mb: 1 }}>
+            Your on-site inspection findings have been permanently logged with security seal{' '}
+            <strong>{submittedReport.security_seal_no || 'Recorded'}</strong>.
+          </Typography>
           <Typography variant="body2" sx={{ color: '#64748B', mb: 3 }}>
-            The physical test measurements have been permanently logged. Stamped with security seal{' '}
-            <strong>{submittedReport.security_seal_no || 'SEAL-DL-SECURED'}</strong>.
+            Per Section 24 of the Legal Metrology Act, 2009, the gazetted LMO will now review your report,
+            sign it with their Class-3 DSC, and issue the official Verification Certificate.
           </Typography>
           <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center' }}>
             <Button
@@ -104,14 +111,14 @@ export default function FOReport() {
               onClick={() => navigate('/dashboard/field-officer/history')}
               sx={{ borderColor: COLOR, color: COLOR, fontWeight: 700 }}
             >
-              View Inspection History
+              View My Reports
             </Button>
             <Button
               variant="contained"
-              onClick={() => navigate('/dashboard/field-officer')}
+              onClick={() => { setSubmittedReport(null); setActiveStep(0); }}
               sx={{ background: GRADIENT, fontWeight: 700 }}
             >
-              Back to Task Roster
+              New Inspection
             </Button>
           </Box>
         </Paper>

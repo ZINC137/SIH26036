@@ -23,6 +23,7 @@ import UserCertificates from './pages/dashboards/user/UserCertificates';
 import LMODashboard from './pages/dashboards/LMODashboard';
 import LMOPending from './pages/dashboards/lmo/LMOPending';
 import LMOOfficers from './pages/dashboards/lmo/LMOOfficers';
+import LMOCertificates from './pages/dashboards/lmo/LMOCertificates';
 
 // Field Officer Portal
 import FieldOfficerDashboard from './pages/dashboards/FieldOfficerDashboard';
@@ -32,6 +33,7 @@ import FOHistory from './pages/dashboards/field_officer/FOHistory';
 // Admin Portal
 import AdminDashboard from './pages/dashboards/AdminDashboard';
 import AdminUsers from './pages/dashboards/admin/AdminUsers';
+import AdminCertificates from './pages/dashboards/admin/AdminCertificates';
 
 // Nav Icons
 import DashboardIcon from '@mui/icons-material/Dashboard';
@@ -46,7 +48,6 @@ import UploadFileIcon from '@mui/icons-material/UploadFile';
 import HistoryIcon from '@mui/icons-material/History';
 import PeopleIcon from '@mui/icons-material/People';
 import SettingsIcon from '@mui/icons-material/Settings';
-import BarChartIcon from '@mui/icons-material/BarChart';
 import SecurityIcon from '@mui/icons-material/Security';
 
 const NAV = {
@@ -58,11 +59,11 @@ const NAV = {
     { label: 'Settings',        icon: <SettingsIcon />,   path: '/dashboard/user/settings' },
   ],
   lmo: [
-    { label: 'Dashboard',       icon: <DashboardIcon />,      path: '/dashboard/lmo' },
-    { label: 'Pending Queue',   icon: <PendingActionsIcon />, path: '/dashboard/lmo/pending' },
-    { label: 'Field Officers',  icon: <GroupIcon />,          path: '/dashboard/lmo/officers' },
-    { label: 'Issue Certificate', icon: <VerifiedIcon />,     path: '/dashboard/lmo/certificates' },
-    { label: 'Settings',        icon: <SettingsIcon />,       path: '/dashboard/lmo/settings' },
+    { label: 'Dashboard',             icon: <DashboardIcon />,      path: '/dashboard/lmo' },
+    { label: 'Pending Queue',         icon: <PendingActionsIcon />, path: '/dashboard/lmo/pending' },
+    { label: 'Field Officers',        icon: <GroupIcon />,          path: '/dashboard/lmo/officers' },
+    { label: 'Certificates & History', icon: <VerifiedIcon />,      path: '/dashboard/lmo/certificates' },
+    { label: 'Settings',              icon: <SettingsIcon />,       path: '/dashboard/lmo/settings' },
   ],
   field_officer: [
     { label: 'Dashboard',        icon: <DashboardIcon />,  path: '/dashboard/field-officer' },
@@ -72,11 +73,11 @@ const NAV = {
     { label: 'Settings',         icon: <SettingsIcon />,   path: '/dashboard/field-officer/settings' },
   ],
   admin: [
-    { label: 'Dashboard',      icon: <DashboardIcon />, path: '/dashboard/admin' },
-    { label: 'User Management',icon: <PeopleIcon />,    path: '/dashboard/admin/users' },
-    { label: 'Analytics',      icon: <BarChartIcon />,  path: '/dashboard/admin/analytics' },
-    { label: 'Security Logs',  icon: <SecurityIcon />,  path: '/dashboard/admin/logs' },
-    { label: 'System Settings',icon: <SettingsIcon />,  path: '/dashboard/admin/settings' },
+    { label: 'Dashboard',             icon: <DashboardIcon />, path: '/dashboard/admin' },
+    { label: 'User Management',       icon: <PeopleIcon />,    path: '/dashboard/admin/users' },
+    { label: 'Certificates & History', icon: <VerifiedIcon />,  path: '/dashboard/admin/certificates' },
+    { label: 'Security Logs',         icon: <SecurityIcon />,  path: '/dashboard/admin/logs' },
+    { label: 'System Settings',       icon: <SettingsIcon />,  path: '/dashboard/admin/settings' },
   ],
 };
 
@@ -156,15 +157,20 @@ function App() {
     localStorage.removeItem('userEmail');
   };
 
-  // Helper: wrap a route group in RoleLayout
-  const portalLayout = (role) => (
-    <RoleLayout
-      userRole={role}
-      userEmail={userEmail}
-      onLogout={handleLogout}
-      navItems={NAV[role]}
-    />
-  );
+  // Helper: wrap a route group in RoleLayout with strict role validation
+  const portalLayout = (role) => {
+    if (userRole && userRole !== role) {
+      return <Navigate to={ROLE_HOME[userRole] || '/dashboard/user'} replace />;
+    }
+    return (
+      <RoleLayout
+        userRole={role}
+        userEmail={userEmail}
+        onLogout={handleLogout}
+        navItems={NAV[role]}
+      />
+    );
+  };
 
   return (
     <ThemeProvider theme={theme}>
@@ -192,7 +198,7 @@ function App() {
                 <Route path="/dashboard/lmo"              element={<LMODashboard userEmail={userEmail} />} />
                 <Route path="/dashboard/lmo/pending"      element={<LMOPending />} />
                 <Route path="/dashboard/lmo/officers"     element={<LMOOfficers />} />
-                <Route path="/dashboard/lmo/certificates" element={<LMOPending />} /> {/* placeholder */}
+                <Route path="/dashboard/lmo/certificates" element={<LMOCertificates />} />
                 <Route path="/dashboard/lmo/settings"     element={<PortalSettings userRole="lmo" userEmail={userEmail} />} />
               </Route>
 
@@ -207,11 +213,12 @@ function App() {
 
               {/* ── ADMIN PORTAL ── */}
               <Route element={portalLayout('admin')}>
-                <Route path="/dashboard/admin"          element={<AdminDashboard userEmail={userEmail} />} />
-                <Route path="/dashboard/admin/users"    element={<AdminUsers />} />
-                <Route path="/dashboard/admin/analytics" element={<AdminDashboard userEmail={userEmail} />} />
-                <Route path="/dashboard/admin/logs"     element={<AdminDashboard userEmail={userEmail} />} />
-                <Route path="/dashboard/admin/settings" element={<PortalSettings userRole="admin" userEmail={userEmail} />} />
+                <Route path="/dashboard/admin"              element={<AdminDashboard userEmail={userEmail} />} />
+                <Route path="/dashboard/admin/users"        element={<AdminUsers />} />
+                <Route path="/dashboard/admin/certificates" element={<AdminCertificates />} />
+                <Route path="/dashboard/admin/analytics"    element={<AdminCertificates />} />
+                <Route path="/dashboard/admin/logs"         element={<AdminDashboard userEmail={userEmail} />} />
+                <Route path="/dashboard/admin/settings"     element={<PortalSettings userRole="admin" userEmail={userEmail} />} />
               </Route>
 
               {/* Redirect /dashboard → role home */}

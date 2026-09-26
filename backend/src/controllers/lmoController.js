@@ -214,9 +214,10 @@ const getLmoApplications = async (req, res) => {
 // 4. Get LMO Dashboard Key Performance Indicators (Live DB stats)
 const getLmoStats = async (req, res) => {
   try {
-    const [pendingCount, underInspectionCount, approvedCount, rejectedCount, officersCount] = await Promise.all([
+    const [pendingCount, underInspectionCount, inspectionReportedCount, approvedCount, rejectedCount, officersCount] = await Promise.all([
       prisma.application.count({ where: { status: 'Pending' } }),
       prisma.application.count({ where: { status: 'Under Inspection' } }),
+      prisma.application.count({ where: { status: 'Inspection Reported' } }),
       prisma.application.count({ where: { status: 'Approved' } }),
       prisma.application.count({ where: { status: 'Rejected' } }),
       prisma.user.count({ where: { role: 'field_officer', status: 'ACTIVE' } }),
@@ -226,10 +227,11 @@ const getLmoStats = async (req, res) => {
       stats: {
         pending: pendingCount,
         underInspection: underInspectionCount,
+        inspectionReported: inspectionReportedCount, // FO reports awaiting LMO signing
         approved: approvedCount,
         rejected: rejectedCount,
         officers: officersCount,
-        total: pendingCount + underInspectionCount + approvedCount + rejectedCount,
+        total: pendingCount + underInspectionCount + inspectionReportedCount + approvedCount + rejectedCount,
       },
     });
   } catch (error) {
@@ -298,7 +300,10 @@ const assignFieldOfficer = async (req, res) => {
   }
 };
 
-// 6. Direct LMO Application Review / Approval / Rejection
+// 6. LMO Application Review:
+// - For 'Pending' apps: LMO can reject after document scrutiny, or assign FO for inspection
+// - For 'Inspection Reported' apps: LMO verifies FO's findings, signs with DSC, and issues the certificate
+// This matches Section 24 of the Legal Metrology Act: only a gazetted LMO may legally issue the stamping certificate.
 const reviewApplication = async (req, res) => {
   try {
     const { id } = req.params;
@@ -309,12 +314,32 @@ const reviewApplication = async (req, res) => {
       return res.status(404).json({ error: 'Application not found.' });
     }
 
+    // Get LMO's profile for certificate signing
+    let lmoName = req.user?.email || 'Legal Metrology Officer';
+    let lmoCode = 'LMO-DL';
+    let lmoDscId = 'DSC-DL-2026-SHA256';
+    if (req.user?.id) {
+      const lmoProfile = await prisma.lmoProfile.findUnique({ where: { user_id: req.user.id } });
+      if (lmoProfile) {
+        lmoName = lmoProfile.full_name;
+        lmoCode = lmoProfile.employeeCode;
+        lmoDscId = lmoProfile.dscKeyId || lmoDscId;
+      }
+    }
+
     if (action === 'approve') {
+      // Can only sign/approve an application that has a FO inspection report
+      if (app.status !== 'Inspection Reported' && app.status !== 'Pending') {
+        return res.status(400).json({
+          error: `Cannot approve application in "${app.status}" status. Only "Inspection Reported" or "Pending" applications can be approved.`,
+        });
+      }
+
       const year = new Date().getFullYear();
       const randHex = crypto.randomBytes(2).toString('hex').toUpperCase();
       const certificate_no = `CERT-DL-${year}-${randHex}`;
       const certificate_issued_at = new Date();
-      const certificate_valid_until = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000); // 1 year validity
+      const certificate_valid_until = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000); // 1 year statutory validity
 
       const updated = await prisma.application.update({
         where: { id },
@@ -323,24 +348,33 @@ const reviewApplication = async (req, res) => {
           certificate_no,
           certificate_issued_at,
           certificate_valid_until,
-          stamped_by: req.user ? req.user.email : 'LMO Officer (Class-3 DSC)',
-          inspection_result: 'Pass',
-          inspection_notes: notes || 'Verified and approved under Section 24 of Legal Metrology Act.',
+          // LMO signs the certificate; FO's stamped_by field preserved (who did the physical test)
+          // We record the LMO as the certificate-issuing authority via inspection_notes if needed
+          inspection_notes: notes
+            ? `LMO Review: ${notes}. ${app.inspection_notes || ''}`
+            : app.inspection_notes || 'Verified and approved under Section 24 of Legal Metrology Act.',
+          inspection_result: app.inspection_result || 'Pass',
+          assigned_lmo_id: req.user ? req.user.id : app.assigned_lmo_id,
         },
       });
 
       await recordAuditLog(
-        'APPLICATION_APPROVED_CERTIFICATE_ISSUED',
+        'CERTIFICATE_ISSUED_BY_LMO',
         req.user ? req.user.email : 'lmo@gov.in',
         app.app_number,
-        `Approved verification for ${app.app_number}. Issued Legal Metrology Stamping Certificate ${certificate_no} valid until ${certificate_valid_until.toISOString().split('T')[0]}.`
+        `LMO ${lmoName} (${lmoCode}) reviewed FO inspection report for ${app.app_number} at ${app.business_name}. Signed with DSC [${lmoDscId}]. Issued Legal Metrology Stamping Certificate ${certificate_no} valid until ${certificate_valid_until.toISOString().split('T')[0]}.`
       );
 
       return res.status(200).json({
-        message: 'Application approved and digital Stamping Certificate issued.',
+        message: `Certificate issued successfully. ${certificate_no} signed by LMO ${lmoName} and valid for 1 year.`,
         application: updated,
       });
+
     } else if (action === 'reject') {
+      if (!['Pending', 'Inspection Reported'].includes(app.status)) {
+        return res.status(400).json({ error: `Cannot reject application in "${app.status}" status.` });
+      }
+
       const updated = await prisma.application.update({
         where: { id },
         data: {
@@ -351,22 +385,96 @@ const reviewApplication = async (req, res) => {
       });
 
       await recordAuditLog(
-        'APPLICATION_REJECTED',
+        'APPLICATION_REJECTED_BY_LMO',
         req.user ? req.user.email : 'lmo@gov.in',
         app.app_number,
-        `Rejected application ${app.app_number}. Reason: ${notes || 'Statutory criteria not met.'}`
+        `Rejected application ${app.app_number} by LMO ${lmoName}. Reason: ${notes || 'Statutory criteria not met.'}`
       );
 
       return res.status(200).json({
         message: 'Application rejected.',
         application: updated,
       });
+
     } else {
       return res.status(400).json({ error: "Invalid action. Use 'approve' or 'reject'." });
     }
   } catch (error) {
     console.error('Review application error:', error);
     return res.status(500).json({ error: 'Failed to review application.' });
+  }
+};
+
+// 6. Get Certificate Registry & Past Verification History for LMO
+const getLmoCertificates = async (req, res) => {
+  try {
+    const applications = await prisma.application.findMany({
+      where: {
+        status: { in: ['Approved', 'Rejected', 'Inspection Reported'] },
+      },
+      orderBy: { updated_at: 'desc' },
+      include: {
+        user: {
+          select: { email: true, profile: true },
+        },
+      },
+    });
+
+    const formatted = applications.map((a) => {
+      const isApproved = a.status === 'Approved';
+      const isRejected = a.status === 'Rejected';
+      const validUntil = a.certificate_valid_until ? new Date(a.certificate_valid_until) : null;
+      const isValid = isApproved && validUntil && validUntil > new Date();
+
+      return {
+        id: a.id,
+        certificateNo: a.certificate_no || null,
+        appNumber: a.app_number,
+        businessName: a.business_name,
+        contactName: a.contact_name,
+        contactEmail: a.contact_email,
+        contactPhone: a.contact_phone,
+        address: `${a.address}, ${a.city}, ${a.state} - ${a.pincode}`,
+        city: a.city,
+        state: a.state,
+        pincode: a.pincode,
+        instrumentType: a.instrument_type,
+        make: a.make,
+        model: a.model,
+        serialNo: a.serial_no,
+        capacity: `${a.capacity} ${a.unit}`,
+        accuracyClass: a.accuracy_class,
+        assignedFoName: a.assigned_fo_name || 'Field Inspector',
+        assignedFoCode: a.assigned_fo_code || 'FO',
+        stampedBy: a.stamped_by || a.assigned_fo_name || 'Authorized Field Inspector',
+        inspectionDate: a.inspection_date ? new Date(a.inspection_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : null,
+        inspectionResult: a.inspection_result || (isApproved ? 'Pass' : isRejected ? 'Fail' : 'Pending'),
+        errorPercentage: a.test_error_percentage ?? 0.02,
+        securitySealNo: a.security_seal_no,
+        inspectionNotes: a.inspection_notes,
+        rejectionReason: a.rejection_reason,
+        certificateIssuedAt: a.certificate_issued_at ? new Date(a.certificate_issued_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : null,
+        certificateValidUntil: a.certificate_valid_until ? new Date(a.certificate_valid_until).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : null,
+        validityStatus: isValid ? 'Active' : (isApproved ? 'Expired' : a.status),
+        status: a.status,
+        submittedAt: new Date(a.submitted_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
+        feeAmount: a.fee_amount,
+        paymentStatus: a.payment_status,
+        raw: a,
+      };
+    });
+
+    const stats = {
+      totalCertificates: formatted.filter((c) => c.status === 'Approved').length,
+      activeCertificates: formatted.filter((c) => c.validityStatus === 'Active').length,
+      rejectedVerifications: formatted.filter((c) => c.status === 'Rejected').length,
+      awaitingSigning: formatted.filter((c) => c.status === 'Inspection Reported').length,
+    };
+
+    return res.status(200).json({ certificates: formatted, stats });
+  } catch (error) {
+    console.error('Get LMO certificates error:', error);
+    return res.status(500).json({ error: 'Failed to retrieve certificate history.' });
   }
 };
 
@@ -377,4 +485,5 @@ module.exports = {
   getLmoStats,
   assignFieldOfficer,
   reviewApplication,
+  getLmoCertificates,
 };

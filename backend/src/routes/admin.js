@@ -8,6 +8,7 @@ const {
   getAllUsers,
   updateUserStatus,
   getAdminAnalytics,
+  getAllVerifications,
 } = require('../controllers/adminController');
 const { authMiddleware, requireRole } = require('../middleware/authMiddleware');
 
@@ -30,6 +31,9 @@ router.get('/audit-logs', getAuditLogs);
 
 // System analytics & metrics
 router.get('/analytics', getAdminAnalytics);
+
+// State-wide verification & certificate registry
+router.get('/verifications', getAllVerifications);
 
 // System user management
 router.get('/users', getAllUsers);

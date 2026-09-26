@@ -409,6 +409,78 @@ const getAdminAnalytics = async (req, res) => {
   }
 };
 
+// 9. Get State-Wide Verification Records & Certificate Registry
+const getAllVerifications = async (req, res) => {
+  try {
+    const applications = await prisma.application.findMany({
+      orderBy: { updated_at: 'desc' },
+      include: {
+        user: {
+          select: { email: true, profile: true },
+        },
+      },
+    });
+
+    const formatted = applications.map((a) => {
+      const isApproved = a.status === 'Approved';
+      const validUntil = a.certificate_valid_until ? new Date(a.certificate_valid_until) : null;
+      const isValid = isApproved && validUntil && validUntil > new Date();
+
+      return {
+        id: a.id,
+        certificateNo: a.certificate_no || null,
+        appNumber: a.app_number,
+        businessName: a.business_name,
+        contactName: a.contact_name,
+        contactEmail: a.contact_email,
+        contactPhone: a.contact_phone,
+        address: `${a.address}, ${a.city}, ${a.state} - ${a.pincode}`,
+        city: a.city,
+        state: a.state,
+        pincode: a.pincode,
+        instrumentType: a.instrument_type,
+        make: a.make,
+        model: a.model,
+        serialNo: a.serial_no,
+        capacity: `${a.capacity} ${a.unit}`,
+        accuracyClass: a.accuracy_class,
+        assignedFoName: a.assigned_fo_name || 'Field Inspector',
+        assignedFoCode: a.assigned_fo_code || 'FO',
+        stampedBy: a.stamped_by || a.assigned_fo_name || 'Legal Metrology Inspector',
+        inspectionDate: a.inspection_date ? new Date(a.inspection_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : null,
+        inspectionResult: a.inspection_result || (isApproved ? 'Pass' : a.status === 'Rejected' ? 'Fail' : a.status),
+        errorPercentage: a.test_error_percentage ?? 0.02,
+        securitySealNo: a.security_seal_no,
+        inspectionNotes: a.inspection_notes,
+        rejectionReason: a.rejection_reason,
+        certificateIssuedAt: a.certificate_issued_at ? new Date(a.certificate_issued_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : null,
+        certificateValidUntil: a.certificate_valid_until ? new Date(a.certificate_valid_until).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : null,
+        validityStatus: isValid ? 'Active' : (isApproved ? 'Expired' : a.status),
+        status: a.status,
+        submittedAt: new Date(a.submitted_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
+        feeAmount: a.fee_amount,
+        paymentStatus: a.payment_status,
+        raw: a,
+      };
+    });
+
+    const stats = {
+      totalVerifications: applications.length,
+      certificatesIssued: formatted.filter((c) => c.status === 'Approved').length,
+      activeCertificates: formatted.filter((c) => c.validityStatus === 'Active').length,
+      underInspection: formatted.filter((c) => c.status === 'Under Inspection').length,
+      awaitingSigning: formatted.filter((c) => c.status === 'Inspection Reported').length,
+      rejected: formatted.filter((c) => c.status === 'Rejected').length,
+      pending: formatted.filter((c) => c.status === 'Pending').length,
+    };
+
+    return res.status(200).json({ verifications: formatted, stats });
+  } catch (error) {
+    console.error('Get all verifications error:', error);
+    return res.status(500).json({ error: 'Failed to retrieve state-wide verifications.' });
+  }
+};
+
 module.exports = {
   appointLMO,
   listLMOs,
@@ -418,5 +490,6 @@ module.exports = {
   getAllUsers,
   updateUserStatus,
   getAdminAnalytics,
+  getAllVerifications,
   recordAuditLog,
 };
