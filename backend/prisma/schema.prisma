@@ -8,44 +8,143 @@ datasource db {
 }
 
 model User {
-  id                            String        @id @default(uuid())
-  email                         String        @unique
-  role                          String        @default("user")
+  id                            String                @id @default(uuid())
+  email                         String                @unique
+  role                          String                @default("user") // 'admin' | 'lmo' | 'field_officer' | 'user'
+  status                        String                @default("ACTIVE") // ACTIVE | PENDING_VERIFICATION | PENDING_ACTIVATION | SUSPENDED | REJECTED
   password_hash                 String
-  is_verified                   Boolean       @default(false)
+  is_verified                   Boolean               @default(false)
   verification_token            String?
   verification_token_expires_at DateTime?
-  failed_login_attempts         Int           @default(0)
+  failed_login_attempts         Int                   @default(0)
   lockout_until                 DateTime?
-  created_at                    DateTime      @default(now())
-  updated_at                    DateTime      @updatedAt
+  created_at                    DateTime              @default(now())
+  updated_at                    DateTime              @updatedAt
+
+  // 1-to-1 Specialized Role Profiles
+  adminProfile                  AdminProfile?
+  lmoProfile                    LmoProfile?
+  fieldOfficerProfile           FieldOfficerProfile?
   profile                       UserProfile?
+
   applications                  Application[]
 }
 
+model LmoProfile {
+  id                    String   @id @default(uuid())
+  user_id               String   @unique
+  user                  User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  full_name             String
+  employeeCode          String   @unique
+  gazetteOrderRef       String
+  state                 String   @default("Delhi")
+  districtDivision      String   @default("North Delhi")
+  zoneSubDivision       String   @default("Zone 1")
+  assignedJurisdiction  String
+  dscKeyId              String   @unique
+  phone                 String?
+  appointedBy           String?  // Admin User ID or email
+  appointedAt           DateTime @default(now())
+  updated_at            DateTime @updatedAt
+}
+
+model FieldOfficerProfile {
+  id                    String    @id @default(uuid())
+  user_id               String    @unique
+  user                  User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  full_name             String
+  employeeCode          String    @unique
+  designation           String    @default("Field Verification Inspector")
+  circleZone            String
+  circlePincode         String    @default("110001")
+  activationToken       String?   // Single-use token issued upon clearance
+  phone                 String?
+  recommendingLmoId     String?   // Recommending LMO user ID
+  recommendingLmoName   String?
+  activatedAt           DateTime?
+  created_at            DateTime  @default(now())
+  updated_at            DateTime  @updatedAt
+}
+
+
+model AdminProfile {
+  id                    String   @id @default(uuid())
+  user_id               String   @unique
+  user                  User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  full_name             String
+  employeeCode          String?  @unique
+  clearanceLevel        String   @default("TIER_1_DIRECTORATE")
+  designation           String   @default("Super Administrator")
+  phone                 String?
+  department            String   @default("State Directorate of Legal Metrology")
+  created_at            DateTime @default(now())
+  updated_at            DateTime @updatedAt
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  action    String
+  actor     String
+  target    String?
+  details   String?
+  timestamp DateTime @default(now())
+}
+
 model Application {
-  id              String   @id @default(uuid())
-  app_number      String   @unique
-  user_id         String
-  user            User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  instrument_type String
-  make            String
-  model           String?
-  serial_no       String
-  capacity        String
-  unit            String
-  business_name   String
-  gst_no          String?
-  address         String
-  city            String
-  state           String
-  pincode         String
-  contact_name    String
-  contact_phone   String
-  contact_email   String
-  status          String   @default("Pending")
-  submitted_at    DateTime @default(now())
-  updated_at      DateTime @updatedAt
+  id                    String    @id @default(uuid())
+  app_number            String    @unique
+  user_id               String
+  user                  User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  instrument_type       String
+  make                  String
+  model                 String?
+  serial_no             String
+  capacity              String
+  unit                  String
+  accuracy_class        String?   @default("Class III (Medium Accuracy)")
+  business_name         String
+  trade_type            String?   @default("Commercial Trader")
+  gst_no                String?
+  address               String
+  city                  String
+  state                 String
+  pincode               String
+  contact_name          String
+  contact_phone         String
+  contact_email         String
+  priority              String    @default("Normal") // High | Normal | Low
+  fee_amount            Float     @default(500.0)
+  payment_status        String    @default("PAID") // PAID | PENDING
+  payment_ref           String?
+  status                String    @default("Pending") // Pending | Under Inspection | Approved | Rejected
+
+  // LMO & Field Officer Assignment
+  assigned_lmo_id       String?
+  assigned_fo_id        String?
+  assigned_fo_name      String?
+  assigned_fo_code      String?
+  assigned_at           DateTime?
+  scheduled_date        String?
+  scheduled_time        String?
+
+  // Inspection & Stamping Details
+  inspection_date       DateTime?
+  test_error_percentage Float?
+  environmental_temp    String?
+  test_readings         String?   // JSON representation of test points
+  security_seal_no      String?
+  inspection_notes      String?
+  inspection_result     String?   // Pass | Fail | Conditional
+  rejection_reason      String?
+
+  // Statutory Legal Metrology Certificate (Form D - Rule 11)
+  certificate_no        String?
+  certificate_issued_at DateTime?
+  certificate_valid_until DateTime?
+  stamped_by            String?
+
+  submitted_at          DateTime  @default(now())
+  updated_at            DateTime  @updatedAt
 }
 
 model UserProfile {

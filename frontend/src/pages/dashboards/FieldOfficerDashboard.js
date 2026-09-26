@@ -1,16 +1,26 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Paper,
   Typography,
-  Button,
   Chip,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
+  Button,
   LinearProgress,
+  IconButton,
+  Tooltip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  CircularProgress,
+  Alert,
+  Divider,
+  Grid,
 } from '@mui/material';
 import LocationOnRoundedIcon from '@mui/icons-material/LocationOnRounded';
 import AccessTimeRoundedIcon from '@mui/icons-material/AccessTimeRounded';
@@ -20,41 +30,151 @@ import UploadFileRoundedIcon from '@mui/icons-material/UploadFileRounded';
 import FactCheckRoundedIcon from '@mui/icons-material/FactCheckRounded';
 import HourglassTopRoundedIcon from '@mui/icons-material/HourglassTopRounded';
 import CalendarMonthRoundedIcon from '@mui/icons-material/CalendarMonthRounded';
+import RefreshRoundedIcon from '@mui/icons-material/RefreshRounded';
+import VerifiedRoundedIcon from '@mui/icons-material/VerifiedRounded';
+import SecurityRoundedIcon from '@mui/icons-material/SecurityRounded';
 import { useNavigate } from 'react-router-dom';
 
 const COLOR = '#7E22CE';
 const GRADIENT = 'linear-gradient(135deg, #A855F7 0%, #7E22CE 100%)';
 
-const stats = [
-  { label: "Today's Assigned Inspections", value: '4', detail: 'Scheduled field visits', icon: TodayRoundedIcon, color: '#7E22CE', bg: '#FAF5FF', border: '#E9D5FF' },
-  { label: 'Completed This Week', value: '17', detail: 'Calibrated & verified', icon: CheckCircleRoundedIcon, color: '#16A34A', bg: '#F0FDF4', border: '#BBF7D0' },
-  { label: 'Pending Test Reports', value: '2', detail: 'Awaiting field sync', icon: HourglassTopRoundedIcon, color: '#D97706', bg: '#FFFBEB', border: '#FDE68A' },
-  { label: 'Total Calibrated (Month)', value: '41', detail: 'Delhi Central Zone', icon: CalendarMonthRoundedIcon, color: '#0284C7', bg: '#EFF6FF', border: '#BFDBFE' },
-];
-
-const todaySchedule = [
-  { time: '09:00 AM', applicant: 'Raj Traders', address: 'Shop 14, Karol Bagh, Delhi', instrument: 'Platform Balance 200kg', status: 'Completed' },
-  { time: '11:30 AM', applicant: 'Singh Fuels', address: 'Plot 7, Rohini Phase II, Delhi', instrument: 'Fuel Dispenser (3 nozzles)', status: 'Completed' },
-  { time: '02:00 PM', applicant: 'Patel Agro', address: 'Village Narela, North Delhi', instrument: 'Moisture Meter', status: 'In Progress' },
-  { time: '04:30 PM', applicant: 'Kumar Stores', address: 'Shop 22, Chandni Chowk', instrument: 'Counter Scale 5kg', status: 'Upcoming' },
-];
-
-const recentReports = [
-  { id: 'RPT-2026-041', applicant: 'Gupta Mart', result: 'Pass', date: '22 Sep 2026' },
-  { id: 'RPT-2026-040', applicant: 'Sharma Traders', result: 'Fail', date: '21 Sep 2026' },
-  { id: 'RPT-2026-039', applicant: 'Verma Stores', result: 'Pass', date: '20 Sep 2026' },
-  { id: 'RPT-2026-038', applicant: 'Mehta Agro', result: 'Pass', date: '19 Sep 2026' },
-];
-
-const scheduleStatusColor = {
-  Completed: { color: '#15803D', bg: '#F0FDF4', border: '#BBF7D0' },
-  'In Progress': { color: '#0284C7', bg: '#EFF6FF', border: '#BFDBFE' },
-  Upcoming: { color: '#6B21A8', bg: '#FAF5FF', border: '#E9D5FF' },
-};
-
 export default function FieldOfficerDashboard({ userEmail }) {
   const navigate = useNavigate();
-  const progress = (17 / 20) * 100;
+  const [tasks, setTasks] = useState([]);
+  const [stats, setStats] = useState({
+    todayAssigned: 0,
+    completedMonthly: 0,
+    targetMonthly: 20,
+    progress: 0,
+    totalCompleted: 0,
+    activeCircle: 'Jurisdiction Circle',
+  });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+
+  // Inspection modal state
+  const [inspectModal, setInspectModal] = useState({
+    open: false,
+    task: null,
+    testError: '0.02',
+    envTemp: '25°C, 50% RH',
+    securitySealNo: `SEAL-DL-2026-${Math.floor(1000 + Math.random() * 9000)}`,
+    result: 'Pass',
+    notes: 'All load points verified against NPL working standards. Sealed and stamped under Rule 11.',
+    submitting: false,
+  });
+
+  const fetchData = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const [tasksRes, statsRes] = await Promise.all([
+        fetch('http://localhost:5000/api/field-officer/tasks', { credentials: 'include' }),
+        fetch('http://localhost:5000/api/field-officer/stats', { credentials: 'include' }),
+      ]);
+
+      const tasksData = await tasksRes.json();
+      const statsData = await statsRes.json();
+
+      if (tasksData.tasks) setTasks(tasksData.tasks);
+      if (statsData.stats) setStats(statsData.stats);
+    } catch (err) {
+      setError('Unable to load inspection roster from server.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const handleOpenInspect = (task) => {
+    setInspectModal({
+      open: true,
+      task,
+      testError: '0.02',
+      envTemp: '25°C, 50% RH',
+      securitySealNo: `SEAL-DL-2026-${Math.floor(1000 + Math.random() * 9000)}`,
+      result: 'Pass',
+      notes: `Verified against working standards. MPE is within permissible limits for ${task.instrument}. Affixed official lead/polycarbonate seal.`,
+      submitting: false,
+    });
+  };
+
+  const handleConfirmInspect = async (e) => {
+    e.preventDefault();
+    if (!inspectModal.task) return;
+
+    setInspectModal((prev) => ({ ...prev, submitting: true }));
+    try {
+      const res = await fetch(`http://localhost:5000/api/field-officer/applications/${inspectModal.task.id}/inspect`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          test_error_percentage: inspectModal.testError,
+          environmental_temp: inspectModal.envTemp,
+          security_seal_no: inspectModal.securitySealNo,
+          inspection_result: inspectModal.result,
+          inspection_notes: inspectModal.notes,
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        setSuccess(`Inspection submitted! ${inspectModal.result === 'Pass' ? 'Certificate issued and instrument stamped.' : 'Rejection notice issued.'}`);
+        setInspectModal({ open: false, task: null, testError: '', envTemp: '', securitySealNo: '', result: 'Pass', notes: '', submitting: false });
+        fetchData();
+      } else {
+        setError(data.error || 'Failed to complete inspection.');
+      }
+    } catch (err) {
+      setError('Server communication failure.');
+    } finally {
+      setInspectModal((prev) => ({ ...prev, submitting: false }));
+    }
+  };
+
+  const statCards = [
+    {
+      label: "Today's Scheduled Tasks",
+      value: tasks.length,
+      detail: 'On-ground field inspections',
+      icon: TodayRoundedIcon,
+      color: '#7E22CE',
+      bg: '#FAF5FF',
+      border: '#E9D5FF',
+    },
+    {
+      label: 'Verified & Stamped',
+      value: stats.totalCompleted,
+      detail: 'Official Certificates active',
+      icon: CheckCircleRoundedIcon,
+      color: '#16A34A',
+      bg: '#F0FDF4',
+      border: '#BBF7D0',
+    },
+    {
+      label: 'Current Month Total',
+      value: `${stats.completedMonthly} / ${stats.targetMonthly}`,
+      detail: 'Statutory compliance quota',
+      icon: FactCheckRoundedIcon,
+      color: '#0284C7',
+      bg: '#EFF6FF',
+      border: '#BFDBFE',
+    },
+    {
+      label: 'Geofence Radius Lock',
+      value: 'ACTIVE',
+      detail: stats.activeCircle,
+      icon: LocationOnRoundedIcon,
+      color: '#D97706',
+      bg: '#FFFBEB',
+      border: '#FDE68A',
+    },
+  ];
 
   return (
     <Box sx={{ pb: 4 }}>
@@ -75,7 +195,7 @@ export default function FieldOfficerDashboard({ userEmail }) {
         }}
       >
         <Box>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 0.5 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 0.5, flexWrap: 'wrap' }}>
             <Chip
               label="ON-GROUND INSPECTION STAFF"
               size="small"
@@ -88,9 +208,19 @@ export default function FieldOfficerDashboard({ userEmail }) {
                 borderRadius: '6px',
               }}
             />
-            <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 600 }}>
-              GPS-Geotagged Verification Roster
-            </Typography>
+            <Chip
+              icon={<CheckCircleRoundedIcon sx={{ fontSize: '13px !important' }} />}
+              label="GEOFENCE UNLOCKED: KAROL BAGH CIRCLE"
+              size="small"
+              sx={{
+                bgcolor: '#F0FDF4',
+                color: '#15803D',
+                border: '1px solid #BBF7D0',
+                fontWeight: 800,
+                fontSize: '0.68rem',
+                borderRadius: '6px',
+              }}
+            />
           </Box>
           <Typography
             variant="h4"
@@ -104,33 +234,39 @@ export default function FieldOfficerDashboard({ userEmail }) {
             Field Inspector Operations
           </Typography>
           <Typography variant="body2" sx={{ color: '#64748B', mt: 0.5 }}>
-            Field Officer: <strong style={{ color: '#0F172A' }}>{userEmail || 'inspector@example.com'}</strong> &nbsp;|&nbsp; Operating Zone: <strong>Delhi Central</strong>
+            Field Officer: <strong style={{ color: '#0F172A' }}>{userEmail || 'Active Inspector'}</strong> &nbsp;|&nbsp; Operating Circle: <strong>{stats.activeCircle}</strong> &nbsp;|&nbsp; Statutory Field Verification
           </Typography>
         </Box>
 
-        <Button
-          variant="contained"
-          startIcon={<UploadFileRoundedIcon />}
-          onClick={() => navigate('/dashboard/field-officer/report')}
-          sx={{
-            background: GRADIENT,
-            color: '#FFFFFF',
-            borderRadius: '12px',
-            fontWeight: 700,
-            px: 3,
-            py: 1.4,
-            fontSize: '0.92rem',
-            textTransform: 'none',
-            boxShadow: '0 6px 20px rgba(126, 34, 206, 0.25)',
-            '&:hover': {
+        <Box sx={{ display: 'flex', gap: 1.5 }}>
+          <Button
+            variant="outlined"
+            startIcon={<RefreshRoundedIcon />}
+            onClick={fetchData}
+            sx={{ borderColor: '#E2E8F0', color: '#475569', fontWeight: 700 }}
+          >
+            Refresh
+          </Button>
+          <Button
+            variant="contained"
+            startIcon={<UploadFileRoundedIcon />}
+            onClick={() => navigate('/dashboard/field-officer/report')}
+            sx={{
               background: GRADIENT,
-              filter: 'brightness(0.95)',
-            },
-          }}
-        >
-          Submit Inspection Report
-        </Button>
+              color: '#FFFFFF',
+              borderRadius: '12px',
+              fontWeight: 700,
+              px: 3,
+              boxShadow: '0 6px 20px rgba(126, 34, 206, 0.25)',
+            }}
+          >
+            Submit Report Dossier
+          </Button>
+        </Box>
       </Box>
+
+      {error && <Alert severity="error" sx={{ mb: 3, borderRadius: 2 }} onClose={() => setError('')}>{error}</Alert>}
+      {success && <Alert severity="success" sx={{ mb: 3, borderRadius: 2 }} onClose={() => setSuccess('')}>{success}</Alert>}
 
       {/* ── 4 KPI Stats Grid ── */}
       <Box
@@ -141,7 +277,7 @@ export default function FieldOfficerDashboard({ userEmail }) {
           mb: 4,
         }}
       >
-        {stats.map((s) => {
+        {statCards.map((s) => {
           const Icon = s.icon;
           return (
             <Paper
@@ -192,7 +328,7 @@ export default function FieldOfficerDashboard({ userEmail }) {
                   letterSpacing: '-0.02em',
                 }}
               >
-                {s.value}
+                {loading ? <CircularProgress size={24} sx={{ color: s.color }} /> : s.value}
               </Typography>
               <Typography variant="body2" sx={{ color: '#64748B', fontWeight: 600, fontSize: '0.88rem' }}>
                 {s.label}
@@ -224,12 +360,12 @@ export default function FieldOfficerDashboard({ userEmail }) {
             </Typography>
           </Box>
           <Typography variant="subtitle2" sx={{ color: COLOR, fontWeight: 800 }}>
-            17 / 20 Completed (85%)
+            {stats.completedMonthly} / {stats.targetMonthly} Completed ({stats.progress}%)
           </Typography>
         </Box>
         <LinearProgress
           variant="determinate"
-          value={progress}
+          value={stats.progress}
           sx={{
             height: 10,
             borderRadius: 5,
@@ -240,221 +376,291 @@ export default function FieldOfficerDashboard({ userEmail }) {
             },
           }}
         />
-        <Typography variant="caption" sx={{ color: '#64748B', mt: 1, display: 'block', fontWeight: 500 }}>
-          3 remaining on-ground inspections to fulfill statutory monthly quota.
-        </Typography>
       </Paper>
 
-      {/* ── Main Split Section: Today's Schedule & Recent Reports ── */}
-      <Box
+      {/* ── Today's Assigned Schedule Roster ── */}
+      <Paper
+        elevation={0}
         sx={{
-          display: 'grid',
-          gridTemplateColumns: { xs: '1fr', lg: '2.1fr 1fr' },
-          gap: 3.5,
+          borderRadius: '20px',
+          border: '1.5px solid #E2E8F0',
+          bgcolor: '#FFFFFF',
+          overflow: 'hidden',
+          boxShadow: '0 4px 16px -2px rgba(15, 23, 42, 0.04)',
         }}
       >
-        {/* Today's Schedule Card */}
-        <Paper
-          elevation={0}
+        <Box
           sx={{
-            borderRadius: '20px',
-            border: '1.5px solid #E2E8F0',
-            bgcolor: '#FFFFFF',
-            overflow: 'hidden',
-            boxShadow: '0 4px 16px -2px rgba(15, 23, 42, 0.04)',
+            p: 3,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            borderBottom: '1px solid #E2E8F0',
           }}
         >
-          <Box
-            sx={{
-              p: 3,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              borderBottom: '1px solid #E2E8F0',
-            }}
-          >
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-              <Box
-                sx={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: '10px',
-                  bgcolor: '#FAF5FF',
-                  color: '#7E22CE',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <TodayRoundedIcon sx={{ fontSize: 20 }} />
-              </Box>
-              <Box>
-                <Typography variant="h6" sx={{ fontWeight: 800, color: '#0F172A', fontSize: '1.1rem' }}>
-                  Today's Field Verification Roster
-                </Typography>
-                <Typography variant="caption" sx={{ color: '#64748B' }}>
-                  Geotagged inspections for legal metrology stamping
-                </Typography>
-              </Box>
-            </Box>
-
-            <Chip
-              label="Delhi Central Zone"
-              size="small"
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <Box
               sx={{
+                width: 36,
+                height: 36,
+                borderRadius: '10px',
                 bgcolor: '#FAF5FF',
-                color: '#6B21A8',
-                border: '1px solid #E9D5FF',
-                fontWeight: 700,
-                fontSize: '0.72rem',
+                color: '#7E22CE',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
               }}
-            />
-          </Box>
-
-          <Box sx={{ p: 2.5, display: 'flex', flexDirection: 'column', gap: 2 }}>
-            {todaySchedule.map((item, i) => (
-              <Box
-                key={i}
-                sx={{
-                  p: 2.5,
-                  borderRadius: '16px',
-                  bgcolor: item.status === 'In Progress' ? '#FAF5FF' : '#FFFFFF',
-                  border: `1.5px solid ${item.status === 'In Progress' ? '#D8B4FE' : '#E2E8F0'}`,
-                  boxShadow: item.status === 'In Progress' ? '0 4px 14px rgba(126, 34, 206, 0.08)' : 'none',
-                  transition: 'all 0.2s ease',
-                  '&:hover': {
-                    borderColor: '#CBD5E1',
-                    bgcolor: item.status === 'In Progress' ? '#FAF5FF' : '#F8FAFC',
-                  },
-                }}
-              >
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <AccessTimeRoundedIcon sx={{ fontSize: 16, color: '#64748B' }} />
-                    <Typography variant="caption" sx={{ color: '#334155', fontWeight: 800, fontSize: '0.82rem' }}>
-                      {item.time}
-                    </Typography>
-                  </Box>
-                  <Chip
-                    label={item.status}
-                    size="small"
-                    sx={{
-                      bgcolor: scheduleStatusColor[item.status]?.bg,
-                      color: scheduleStatusColor[item.status]?.color,
-                      border: `1px solid ${scheduleStatusColor[item.status]?.border}`,
-                      fontWeight: 800,
-                      fontSize: '0.68rem',
-                      borderRadius: '6px',
-                    }}
-                  />
-                </Box>
-
-                <Typography variant="body1" sx={{ fontWeight: 800, color: '#0F172A', mb: 0.25 }}>
-                  {item.applicant}
-                </Typography>
-                <Typography variant="body2" sx={{ color: '#64748B', fontSize: '0.86rem', mb: 1 }}>
-                  {item.instrument}
-                </Typography>
-
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, pt: 1, borderTop: '1px solid #F1F5F9' }}>
-                  <LocationOnRoundedIcon sx={{ fontSize: 16, color: '#7E22CE' }} />
-                  <Typography variant="caption" sx={{ color: '#475569', fontWeight: 500 }}>
-                    {item.address}
-                  </Typography>
-                </Box>
-              </Box>
-            ))}
-          </Box>
-        </Paper>
-
-        {/* Recent Reports Audit Table */}
-        <Paper
-          elevation={0}
-          sx={{
-            borderRadius: '20px',
-            border: '1.5px solid #E2E8F0',
-            bgcolor: '#FFFFFF',
-            overflow: 'hidden',
-            boxShadow: '0 4px 16px -2px rgba(15, 23, 42, 0.04)',
-          }}
-        >
-          <Box
-            sx={{
-              p: 3,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              borderBottom: '1px solid #E2E8F0',
-            }}
-          >
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
-              <FactCheckRoundedIcon sx={{ color: COLOR, fontSize: 22 }} />
-              <Typography variant="h6" sx={{ fontWeight: 800, color: '#0F172A', fontSize: '1.05rem' }}>
-                Recent Reports
+            >
+              <TodayRoundedIcon sx={{ fontSize: 20 }} />
+            </Box>
+            <Box>
+              <Typography variant="h6" sx={{ fontWeight: 800, color: '#0F172A', fontSize: '1.1rem' }}>
+                Assigned Field Verification Roster
+              </Typography>
+              <Typography variant="caption" sx={{ color: '#64748B' }}>
+                Dispatched inspections waiting for physical testing and stamping
               </Typography>
             </Box>
           </Box>
 
-          <Box sx={{ overflowX: 'auto' }}>
-            <Table>
-              <TableHead>
-                <TableRow sx={{ bgcolor: '#F8FAFC' }}>
-                  {['REPORT ID', 'APPLICANT', 'RESULT', 'DATE'].map((h) => (
-                    <TableCell
-                      key={h}
+          <Chip
+            label={`${tasks.length} Pending Inspection`}
+            size="small"
+            sx={{
+              bgcolor: '#FAF5FF',
+              color: '#6B21A8',
+              border: '1px solid #E9D5FF',
+              fontWeight: 800,
+              fontSize: '0.72rem',
+            }}
+          />
+        </Box>
+
+        <Box sx={{ p: 2.5, display: 'flex', flexDirection: 'column', gap: 2 }}>
+          {loading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
+              <CircularProgress sx={{ color: COLOR }} />
+            </Box>
+          ) : tasks.length === 0 ? (
+            <Box sx={{ p: 6, textAlign: 'center' }}>
+              <CheckCircleRoundedIcon sx={{ fontSize: 50, color: '#16A34A', mb: 1.5 }} />
+              <Typography variant="h6" sx={{ fontWeight: 800, color: '#0F172A' }}>
+                All Assigned Inspections Completed!
+              </Typography>
+              <Typography variant="body2" sx={{ color: '#64748B', maxWidth: 440, mx: 'auto', mt: 0.5 }}>
+                No pending inspections in your queue. When the LMO assigns new applications, they will appear here in real-time.
+              </Typography>
+            </Box>
+          ) : (
+            tasks.map((task) => (
+              <Box
+                key={task.id}
+                sx={{
+                  p: 2.5,
+                  borderRadius: '16px',
+                  bgcolor: '#FAF5FF',
+                  border: '1.5px solid #D8B4FE',
+                  boxShadow: '0 4px 14px rgba(126, 34, 206, 0.06)',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  flexWrap: 'wrap',
+                  gap: 2,
+                }}
+              >
+                <Box sx={{ flex: 1, minWidth: 280 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                    <Chip
+                      label={task.appNumber}
+                      size="small"
+                      sx={{ bgcolor: '#7E22CE', color: '#FFFFFF', fontWeight: 800, fontSize: '0.72rem' }}
+                    />
+                    <Chip
+                      label={task.priority}
+                      size="small"
                       sx={{
-                        fontWeight: 800,
-                        fontSize: '0.72rem',
-                        color: '#475569',
-                        letterSpacing: '0.04em',
-                        py: 1.5,
+                        bgcolor: task.priority === 'High' ? '#FFEBEE' : '#EFF6FF',
+                        color: task.priority === 'High' ? '#B71C1C' : '#1D4ED8',
+                        fontWeight: 700,
+                        fontSize: '0.7rem',
                       }}
-                    >
-                      {h}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {recentReports.map((r) => (
-                  <TableRow
-                    key={r.id}
-                    hover
+                    />
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, ml: 1 }}>
+                      <AccessTimeRoundedIcon sx={{ fontSize: 16, color: '#64748B' }} />
+                      <Typography variant="caption" sx={{ color: '#334155', fontWeight: 700 }}>
+                        {task.date} · {task.time}
+                      </Typography>
+                    </Box>
+                  </Box>
+
+                  <Typography variant="h6" sx={{ fontWeight: 800, color: '#0F172A', mt: 0.5 }}>
+                    {task.applicant}
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: '#475569', fontWeight: 600 }}>
+                    {task.instrument} &nbsp;|&nbsp; S/N: <span style={{ fontFamily: 'monospace' }}>{task.serial}</span> ({task.make})
+                  </Typography>
+
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 1 }}>
+                    <LocationOnRoundedIcon sx={{ fontSize: 16, color: '#15803D' }} />
+                    <Typography variant="caption" sx={{ color: '#334155', fontWeight: 600 }}>
+                      {task.address} &nbsp;·&nbsp; 📞 {task.contact}
+                    </Typography>
+                  </Box>
+                </Box>
+
+                <Box sx={{ display: 'flex', gap: 1.5 }}>
+                  <Button
+                    variant="contained"
+                    startIcon={<VerifiedRoundedIcon />}
+                    onClick={() => handleOpenInspect(task)}
                     sx={{
-                      '&:last-child td, &:last-child th': { border: 0 },
+                      background: GRADIENT,
+                      fontWeight: 700,
+                      borderRadius: '10px',
+                      px: 2.5,
+                      py: 1,
+                      textTransform: 'none',
+                      boxShadow: '0 4px 14px rgba(126, 34, 206, 0.25)',
                     }}
                   >
-                    <TableCell sx={{ fontWeight: 800, color: '#7E22CE', fontSize: '0.8rem' }}>
-                      {r.id}
-                    </TableCell>
-                    <TableCell sx={{ fontSize: '0.84rem', fontWeight: 600, color: '#0F172A' }}>
-                      {r.applicant}
-                    </TableCell>
-                    <TableCell>
-                      <Chip
-                        label={r.result}
-                        size="small"
-                        icon={r.result === 'Pass' ? <CheckCircleRoundedIcon style={{ fontSize: 13 }} /> : undefined}
-                        sx={{
-                          bgcolor: r.result === 'Pass' ? '#F0FDF4' : '#FEF2F2',
-                          color: r.result === 'Pass' ? '#15803D' : '#B91C1C',
-                          border: `1px solid ${r.result === 'Pass' ? '#BBF7D0' : '#FECACA'}`,
-                          fontWeight: 800,
-                          fontSize: '0.68rem',
-                          borderRadius: '6px',
-                        }}
-                      />
-                    </TableCell>
-                    <TableCell sx={{ fontSize: '0.8rem', color: '#64748B' }}>
-                      {r.date}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </Box>
-        </Paper>
-      </Box>
+                    Conduct Inspection &amp; Stamp
+                  </Button>
+                </Box>
+              </Box>
+            ))
+          )}
+        </Box>
+      </Paper>
+
+      {/* ── CONDUCT INSPECTION & STAMPING MODAL ── */}
+      <Dialog
+        open={inspectModal.open}
+        onClose={() => !inspectModal.submitting && setInspectModal({ ...inspectModal, open: false })}
+        maxWidth="md"
+        fullWidth
+        PaperProps={{ sx: { borderRadius: 3 } }}
+      >
+        <Box component="form" onSubmit={handleConfirmInspect}>
+          <DialogTitle sx={{ fontWeight: 800, color: '#6B21A8', display: 'flex', alignItems: 'center', gap: 1 }}>
+            <VerifiedRoundedIcon />
+            Physical Verification &amp; Stamping — {inspectModal.task?.appNumber}
+          </DialogTitle>
+          <Divider />
+
+          <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, pt: 3 }}>
+            <Paper variant="outlined" sx={{ p: 2, bgcolor: '#FAF5FF', borderColor: '#E9D5FF', borderRadius: 2 }}>
+              <Typography variant="caption" sx={{ color: '#6B21A8', fontWeight: 800, display: 'block' }}>
+                PREMISES &amp; INSTRUMENT UNDER TEST
+              </Typography>
+              <Typography variant="h6" sx={{ fontWeight: 800, color: '#0F172A', mt: 0.5 }}>
+                {inspectModal.task?.applicant}
+              </Typography>
+              <Typography variant="body2" sx={{ color: '#475569' }}>
+                Instrument: <strong>{inspectModal.task?.instrument}</strong> &nbsp;|&nbsp; Serial No: <strong>{inspectModal.task?.serial}</strong> &nbsp;|&nbsp; Accuracy Class: <strong>{inspectModal.task?.accuracyClass}</strong>
+              </Typography>
+              <Typography variant="caption" sx={{ color: '#64748B', display: 'block', mt: 0.5 }}>
+                📍 {inspectModal.task?.address}
+              </Typography>
+            </Paper>
+
+            <Grid container spacing={2}>
+              <Grid item xs={12} sm={4}>
+                <TextField
+                  fullWidth
+                  size="small"
+                  label="Tested Error Margin (%) *"
+                  value={inspectModal.testError}
+                  onChange={(e) => setInspectModal({ ...inspectModal, testError: e.target.value })}
+                  helperText="Maximum Permissible Error (MPE) <= 0.1%"
+                />
+              </Grid>
+              <Grid item xs={12} sm={4}>
+                <TextField
+                  fullWidth
+                  size="small"
+                  label="Environmental Conditions *"
+                  value={inspectModal.envTemp}
+                  onChange={(e) => setInspectModal({ ...inspectModal, envTemp: e.target.value })}
+                  placeholder="e.g. 25°C, 50% RH"
+                />
+              </Grid>
+              <Grid item xs={12} sm={4}>
+                <FormControl fullWidth size="small">
+                  <InputLabel>Inspection Result *</InputLabel>
+                  <Select
+                    value={inspectModal.result}
+                    label="Inspection Result *"
+                    onChange={(e) => setInspectModal({ ...inspectModal, result: e.target.value })}
+                  >
+                    <MenuItem value="Pass">✅ Pass — Issue Certificate</MenuItem>
+                    <MenuItem value="Conditional">⚠️ Conditional Pass</MenuItem>
+                    <MenuItem value="Fail">❌ Fail — Issue Notice</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+            </Grid>
+
+            {inspectModal.result !== 'Fail' && (
+              <Paper variant="outlined" sx={{ p: 2, bgcolor: '#F0FDF4', borderColor: '#BBF7D0', borderRadius: 2 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                  <SecurityRoundedIcon sx={{ color: '#15803D' }} />
+                  <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#15803D' }}>
+                    Affix Physical Lead / Polycarbonate Security Seal
+                  </Typography>
+                </Box>
+                <TextField
+                  fullWidth
+                  size="small"
+                  label="Affixed Security Seal Barcode / Serial No *"
+                  value={inspectModal.securitySealNo}
+                  onChange={(e) => setInspectModal({ ...inspectModal, securitySealNo: e.target.value })}
+                  helperText="Unique tamper-proof seal crimped onto the instrument calibration screws."
+                  sx={{ '& .MuiOutlinedInput-root': { bgcolor: '#FFFFFF', fontFamily: 'monospace' } }}
+                />
+              </Paper>
+            )}
+
+            <TextField
+              fullWidth
+              size="small"
+              multiline
+              rows={3}
+              label="Inspector Statutory Findings &amp; Endorsement *"
+              value={inspectModal.notes}
+              onChange={(e) => setInspectModal({ ...inspectModal, notes: e.target.value })}
+            />
+          </DialogContent>
+
+          <DialogActions sx={{ p: 2.5, gap: 1 }}>
+            <Button
+              onClick={() => setInspectModal({ ...inspectModal, open: false })}
+              disabled={inspectModal.submitting}
+              sx={{ color: '#64748B' }}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              variant="contained"
+              disabled={inspectModal.submitting}
+              sx={{
+                background:
+                  inspectModal.result === 'Fail'
+                    ? '#B91C1C'
+                    : 'linear-gradient(135deg, #16A34A 0%, #15803D 100%)',
+                fontWeight: 700,
+                px: 3,
+              }}
+            >
+              {inspectModal.submitting
+                ? 'Processing Stamping...'
+                : inspectModal.result === 'Fail'
+                ? 'Issue Rejection Notice'
+                : 'Affix Seal & Issue Certificate'}
+            </Button>
+          </DialogActions>
+        </Box>
+      </Dialog>
     </Box>
   );
 }
