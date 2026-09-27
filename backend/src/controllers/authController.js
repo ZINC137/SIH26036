@@ -510,6 +510,10 @@ const me = async (req, res) => {
       },
     });
 
+    if (!user) {
+      return res.status(401).json({ error: 'User session not found or account deactivated.' });
+    }
+
     const employeeCode = user.adminProfile?.employeeCode || user.lmoProfile?.employeeCode || user.fieldOfficerProfile?.employeeCode || user.gatcProfile?.gatc_code || null;
     const assignedJurisdiction = user.adminProfile?.department || user.lmoProfile?.assignedJurisdiction || user.fieldOfficerProfile?.circleZone || user.gatcProfile?.centre_name || null;
     const dscKeyId = user.lmoProfile?.dscKeyId || user.gatcProfile?.accreditation_no || null;

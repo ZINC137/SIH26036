@@ -141,7 +141,7 @@ async function runTests() {
       make: 'Avery Weigh-Tronix',
       model: 'E-1010-PRO',
       serial_no: serialNumber,
-      capacity: '300',
+      capacity: '100',
       unit: 'kg',
       business_name: 'Metro Retail Mart',
       gst_no: '07AAAAA0000A1Z5',

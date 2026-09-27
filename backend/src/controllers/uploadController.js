@@ -41,10 +41,25 @@ const uploadDocument = async (req, res) => {
   }
 };
 
-// Get documents for an application
+// Get documents for an application (Protected: Application Owner or Authorized Officer)
 const getApplicationDocuments = async (req, res) => {
   try {
     const { applicationId } = req.params;
+    const application = await prisma.application.findUnique({
+      where: { id: applicationId },
+    });
+
+    if (!application) {
+      return res.status(404).json({ error: 'Application not found.' });
+    }
+
+    const isOwner = req.user && application.user_id === req.user.id;
+    const isOfficer = req.user && ['admin', 'lmo', 'gatc', 'field_officer'].includes(req.user.role);
+
+    if (!isOwner && !isOfficer) {
+      return res.status(403).json({ error: 'Forbidden: You do not have permission to view documents for this application.' });
+    }
+
     const docs = await prisma.document.findMany({
       where: { application_id: applicationId },
       orderBy: { uploaded_at: 'desc' },
@@ -56,17 +71,35 @@ const getApplicationDocuments = async (req, res) => {
   }
 };
 
-// Stream / download document file
+// Stream / download document file (Protected: Document Uploader, Application Owner, or Authorized Officer)
 const downloadDocument = async (req, res) => {
   try {
     const { id } = req.params;
-    const doc = await prisma.document.findUnique({ where: { id } });
+    const doc = await prisma.document.findUnique({
+      where: { id },
+      include: { application: true },
+    });
 
     if (!doc) {
       return res.status(404).json({ error: 'Document not found.' });
     }
 
-    const absolutePath = path.join(__dirname, '../../', doc.file_path);
+    // Access control: Uploader, Application Owner, or Authorized Legal Metrology Officer
+    const isOwner = req.user && (doc.user_id === req.user.id || doc.application?.user_id === req.user.id);
+    const isOfficer = req.user && ['admin', 'lmo', 'gatc', 'field_officer'].includes(req.user.role);
+
+    if (!isOwner && !isOfficer) {
+      return res.status(403).json({ error: 'Forbidden: You do not have permission to access this document.' });
+    }
+
+    const uploadsDir = path.resolve(__dirname, '../../uploads');
+    const absolutePath = path.resolve(__dirname, '../../', doc.file_path);
+
+    // Defense against path traversal
+    if (!absolutePath.startsWith(uploadsDir)) {
+      return res.status(403).json({ error: 'Access denied: Invalid file path.' });
+    }
+
     if (!fs.existsSync(absolutePath)) {
       return res.status(404).json({ error: 'Physical file not found on server.' });
     }

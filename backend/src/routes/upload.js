@@ -42,6 +42,6 @@ const upload = multer({
 // Routes
 router.post('/', authMiddleware, upload.single('file'), uploadDocument);
 router.get('/application/:applicationId', authMiddleware, getApplicationDocuments);
-router.get('/:id', downloadDocument);
+router.get('/:id', authMiddleware, downloadDocument);
 
 module.exports = router;

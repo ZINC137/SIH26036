@@ -132,6 +132,20 @@ const submitInspection = async (req, res) => {
       return res.status(400).json({ error: 'This application is not currently assigned for inspection.' });
     }
 
+    // Verify task is not routed to GATC testing laboratory
+    if (app.inspection_mode === 'GATC_LAB' || app.assigned_gatc_id) {
+      return res.status(403).json({
+        error: 'Forbidden: This application is allocated to an accredited GATC testing laboratory and cannot be inspected by a Field Officer.',
+      });
+    }
+
+    // Enforce task assignment ownership for Field Officers
+    if (req.user?.role === 'field_officer' && app.assigned_fo_id && app.assigned_fo_id !== req.user.id) {
+      return res.status(403).json({
+        error: 'Access Denied: This inspection task is assigned to another Field Officer in the jurisdiction.',
+      });
+    }
+
     // Determine inspector identity from logged-in user profile
     let officerName = req.user?.email || 'Authorized Inspector';
     let officerCode = 'FO-GEN-01';

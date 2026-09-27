@@ -126,9 +126,28 @@ const submitGatcInspection = async (req, res) => {
       return res.status(404).json({ error: 'Application not found.' });
     }
 
+    if (!['Under Inspection', 'Pending'].includes(app.status)) {
+      return res.status(400).json({
+        error: `Cannot submit test report for application in "${app.status}" status. Only tasks in "Under Inspection" or "Pending" can be processed.`,
+      });
+    }
+
     const gatcProfile = await prisma.gatcProfile.findUnique({
       where: { user_id: req.user.id },
     });
+
+    // Enforce task assignment ownership for GATC Centres
+    if (req.user?.role === 'gatc') {
+      const isAssigned =
+        app.assigned_gatc_id === req.user.id ||
+        (gatcProfile?.gatc_code && app.assigned_gatc_code === gatcProfile.gatc_code);
+
+      if (!isAssigned) {
+        return res.status(403).json({
+          error: 'Access Denied: This application is not allocated to your testing laboratory.',
+        });
+      }
+    }
 
     const centreName = gatcProfile?.centre_name || req.user.email;
     const gatcCode = gatcProfile?.gatc_code || 'GATC-DL';

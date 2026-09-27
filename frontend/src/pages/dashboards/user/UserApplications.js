@@ -17,10 +17,12 @@ const COLOR = "#E65100";
 const GRADIENT = "linear-gradient(135deg, #FF6D00, #E65100)";
 
 const statusColor = {
-  Approved:           { color: "#2E7D32", bg: "#E8F5E9" },
-  Pending:            { color: "#E65100", bg: "#FFF3E0" },
-  "Under Inspection": { color: "#1565C0", bg: "#E3F2FD" },
-  Rejected:           { color: "#B71C1C", bg: "#FFEBEE" },
+  Approved:              { color: "#2E7D32", bg: "#E8F5E9" },
+  Pending:               { color: "#E65100", bg: "#FFF3E0" },
+  "Under Inspection":    { color: "#1565C0", bg: "#E3F2FD" },
+  "Inspection Reported": { color: "#0D47A1", bg: "#E1F5FE" },
+  "Correction Required": { color: "#C62828", bg: "#FFEBEE" },
+  Rejected:              { color: "#B71C1C", bg: "#FFEBEE" },
 };
 
 const formatDate = (iso) => {
@@ -62,6 +64,8 @@ export default function UserApplications() {
   const getTimelineStep = (status) => {
     if (status === "Pending") return 1;
     if (status === "Under Inspection") return 2;
+    if (status === "Inspection Reported") return 2;
+    if (status === "Correction Required") return 2;
     if (status === "Approved") return 3;
     if (status === "Rejected") return 3;
     return 0;
