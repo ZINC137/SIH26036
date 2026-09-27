@@ -76,8 +76,15 @@ const sendVerificationEmail = async (toEmail, token) => {
                       <!-- Warning box -->
                       <div style="background:#FFF8E1;border-left:4px solid #FF9800;border-radius:4px;padding:14px 18px;margin-bottom:24px;">
                         <p style="margin:0;color:#795548;font-size:13px;line-height:1.6;">
-                          ⚠️ This link will expire in <strong>24 hours</strong>.
+                          ⚠️ This link will expire in <strong>24 hours</strong>.<br />
                           If you did not create an account, you can safely ignore this email.
+                        </p>
+                      </div>
+
+                      <!-- Localhost / Dev advisory -->
+                      <div style="background:#E3F2FD;border-left:4px solid #1976D2;border-radius:4px;padding:12px 18px;margin-bottom:24px;">
+                        <p style="margin:0;color:#0D47A1;font-size:12px;line-height:1.5;">
+                          💻 <strong>Local Development Note:</strong> This link points to the local verification server. If accessing from another device (such as a mobile phone), please open or paste this link on the computer running the local server.
                         </p>
                       </div>
 
@@ -112,10 +119,12 @@ const sendVerificationEmail = async (toEmail, token) => {
   try {
     const info = await transporter.sendMail(mailOptions);
     console.log(`[EMAIL] Verification email sent to ${toEmail} — MessageId: ${info.messageId}`);
+    return { success: true, messageId: info.messageId, verificationUrl };
   } catch (error) {
     console.error(`[EMAIL] Failed to send to ${toEmail}:`, error.message);
     // Fallback: still print the link to console so dev can test
     console.log(`[EMAIL FALLBACK] Verification URL: ${verificationUrl}`);
+    return { success: false, error: error.message, verificationUrl };
   }
 };
 

@@ -2,6 +2,8 @@ const express = require('express');
 const {
   appointLMO,
   listLMOs,
+  appointGATC,
+  listGATCs,
   getPendingInspectorApprovals,
   clearInspector,
   getAuditLogs,
@@ -21,6 +23,10 @@ router.use(requireRole('admin'));
 // LMO appointment & registry
 router.post('/lmo/appoint', appointLMO);
 router.get('/lmo/list', listLMOs);
+
+// GATC accreditation, appointment & registry
+router.post('/gatc/appoint', appointGATC);
+router.get('/gatc/list', listGATCs);
 
 // Field Officer multi-tier verification & security clearance
 router.get('/officers/pending-approvals', getPendingInspectorApprovals);

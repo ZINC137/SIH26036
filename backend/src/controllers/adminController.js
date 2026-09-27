@@ -153,6 +153,137 @@ const listLMOs = async (req, res) => {
   }
 };
 
+// 2b. Commission / Appoint Government Approved Test Centre (GATC)
+const appointGATC = async (req, res) => {
+  try {
+    const {
+      centreName,
+      email,
+      gatcCode,
+      accreditationNo,
+      validUntil,
+      authorizedScopes,
+      state,
+      district,
+      address,
+      labHeadName,
+      phone,
+      initialPassword,
+    } = req.body;
+
+    if (!centreName || !email || !accreditationNo) {
+      return res.status(400).json({
+        error: 'Centre Name, Official Lab Email, and NABL Accreditation Number are required.',
+      });
+    }
+
+    const existingUser = await prisma.user.findUnique({
+      where: { email: email.toLowerCase() },
+    });
+    if (existingUser) {
+      return res.status(409).json({ error: 'A user account with this email address already exists.' });
+    }
+
+    // Auto-generate GATC Code if not provided
+    const count = await prisma.gatcProfile.count();
+    const code = gatcCode || `GATC-${(state || 'DL').substring(0, 2).toUpperCase()}-${String(count + 1).padStart(2, '0')}`;
+    const defaultPassword = initialPassword || 'GatcPassword2026!';
+
+    const password_hash = await argon2.hash(defaultPassword, {
+      type: argon2.argon2id,
+      memoryCost: 2 ** 16,
+      hashLength: 50,
+    });
+
+    const result = await prisma.$transaction(async (tx) => {
+      const user = await tx.user.create({
+        data: {
+          email: email.toLowerCase(),
+          role: 'gatc',
+          status: 'ACTIVE',
+          is_verified: true,
+          password_hash,
+        },
+      });
+
+      const gatcProfile = await tx.gatcProfile.create({
+        data: {
+          user_id: user.id,
+          centre_name: centreName,
+          gatc_code: code,
+          accreditation_no: accreditationNo,
+          valid_until: validUntil ? new Date(validUntil) : new Date(Date.now() + 3 * 365 * 24 * 60 * 60 * 1000),
+          authorized_scopes: authorizedScopes || 'Weighbridges, Platform Balances, Fuel Dispensers, Precision Flow Meters',
+          state: state || 'Delhi',
+          district: district || 'North Delhi',
+          address: address || 'Accredited Testing Facility Premises',
+          lab_head_name: labHeadName || 'Chief Metrologist',
+          phone: phone || '',
+          contact_email: email.toLowerCase(),
+          status: 'ACTIVE',
+          appointed_by: req.user ? req.user.id : 'ADMIN_SUPER',
+        },
+      });
+
+      return { user, gatcProfile };
+    });
+
+    await recordAuditLog(
+      'GATC_COMMISSIONED',
+      req.user ? req.user.email : 'admin@gov.in',
+      result.user.email,
+      `Commissioned GATC Laboratory ${centreName} (${code}) with NABL Accr: [${accreditationNo}], Scopes: [${authorizedScopes || 'General Standards'}]`
+    );
+
+    return res.status(201).json({
+      message: 'Government Approved Test Centre (GATC) accredited and commissioned successfully.',
+      gatc: {
+        id: result.user.id,
+        email: result.user.email,
+        centreName: result.gatcProfile.centre_name,
+        gatcCode: result.gatcProfile.gatc_code,
+        accreditationNo: result.gatcProfile.accreditation_no,
+        defaultPassword,
+      },
+    });
+  } catch (error) {
+    console.error('GATC appointment error:', error);
+    return res.status(500).json({ error: 'Internal Server Error during GATC commissioning.' });
+  }
+};
+
+// 2c. List all accredited GATCs from GatcProfile table
+const listGATCs = async (req, res) => {
+  try {
+    const gatcs = await prisma.user.findMany({
+      where: { role: 'gatc' },
+      include: { gatcProfile: true },
+      orderBy: { created_at: 'desc' },
+    });
+
+    const formatted = gatcs.map((u) => ({
+      id: u.id,
+      name: u.gatcProfile?.centre_name || 'GATC Laboratory',
+      email: u.email,
+      gatcCode: u.gatcProfile?.gatc_code || 'GATC-DL-01',
+      accreditationNo: u.gatcProfile?.accreditation_no || 'NABL/2026/01',
+      validUntil: u.gatcProfile?.valid_until ? new Date(u.gatcProfile.valid_until).toLocaleDateString('en-IN') : '—',
+      scopes: u.gatcProfile?.authorized_scopes,
+      state: u.gatcProfile?.state,
+      district: u.gatcProfile?.district,
+      labHead: u.gatcProfile?.lab_head_name,
+      status: u.status,
+      phone: u.gatcProfile?.phone,
+      created_at: u.created_at,
+    }));
+
+    return res.status(200).json({ gatcs: formatted });
+  } catch (error) {
+    console.error('List GATCs error:', error);
+    return res.status(500).json({ error: 'Failed to retrieve GATC registry.' });
+  }
+};
+
 // 3. Get Field Inspectors awaiting clearance from FieldOfficerProfile table
 const getPendingInspectorApprovals = async (req, res) => {
   try {
@@ -484,6 +615,8 @@ const getAllVerifications = async (req, res) => {
 module.exports = {
   appointLMO,
   listLMOs,
+  appointGATC,
+  listGATCs,
   getPendingInspectorApprovals,
   clearInspector,
   getAuditLogs,

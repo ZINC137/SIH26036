@@ -42,11 +42,16 @@ export default function LMOPending() {
   // Selected application for viewing details
   const [selectedApp, setSelectedApp] = useState(null);
 
-  // Selected application for assigning a Field Officer
+  const [gatcCentres, setGatcCentres] = useState([]);
+  const [appEligibility, setAppEligibility] = useState(null);
+
+  // Selected application for assigning a Field Officer or GATC
   const [assignModal, setAssignModal] = useState({
     open: false,
     app: null,
+    assigneeType: 'FIELD_OFFICER', // 'FIELD_OFFICER' | 'GATC'
     foUserId: '',
+    gatcUserId: '',
     scheduledDate: new Date().toISOString().split('T')[0],
     scheduledTime: '11:00 AM',
     priority: 'Normal',
@@ -58,19 +63,24 @@ export default function LMOPending() {
     setLoading(true);
     setError('');
     try {
-      const [appsRes, officersRes] = await Promise.all([
+      const [appsRes, officersRes, gatcRes] = await Promise.all([
         fetch('http://localhost:5000/api/lmo/applications', { credentials: 'include' }),
         fetch('http://localhost:5000/api/lmo/officers', { credentials: 'include' }),
+        fetch('http://localhost:5000/api/lmo/gatc-centres', { credentials: 'include' }),
       ]);
 
       const appsData = await appsRes.json();
       const officersData = await officersRes.json();
+      const gatcData = await gatcRes.json();
 
       if (appsData.applications) {
         setApps(appsData.applications);
       }
       if (officersData.officers) {
         setOfficers(officersData.officers);
+      }
+      if (gatcData.centres) {
+        setGatcCentres(gatcData.centres);
       }
     } catch (err) {
       setError('Failed to connect to Legal Metrology officer services.');
@@ -83,25 +93,54 @@ export default function LMOPending() {
     fetchData();
   }, []);
 
-  const handleOpenAssign = (app) => {
-    // Pick first active officer if available
+  const handleOpenAssign = async (app) => {
+    // Pick first active officer
     const defaultFo = officers.find((o) => o.status === 'Active')?.dbId || '';
+    setAppEligibility(null);
+
     setAssignModal({
       open: true,
       app,
+      assigneeType: 'FIELD_OFFICER', // NEVER auto-assign GATC (Rule 4)
       foUserId: defaultFo,
+      gatcUserId: '',
       scheduledDate: new Date().toISOString().split('T')[0],
       scheduledTime: '11:30 AM',
       priority: app.priority || 'Normal',
       notes: `Territorial verification of ${app.instrument} at ${app.applicant}. Verify working standards tolerance under Rule 11.`,
       submitting: false,
     });
+
+    try {
+      const catCode = app.raw?.selected_category_code || app.instrumentType;
+      const state = app.raw?.state || 'Delhi';
+      const district = app.raw?.city || 'North Delhi';
+      const pref = app.raw?.preferred_verification_route || 'NO_PREFERENCE';
+      const capacity = app.raw?.capacity || app.capacity || '';
+      const unit = app.raw?.unit || app.unit || '';
+      const res = await fetch(`http://localhost:5000/api/rules/eligibility?categoryCode=${encodeURIComponent(catCode)}&state=${encodeURIComponent(state)}&district=${encodeURIComponent(district)}&preferredRoute=${encodeURIComponent(pref)}&capacity=${encodeURIComponent(capacity)}&unit=${encodeURIComponent(unit)}`);
+      const data = await res.json();
+      const eligibility = data.eligibility || data;
+      setAppEligibility(eligibility);
+      if (eligibility.eligibleGATCs && eligibility.eligibleGATCs.length > 0) {
+        setAssignModal((prev) => ({
+          ...prev,
+          gatcUserId: eligibility.eligibleGATCs[0].id || eligibility.eligibleGATCs[0].dbId,
+        }));
+      }
+    } catch (e) {
+      console.error('Error fetching authority eligibility for assignment modal:', e);
+    }
   };
 
   const handleConfirmAssign = async (e) => {
     e.preventDefault();
-    if (!assignModal.foUserId) {
+    if (assignModal.assigneeType === 'FIELD_OFFICER' && !assignModal.foUserId) {
       setError('Please select an active Field Officer to assign.');
+      return;
+    }
+    if (assignModal.assigneeType === 'GATC' && !assignModal.gatcUserId) {
+      setError('Please select an accredited Government Approved Test Centre.');
       return;
     }
 
@@ -112,7 +151,9 @@ export default function LMOPending() {
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({
-          foUserId: assignModal.foUserId,
+          assigneeType: assignModal.assigneeType,
+          foUserId: assignModal.assigneeType === 'FIELD_OFFICER' ? assignModal.foUserId : null,
+          gatcUserId: assignModal.assigneeType === 'GATC' ? assignModal.gatcUserId : null,
           scheduledDate: assignModal.scheduledDate,
           scheduledTime: assignModal.scheduledTime,
           priority: assignModal.priority,
@@ -122,14 +163,14 @@ export default function LMOPending() {
 
       const data = await res.json();
       if (res.ok) {
-        setSuccess(`Application ${assignModal.app.appNumber} successfully assigned to Field Inspector!`);
-        setAssignModal({ open: false, app: null, foUserId: '', scheduledDate: '', scheduledTime: '', priority: 'Normal', notes: '', submitting: false });
+        setSuccess(`Application ${assignModal.app.appNumber} successfully allocated for verification!`);
+        setAssignModal({ open: false, app: null, assigneeType: 'FIELD_OFFICER', foUserId: '', gatcUserId: '', scheduledDate: '', scheduledTime: '', priority: 'Normal', notes: '', submitting: false });
         fetchData();
       } else {
-        setError(data.error || 'Failed to assign field officer.');
+        setError(data.error || 'Failed to assign.');
       }
     } catch (err) {
-      setError('Could not connect to server to assign officer.');
+      setError('Could not connect to server to allocate task.');
     } finally {
       setAssignModal((prev) => ({ ...prev, submitting: false }));
     }
@@ -145,6 +186,8 @@ export default function LMOPending() {
           action,
           notes: notes || (action === 'approve'
             ? 'FO inspection report reviewed and verified by LMO. Certificate issued under Section 24 of Legal Metrology Act.'
+            : action === 'correction'
+            ? 'Rectification ordered: Instrument requires repair / calibration adjustment before retesting.'
             : 'Rejected after territorial review.'),
         }),
       });
@@ -152,6 +195,8 @@ export default function LMOPending() {
       if (res.ok) {
         setSuccess(action === 'approve'
           ? `Certificate issued! ${data.message}`
+          : action === 'correction'
+          ? `Notice of non-compliance issued. Correction / repair required.`
           : `Application rejected.`);
         setSelectedApp(null);
         fetchData();
@@ -418,26 +463,111 @@ export default function LMOPending() {
               </Typography>
             </Paper>
 
-            <FormControl fullWidth required size="small">
-              <InputLabel>Select Authorized Field Inspector *</InputLabel>
-              <Select
-                value={assignModal.foUserId}
-                label="Select Authorized Field Inspector *"
-                onChange={(e) => setAssignModal({ ...assignModal, foUserId: e.target.value })}
-              >
-                {officers.length === 0 ? (
-                  <MenuItem value="" disabled>
-                    No Field Officers available — Nominate one first
-                  </MenuItem>
-                ) : (
-                  officers.map((fo) => (
-                    <MenuItem key={fo.dbId} value={fo.dbId}>
-                      {fo.name} ({fo.id}) — {fo.zone} [{fo.status}]
-                    </MenuItem>
-                  ))
+            {/* Statutory Authority Routing Eligibility (Rule A-H) */}
+            {appEligibility && (
+              <Box sx={{ p: 2, bgcolor: '#F8FAFC', borderRadius: 2, border: '1px solid #E2E8F0' }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1, flexWrap: 'wrap', gap: 1 }}>
+                  <Typography variant="caption" sx={{ fontWeight: 800, color: '#334155', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                    Statutory Authority Eligibility (First Schedule)
+                  </Typography>
+                  <Chip
+                    size="small"
+                    label={appEligibility.gatcEligible ? 'GATC & LMO Eligible' : 'LMO Field Stamping Only'}
+                    sx={{
+                      bgcolor: appEligibility.gatcEligible ? '#DCFCE7' : '#FEF3C7',
+                      color: appEligibility.gatcEligible ? '#166534' : '#92400E',
+                      fontWeight: 700,
+                      fontSize: '0.72rem',
+                    }}
+                  />
+                </Box>
+                <Typography variant="body2" sx={{ fontSize: '0.82rem', color: '#475569', mb: 1 }}>
+                  {appEligibility.reason}
+                </Typography>
+                {appEligibility.preferredRoute && appEligibility.preferredRoute !== 'NO_PREFERENCE' && (
+                  <Chip
+                    size="small"
+                    label={`Applicant Requested Preference: ${appEligibility.preferredRoute} (Preference only — Allocator assigns final authority)`}
+                    sx={{ bgcolor: '#EFF6FF', color: '#1D4ED8', fontWeight: 600, fontSize: '0.72rem' }}
+                  />
                 )}
+              </Box>
+            )}
+
+            {/* Assignee Authority Type Selection */}
+            <FormControl fullWidth size="small">
+              <InputLabel>Allocation Target *</InputLabel>
+              <Select
+                value={assignModal.assigneeType}
+                label="Allocation Target *"
+                onChange={(e) => {
+                  const newType = e.target.value;
+                  const availableGatc =
+                    appEligibility?.eligibleGATCs?.[0]?.id ||
+                    appEligibility?.eligibleGATCs?.[0]?.dbId ||
+                    gatcCentres?.[0]?.dbId ||
+                    gatcCentres?.[0]?.id ||
+                    '';
+                  setAssignModal((prev) => ({
+                    ...prev,
+                    assigneeType: newType,
+                    gatcUserId: newType === 'GATC' && !prev.gatcUserId ? availableGatc : prev.gatcUserId,
+                  }));
+                }}
+              >
+                <MenuItem value="FIELD_OFFICER">👮 On-Ground Field Inspector (Circle / Field Stamping)</MenuItem>
+                <MenuItem
+                  value="GATC"
+                  disabled={appEligibility && !appEligibility.gatcEligible}
+                >
+                  🔬 Government Approved Test Centre (GATC Lab) {appEligibility && !appEligibility.gatcEligible ? '— [Legally Ineligible]' : ''}
+                </MenuItem>
               </Select>
             </FormControl>
+
+            {assignModal.assigneeType === 'FIELD_OFFICER' ? (
+              <FormControl fullWidth required size="small">
+                <InputLabel>Select Authorized Field Inspector *</InputLabel>
+                <Select
+                  value={assignModal.foUserId}
+                  label="Select Authorized Field Inspector *"
+                  onChange={(e) => setAssignModal({ ...assignModal, foUserId: e.target.value })}
+                >
+                  {officers.length === 0 ? (
+                    <MenuItem value="" disabled>
+                      No Field Officers available — Nominate one first
+                    </MenuItem>
+                  ) : (
+                    officers.map((fo) => (
+                      <MenuItem key={fo.dbId} value={fo.dbId}>
+                        {fo.name} ({fo.id}) — {fo.zone} [{fo.status}]
+                      </MenuItem>
+                    ))
+                  )}
+                </Select>
+              </FormControl>
+            ) : (
+              <FormControl fullWidth required size="small">
+                <InputLabel>Select Accredited GATC Test Centre *</InputLabel>
+                <Select
+                  value={assignModal.gatcUserId}
+                  label="Select Accredited GATC Test Centre *"
+                  onChange={(e) => setAssignModal({ ...assignModal, gatcUserId: e.target.value })}
+                >
+                  {((appEligibility?.eligibleGATCs && appEligibility.eligibleGATCs.length > 0) ? appEligibility.eligibleGATCs : gatcCentres).length === 0 ? (
+                    <MenuItem value="" disabled>
+                      No authorized GATC Test Centres available in this jurisdiction
+                    </MenuItem>
+                  ) : (
+                    ((appEligibility?.eligibleGATCs && appEligibility.eligibleGATCs.length > 0) ? appEligibility.eligibleGATCs : gatcCentres).map((g) => (
+                      <MenuItem key={g.dbId || g.id} value={g.dbId || g.id}>
+                        {g.name} ({g.gatcCode || g.id}) — Accreditation: {g.accreditationNo || 'NABL Accredited'}
+                      </MenuItem>
+                    ))
+                  )}
+                </Select>
+              </FormControl>
+            )}
 
             <Grid container spacing={2}>
               <Grid item xs={6}>
@@ -500,12 +630,18 @@ export default function LMOPending() {
               variant="contained"
               disabled={assignModal.submitting}
               sx={{
-                background: 'linear-gradient(135deg, #7E22CE 0%, #581C87 100%)',
+                background: assignModal.assigneeType === 'GATC'
+                  ? 'linear-gradient(135deg, #0D9488 0%, #0F766E 100%)'
+                  : 'linear-gradient(135deg, #7E22CE 0%, #581C87 100%)',
                 fontWeight: 700,
                 px: 3,
               }}
             >
-              {assignModal.submitting ? 'Dispatching...' : 'Assign & Dispatch FO'}
+              {assignModal.submitting
+                ? 'Allocating...'
+                : assignModal.assigneeType === 'GATC'
+                ? 'Assign & Route to GATC Lab'
+                : 'Assign & Dispatch FO'}
             </Button>
           </DialogActions>
         </Box>
@@ -581,6 +717,12 @@ export default function LMOPending() {
           )}
           {selectedApp?.status === 'Inspection Reported' && (
             <>
+              <Button
+                onClick={() => handleDirectAction(selectedApp?.id, 'correction', 'Non-compliance noted during verification. Re-calibration/adjustment required.')}
+                variant="outlined" color="warning" sx={{ fontWeight: 700 }}
+              >
+                Order Correction / Retest
+              </Button>
               <Button
                 onClick={() => handleDirectAction(selectedApp?.id, 'reject')}
                 variant="outlined" color="error" sx={{ fontWeight: 700 }}

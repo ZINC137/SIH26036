@@ -2,6 +2,7 @@ const express = require('express');
 const {
   nominateOfficer,
   getOfficers,
+  getGatcCentres,
   getLmoApplications,
   getLmoStats,
   assignFieldOfficer,
@@ -18,8 +19,9 @@ router.use(requireRole('lmo', 'admin'));
 // Nominate Field Inspector for Circle / Zone
 router.post('/officer/nominate', nominateOfficer);
 
-// Get Field Officers in Jurisdiction
+// Get Field Officers & Accredited GATCs in Jurisdiction
 router.get('/officers', getOfficers);
+router.get('/gatc-centres', getGatcCentres);
 
 // Applications Queue & Management
 router.get('/applications', getLmoApplications);

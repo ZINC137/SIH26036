@@ -76,6 +76,19 @@ const PORTAL_CONFIG = {
     demoEmail: 'anjali@example.com',
     demoPass: 'FoPassword123!',
   },
+  gatc: {
+    label: 'GATC Centre Portal',
+    roleBadge: 'GOVT APPROVED TEST CENTRES',
+    icon: AccountBalanceRoundedIcon,
+    color: '#0D9488',
+    darkColor: '#0F766E',
+    gradient: 'linear-gradient(135deg, #14B8A6 0%, #0D9488 100%)',
+    lightBg: '#F0FDFA',
+    accentBorder: '#99F6E4',
+    hint: 'Authorized access for NABL-accredited Government Approved Test Centres & Calibration Labs',
+    demoEmail: 'gatc1@gov.in',
+    demoPass: 'GatcPassword123!',
+  },
   admin: {
     label: 'Administrator Portal',
     roleBadge: 'CENTRAL ADMINISTRATION',
@@ -98,16 +111,56 @@ export default function Login({ onLogin }) {
   const portal = PORTAL_CONFIG[roleFromUrl] || PORTAL_CONFIG.user;
   const PortalIcon = portal.icon;
 
-  const [email, setEmail] = useState('');
+  const verifiedParam = searchParams.get('verified');
+  const errorParam = searchParams.get('error');
+  const emailParam = searchParams.get('email');
+
+  const [email, setEmail] = useState(() => emailParam || '');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [roleMismatch, setRoleMismatch] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
+  // Email verification states
+  const [emailNotVerified, setEmailNotVerified] = useState(false);
+  const [resendingVerification, setResendingVerification] = useState(false);
+  const [resendVerificationSuccess, setResendVerificationSuccess] = useState(null);
+  const [devVerificationUrl, setDevVerificationUrl] = useState(null);
+
+  const handleResendVerification = async () => {
+    const targetEmail = (email || emailParam || '').trim().toLowerCase();
+    if (!targetEmail) {
+      setError('Please enter your email address to resend the verification link.');
+      return;
+    }
+    setResendingVerification(true);
+    setResendVerificationSuccess(null);
+    try {
+      const res = await fetch('http://localhost:5000/api/auth/resend-verification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: targetEmail }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setResendVerificationSuccess(data.message || 'Verification link resent! Please check your inbox.');
+        if (data.verificationUrl) setDevVerificationUrl(data.verificationUrl);
+      } else {
+        setError(data.error || 'Failed to resend verification email.');
+      }
+    } catch (err) {
+      setError('Could not connect to authentication server.');
+    } finally {
+      setResendingVerification(false);
+    }
+  };
+
   const switchRole = (newRole) => {
     setError('');
     setRoleMismatch(null);
+    setEmailNotVerified(false);
+    setResendVerificationSuccess(null);
     navigate(`/login?role=${newRole}`);
   };
 
@@ -129,6 +182,7 @@ export default function Login({ onLogin }) {
     setPassword(portal.demoPass);
     setError('');
     setRoleMismatch(null);
+    setEmailNotVerified(false);
   };
 
   const handleLogin = async (e) => {
@@ -183,6 +237,9 @@ export default function Login({ onLogin }) {
             actualRole: data.actualRole,
             actualPortalName: PORTAL_CONFIG[data.actualRole]?.label || data.actualRole,
           });
+        }
+        if (data.code === 'EMAIL_NOT_VERIFIED' || (data.error && data.error.toLowerCase().includes('verify your email'))) {
+          setEmailNotVerified(true);
         }
         setError(data.error || 'Authentication failed. Please verify your credentials.');
       }
@@ -405,7 +462,7 @@ export default function Login({ onLogin }) {
               bgcolor: '#FFFFFF',
               border: '1.5px solid #E2E8F0',
               display: 'grid',
-              gridTemplateColumns: 'repeat(4, 1fr)',
+              gridTemplateColumns: { xs: 'repeat(3, 1fr)', sm: 'repeat(5, 1fr)' },
               gap: 0.75,
               boxShadow: '0 4px 20px -2px rgba(15, 23, 42, 0.04)',
             }}
@@ -419,7 +476,7 @@ export default function Login({ onLogin }) {
                   onClick={() => switchRole(roleKey)}
                   sx={{
                     py: 1,
-                    px: 1,
+                    px: 0.5,
                     borderRadius: '10px',
                     display: 'flex',
                     flexDirection: 'column',
@@ -444,9 +501,10 @@ export default function Login({ onLogin }) {
                       fontSize: '0.72rem',
                       lineHeight: 1.1,
                       textAlign: 'center',
+                      whiteSpace: 'nowrap',
                     }}
                   >
-                    {roleKey === 'user' ? 'Citizen' : roleKey === 'lmo' ? 'LMO Officer' : roleKey === 'field_officer' ? 'Inspector' : 'Admin'}
+                    {roleKey === 'user' ? 'Citizen' : roleKey === 'lmo' ? 'LMO Officer' : roleKey === 'field_officer' ? 'Inspector' : roleKey === 'gatc' ? 'GATC Lab' : 'Admin'}
                   </Typography>
                 </Button>
               );
@@ -548,6 +606,68 @@ export default function Login({ onLogin }) {
               </Button>
             </Box>
 
+            {/* Verification Status Alerts from URL */}
+            {verifiedParam === 'true' && (
+              <Alert severity="success" sx={{ mb: 2.5, borderRadius: '12px', fontWeight: 600 }}>
+                ✅ Email verified successfully! You can now sign in with your credentials.
+              </Alert>
+            )}
+
+            {verifiedParam === 'already' && (
+              <Alert severity="info" sx={{ mb: 2.5, borderRadius: '12px', fontWeight: 600 }}>
+                ℹ️ Your email address is already verified. Please enter your credentials to log in.
+              </Alert>
+            )}
+
+            {errorParam === 'token_expired' && (
+              <Alert severity="warning" sx={{ mb: 2.5, borderRadius: '12px' }}>
+                <Typography variant="body2" sx={{ fontWeight: 700, mb: 0.5 }}>
+                  ⚠️ Verification Link Expired
+                </Typography>
+                <Typography variant="caption" sx={{ display: 'block', mb: 1.5, color: '#663C00' }}>
+                  Verification links expire after 24 hours. Enter your email above and click below to request a fresh link.
+                </Typography>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  color="warning"
+                  onClick={handleResendVerification}
+                  disabled={resendingVerification}
+                  sx={{ textTransform: 'none', fontWeight: 700, borderRadius: '8px' }}
+                >
+                  {resendingVerification ? 'Sending...' : 'Resend Verification Link'}
+                </Button>
+              </Alert>
+            )}
+
+            {errorParam === 'invalid_token' && (
+              <Alert severity="error" sx={{ mb: 2.5, borderRadius: '12px' }}>
+                ⚠️ Invalid verification link. Please check the link in your email or request a fresh one below.
+              </Alert>
+            )}
+
+            {resendVerificationSuccess && (
+              <Alert severity="success" sx={{ mb: 2.5, borderRadius: '12px' }}>
+                <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                  ✅ {resendVerificationSuccess}
+                </Typography>
+                {devVerificationUrl && (
+                  <Box sx={{ mt: 1 }}>
+                    <Button
+                      size="small"
+                      variant="contained"
+                      color="success"
+                      href={devVerificationUrl}
+                      target="_blank"
+                      sx={{ textTransform: 'none', fontWeight: 700, fontSize: '0.75rem', borderRadius: '6px' }}
+                    >
+                      Dev Quick Verify (Localhost) →
+                    </Button>
+                  </Box>
+                )}
+              </Alert>
+            )}
+
             {/* Error Message */}
             {error && (
               <Alert
@@ -567,6 +687,29 @@ export default function Login({ onLogin }) {
                   <Typography variant="body2" sx={{ fontWeight: 600 }}>
                     {error}
                   </Typography>
+
+                  {emailNotVerified && (
+                    <Box sx={{ pt: 0.5 }}>
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        color="error"
+                        onClick={handleResendVerification}
+                        disabled={resendingVerification}
+                        sx={{
+                          fontWeight: 700,
+                          fontSize: '0.78rem',
+                          textTransform: 'none',
+                          borderRadius: '8px',
+                          bgcolor: '#FFFFFF',
+                          '&:hover': { bgcolor: '#FFEBEE' },
+                        }}
+                      >
+                        {resendingVerification ? 'Resending verification email...' : '📧 Resend Verification Link'}
+                      </Button>
+                    </Box>
+                  )}
+
                   {roleMismatch && (
                     <Box sx={{ pt: 0.5 }}>
                       <Button

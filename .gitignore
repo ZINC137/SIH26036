@@ -36,6 +36,10 @@ coverage/
 tmp/
 temp/
 *.tmp
+*.bak
+*.backup*
+uploads/
+!backend/uploads/.gitkeep
 
 # OS
 Thumbs.db

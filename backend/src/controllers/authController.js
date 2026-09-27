@@ -5,6 +5,85 @@ const { PrismaClient } = require('@prisma/client');
 const { sendVerificationEmail } = require('../utils/emailService');
 const prisma = new PrismaClient();
 
+const renderVerificationHtml = ({ success, title, message, redirectUrl, buttonText }) => {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>${title} — Legal Metrology Verification System</title>
+  <meta http-equiv="refresh" content="3;url=${redirectUrl}" />
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background: #F0F4FF;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+    }
+    .card {
+      background: #ffffff;
+      max-width: 500px;
+      margin: 20px;
+      padding: 40px 32px;
+      border-radius: 16px;
+      box-shadow: 0 10px 30px rgba(13, 71, 161, 0.12);
+      text-align: center;
+    }
+    .icon {
+      font-size: 64px;
+      line-height: 1;
+      margin-bottom: 20px;
+    }
+    h1 {
+      font-size: 24px;
+      color: #0D47A1;
+      margin: 0 0 12px;
+      font-weight: 700;
+    }
+    p {
+      color: #4B5563;
+      font-size: 15px;
+      line-height: 1.6;
+      margin: 0 0 24px;
+    }
+    .btn {
+      display: inline-block;
+      background: linear-gradient(135deg, #0D47A1 0%, #1565C0 100%);
+      color: #ffffff;
+      text-decoration: none;
+      font-weight: 600;
+      padding: 12px 28px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(13, 71, 161, 0.25);
+      transition: all 0.2s ease;
+    }
+    .btn:hover {
+      background: linear-gradient(135deg, #0B3C8A 0%, #0D47A1 100%);
+      transform: translateY(-1px);
+    }
+    .countdown {
+      margin-top: 18px;
+      font-size: 13px;
+      color: #9CA3AF;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="icon">${success ? '✅' : '⚠️'}</div>
+    <h1>${title}</h1>
+    <p>${message}</p>
+    <a href="${redirectUrl}" class="btn">${buttonText || 'Proceed to Login →'}</a>
+    <div class="countdown">Automatically redirecting to login in a few seconds...</div>
+  </div>
+</body>
+</html>`;
+};
+
 const register = async (req, res) => {
   try {
     const { email, password, full_name, phone, organization, address, city, state, pincode } = req.body;
@@ -28,11 +107,37 @@ const register = async (req, res) => {
       return res.status(400).json({ error: `The following fields are required: ${missing.join(', ')}` });
     }
 
+    const normalizedEmail = (email || '').toLowerCase().trim();
+
     // 3. Check if email already exists
-    const existingUser = await prisma.user.findUnique({ where: { email } });
+    const existingUser = await prisma.user.findUnique({ where: { email: normalizedEmail } });
     if (existingUser) {
-      // Do not reveal whether email is taken
-      return res.status(200).json({ message: 'If this email is eligible, a verification link has been sent.' });
+      // If user exists and is NOT verified, refresh token and resend verification email!
+      if (!existingUser.is_verified) {
+        const token = crypto.randomBytes(32).toString('hex');
+        const expiresAt = new Date();
+        expiresAt.setHours(expiresAt.getHours() + 24);
+
+        await prisma.user.update({
+          where: { id: existingUser.id },
+          data: {
+            verification_token: token,
+            verification_token_expires_at: expiresAt,
+          },
+        });
+
+        const sendResult = await sendVerificationEmail(normalizedEmail, token);
+        return res.status(200).json({
+          message: 'If this email is eligible, a verification link has been sent.',
+          verificationUrl: process.env.NODE_ENV !== 'production' ? sendResult?.verificationUrl : undefined,
+        });
+      }
+
+      // If user is already verified, inform them cleanly
+      return res.status(200).json({
+        message: 'This email is already registered and verified. You can log in directly.',
+        alreadyVerified: true,
+      });
     }
 
     // 4. Hash password
@@ -51,7 +156,7 @@ const register = async (req, res) => {
     await prisma.$transaction(async (tx) => {
       const user = await tx.user.create({
         data: {
-          email,
+          email: normalizedEmail,
           password_hash,
           is_verified: false,
           verification_token: token,
@@ -74,9 +179,12 @@ const register = async (req, res) => {
     });
 
     // 7. Send verification email
-    await sendVerificationEmail(email, token);
+    const sendResult = await sendVerificationEmail(normalizedEmail, token);
 
-    return res.status(200).json({ message: 'If this email is eligible, a verification link has been sent.' });
+    return res.status(200).json({
+      message: 'If this email is eligible, a verification link has been sent.',
+      verificationUrl: process.env.NODE_ENV !== 'production' ? sendResult?.verificationUrl : undefined,
+    });
 
   } catch (error) {
     console.error('Registration error:', error);
@@ -87,8 +195,19 @@ const register = async (req, res) => {
 const verify = async (req, res) => {
   try {
     const { token } = req.query;
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const acceptsHtml = req.headers.accept && req.headers.accept.includes('text/html');
 
     if (!token) {
+      if (acceptsHtml) {
+        return res.status(400).send(renderVerificationHtml({
+          success: false,
+          title: 'Invalid Verification Link',
+          message: 'No verification token was provided. Please verify the link in your email.',
+          redirectUrl: `${frontendUrl}/login?error=invalid_token`,
+          buttonText: 'Return to Login',
+        }));
+      }
       return res.status(400).json({ error: 'Invalid or expired verification link' });
     }
 
@@ -97,9 +216,32 @@ const verify = async (req, res) => {
       where: { verification_token: token },
     });
 
-    // Validate token existence and expiration
-    if (!user || !user.verification_token_expires_at || new Date() > user.verification_token_expires_at) {
+    // Validate token existence
+    if (!user) {
+      if (acceptsHtml) {
+        return res.status(200).send(renderVerificationHtml({
+          success: true,
+          title: 'Email Already Verified',
+          message: 'Your email address is already verified and active. You can proceed directly to sign in.',
+          redirectUrl: `${frontendUrl}/login?verified=already`,
+          buttonText: 'Proceed to Login →',
+        }));
+      }
       return res.status(400).json({ error: 'Invalid or expired verification link' });
+    }
+
+    // Validate expiration
+    if (!user.verification_token_expires_at || new Date() > user.verification_token_expires_at) {
+      if (acceptsHtml) {
+        return res.status(400).send(renderVerificationHtml({
+          success: false,
+          title: 'Verification Link Expired',
+          message: 'This verification link has expired (24-hour limit). Please sign in to request a fresh link.',
+          redirectUrl: `${frontendUrl}/login?error=token_expired&email=${encodeURIComponent(user.email)}`,
+          buttonText: 'Request New Link / Login',
+        }));
+      }
+      return res.status(400).json({ error: 'Verification link has expired. Please request a new one.' });
     }
 
     // Mark as verified
@@ -112,9 +254,76 @@ const verify = async (req, res) => {
       },
     });
 
+    if (acceptsHtml) {
+      return res.status(200).send(renderVerificationHtml({
+        success: true,
+        title: 'Email Verified Successfully!',
+        message: 'Your email has been verified. Welcome to the Legal Metrology Verification System.',
+        redirectUrl: `${frontendUrl}/login?verified=true&email=${encodeURIComponent(user.email)}`,
+        buttonText: 'Proceed to Login →',
+      }));
+    }
+
     return res.status(200).json({ message: 'Email verified successfully. You can now log in.' });
   } catch (error) {
     console.error('Verification error:', error);
+    if (req.headers.accept && req.headers.accept.includes('text/html')) {
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+      return res.status(500).send(renderVerificationHtml({
+        success: false,
+        title: 'Verification Failed',
+        message: 'A server error occurred while verifying your email. Please try again.',
+        redirectUrl: `${frontendUrl}/login?error=server_error`,
+        buttonText: 'Return to Login',
+      }));
+    }
+    return res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+const resendVerification = async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ error: 'Email is required' });
+    }
+
+    const normalizedEmail = (email || '').toLowerCase().trim();
+    const user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+
+    if (!user) {
+      // Do not reveal whether user exists
+      return res.status(200).json({ message: 'If this email is eligible, a new verification link has been sent.' });
+    }
+
+    if (user.is_verified) {
+      return res.status(200).json({
+        message: 'This email is already verified. You can log in directly.',
+        alreadyVerified: true,
+      });
+    }
+
+    // Generate fresh token and set expiry
+    const token = crypto.randomBytes(32).toString('hex');
+    const expiresAt = new Date();
+    expiresAt.setHours(expiresAt.getHours() + 24);
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        verification_token: token,
+        verification_token_expires_at: expiresAt,
+      },
+    });
+
+    const sendResult = await sendVerificationEmail(normalizedEmail, token);
+
+    return res.status(200).json({
+      message: 'A fresh verification link has been sent to your email.',
+      verificationUrl: process.env.NODE_ENV !== 'production' ? sendResult?.verificationUrl : undefined,
+    });
+  } catch (error) {
+    console.error('Resend verification error:', error);
     return res.status(500).json({ error: 'Internal Server Error' });
   }
 };
@@ -138,6 +347,7 @@ const login = async (req, res) => {
         adminProfile: true,
         lmoProfile: true,
         fieldOfficerProfile: true,
+        gatcProfile: true,
         profile: true,
       },
     });
@@ -180,6 +390,7 @@ const login = async (req, res) => {
       user: 'Public Citizen / Trader',
       lmo: 'Legal Metrology Officer (LMO)',
       field_officer: 'Field Verification Officer',
+      gatc: 'Government Approved Test Centre (GATC)',
       admin: 'Administrator',
     };
 
@@ -187,6 +398,7 @@ const login = async (req, res) => {
       user: 'Public User Portal',
       lmo: 'LMO Officer Portal',
       field_officer: 'Field Officer Portal',
+      gatc: 'GATC Testing Centre Portal',
       admin: 'Administrator Portal',
     };
 
@@ -218,7 +430,11 @@ const login = async (req, res) => {
     }
 
     if (!user.is_verified) {
-      return res.status(403).json({ error: 'Please verify your email before logging in' });
+      return res.status(403).json({
+        error: 'Please verify your email before logging in. Check your inbox or request a new verification link.',
+        code: 'EMAIL_NOT_VERIFIED',
+        email: user.email,
+      });
     }
 
     // Reset lockout counters
@@ -231,9 +447,9 @@ const login = async (req, res) => {
     });
 
     // Extract specialized metadata from the appropriate profile table
-    const employeeCode = user.adminProfile?.employeeCode || user.lmoProfile?.employeeCode || user.fieldOfficerProfile?.employeeCode || null;
-    const assignedJurisdiction = user.adminProfile?.department || user.lmoProfile?.assignedJurisdiction || user.fieldOfficerProfile?.circleZone || null;
-    const dscKeyId = user.lmoProfile?.dscKeyId || null;
+    const employeeCode = user.adminProfile?.employeeCode || user.lmoProfile?.employeeCode || user.fieldOfficerProfile?.employeeCode || user.gatcProfile?.gatc_code || null;
+    const assignedJurisdiction = user.adminProfile?.department || user.lmoProfile?.assignedJurisdiction || user.fieldOfficerProfile?.circleZone || user.gatcProfile?.centre_name || null;
+    const dscKeyId = user.lmoProfile?.dscKeyId || user.gatcProfile?.accreditation_no || null;
 
     // Generate JWT
     const token = jwt.sign(
@@ -261,6 +477,7 @@ const login = async (req, res) => {
         employeeCode,
         assignedJurisdiction,
         dscKeyId,
+        gatcProfile: user.gatcProfile,
       }
     });
 
@@ -288,13 +505,14 @@ const me = async (req, res) => {
         adminProfile: true,
         lmoProfile: true,
         fieldOfficerProfile: true,
+        gatcProfile: true,
         profile: true,
       },
     });
 
-    const employeeCode = user.adminProfile?.employeeCode || user.lmoProfile?.employeeCode || user.fieldOfficerProfile?.employeeCode || null;
-    const assignedJurisdiction = user.adminProfile?.department || user.lmoProfile?.assignedJurisdiction || user.fieldOfficerProfile?.circleZone || null;
-    const dscKeyId = user.lmoProfile?.dscKeyId || null;
+    const employeeCode = user.adminProfile?.employeeCode || user.lmoProfile?.employeeCode || user.fieldOfficerProfile?.employeeCode || user.gatcProfile?.gatc_code || null;
+    const assignedJurisdiction = user.adminProfile?.department || user.lmoProfile?.assignedJurisdiction || user.fieldOfficerProfile?.circleZone || user.gatcProfile?.centre_name || null;
+    const dscKeyId = user.lmoProfile?.dscKeyId || user.gatcProfile?.accreditation_no || null;
 
     return res.status(200).json({ 
       user: { 
@@ -305,7 +523,7 @@ const me = async (req, res) => {
         employeeCode,
         assignedJurisdiction,
         dscKeyId,
-        profile: user.profile || user.adminProfile || user.lmoProfile || user.fieldOfficerProfile,
+        profile: user.profile || user.adminProfile || user.lmoProfile || user.fieldOfficerProfile || user.gatcProfile,
       } 
     });
 
@@ -448,6 +666,7 @@ const activateFieldOfficer = async (req, res) => {
 module.exports = {
   register,
   verify,
+  resendVerification,
   login,
   logout,
   me,

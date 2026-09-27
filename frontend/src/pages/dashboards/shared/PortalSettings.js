@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box, Paper, Typography, Grid, TextField, Button,
   Divider, Switch, FormControlLabel, Alert, CircularProgress,
@@ -10,6 +10,7 @@ const ROLE_META = {
   lmo:           { label: 'LMO Officer',   color: '#1B5E20', gradient: 'linear-gradient(135deg, #2E7D32, #1B5E20)' },
   field_officer: { label: 'Field Officer', color: '#4A148C', gradient: 'linear-gradient(135deg, #7B1FA2, #4A148C)' },
   admin:         { label: 'Administrator', color: '#B71C1C', gradient: 'linear-gradient(135deg, #C62828, #B71C1C)' },
+  gatc:          { label: 'GATC Centre',   color: '#0D9488', gradient: 'linear-gradient(135deg, #14B8A6, #0D9488)' },
 };
 
 export default function PortalSettings({ userRole = 'user', userEmail = '' }) {
@@ -44,14 +45,15 @@ export default function PortalSettings({ userRole = 'user', userEmail = '' }) {
         if (res.ok) {
           const data = await res.json();
           const p = data.user?.profile || {};
+          const gp = data.user?.gatcProfile || {};
           setProfile({
-            fullName:     p.full_name     || '',
+            fullName:     gp.lab_head_name || p.full_name     || '',
             email:        data.user?.email || userEmail,
-            phone:        p.phone         || '',
-            organization: p.organization  || '',
-            address:      p.address       || '',
-            city:         p.city          || '',
-            state:        p.state         || '',
+            phone:        gp.phone         || p.phone         || '',
+            organization: gp.centre_name   || p.organization  || '',
+            address:      gp.address       || p.address       || '',
+            city:         gp.district      || p.city          || '',
+            state:        gp.state         || p.state         || '',
             pincode:      p.pincode       || '',
           });
         } else {

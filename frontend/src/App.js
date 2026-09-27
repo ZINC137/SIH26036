@@ -34,10 +34,17 @@ import FOHistory from './pages/dashboards/field_officer/FOHistory';
 import AdminDashboard from './pages/dashboards/AdminDashboard';
 import AdminUsers from './pages/dashboards/admin/AdminUsers';
 import AdminCertificates from './pages/dashboards/admin/AdminCertificates';
+import AdminRules from './pages/dashboards/admin/AdminRules';
+
+// GATC Portal
+import GATCDashboard from './pages/dashboards/GATCDashboard';
+import GATCQueue from './pages/dashboards/gatc/GATCQueue';
+import GATCHistory from './pages/dashboards/gatc/GATCHistory';
 
 // Nav Icons
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import AssignmentIcon from '@mui/icons-material/Assignment';
+import GavelIcon from '@mui/icons-material/Gavel';
 import DownloadIcon from '@mui/icons-material/Download';
 import AddCircleIcon from '@mui/icons-material/AddCircle';
 import PendingActionsIcon from '@mui/icons-material/PendingActions';
@@ -75,9 +82,16 @@ const NAV = {
   admin: [
     { label: 'Dashboard',             icon: <DashboardIcon />, path: '/dashboard/admin' },
     { label: 'User Management',       icon: <PeopleIcon />,    path: '/dashboard/admin/users' },
+    { label: 'Rule Management',       icon: <GavelIcon />,     path: '/dashboard/admin/rules' },
     { label: 'Certificates & History', icon: <VerifiedIcon />,  path: '/dashboard/admin/certificates' },
     { label: 'Security Logs',         icon: <SecurityIcon />,  path: '/dashboard/admin/logs' },
     { label: 'System Settings',       icon: <SettingsIcon />,  path: '/dashboard/admin/settings' },
+  ],
+  gatc: [
+    { label: 'Dashboard',          icon: <DashboardIcon />,      path: '/dashboard/gatc' },
+    { label: 'Testing Queue',      icon: <PendingActionsIcon />, path: '/dashboard/gatc/tasks' },
+    { label: 'Testing History',    icon: <VerifiedIcon />,       path: '/dashboard/gatc/history' },
+    { label: 'Settings',           icon: <SettingsIcon />,       path: '/dashboard/gatc/settings' },
   ],
 };
 
@@ -85,6 +99,7 @@ const ROLE_HOME = {
   user: '/dashboard/user',
   lmo: '/dashboard/lmo',
   field_officer: '/dashboard/field-officer',
+  gatc: '/dashboard/gatc',
   admin: '/dashboard/admin',
 };
 
@@ -215,10 +230,19 @@ function App() {
               <Route element={portalLayout('admin')}>
                 <Route path="/dashboard/admin"              element={<AdminDashboard userEmail={userEmail} />} />
                 <Route path="/dashboard/admin/users"        element={<AdminUsers />} />
+                <Route path="/dashboard/admin/rules"        element={<AdminRules />} />
                 <Route path="/dashboard/admin/certificates" element={<AdminCertificates />} />
                 <Route path="/dashboard/admin/analytics"    element={<AdminCertificates />} />
                 <Route path="/dashboard/admin/logs"         element={<AdminDashboard userEmail={userEmail} />} />
                 <Route path="/dashboard/admin/settings"     element={<PortalSettings userRole="admin" userEmail={userEmail} />} />
+              </Route>
+
+              {/* ── GATC PORTAL ── */}
+              <Route element={portalLayout('gatc')}>
+                <Route path="/dashboard/gatc"          element={<GATCDashboard userEmail={userEmail} />} />
+                <Route path="/dashboard/gatc/tasks"    element={<GATCQueue userEmail={userEmail} />} />
+                <Route path="/dashboard/gatc/history"  element={<GATCHistory userEmail={userEmail} />} />
+                <Route path="/dashboard/gatc/settings" element={<PortalSettings userRole="gatc" userEmail={userEmail} />} />
               </Route>
 
               {/* Redirect /dashboard → role home */}
