@@ -8,7 +8,9 @@
 
 ## Local Development Setup
 
-For the local backend, create `backend/.env` from [`backend/.env.example`](../backend/.env.example). Keep `DATABASE_URL` set to `file:./dev.db`; Prisma resolves it relative to `backend/prisma/schema.prisma`, selecting `backend/prisma/dev.db`. The frontend development server proxies same-origin `/api` requests to `http://localhost:5001`; restart it after changing the frontend proxy configuration. In production, configure the web server to proxy `/api` to the backend.
+For the local backend, create `backend/.env` from [`backend/.env.example`](../backend/.env.example). Keep `DATABASE_URL` set to `file:./dev.db`; Prisma resolves it relative to `backend/prisma/schema.prisma`, selecting the local `backend/prisma/dev.db` database. This database is intentionally not tracked by Git, so existing user accounts and application data remain local. The frontend development server proxies same-origin `/api` requests to `http://localhost:5001`; restart it after changing the frontend proxy configuration. In production, configure the web server to proxy `/api` to the backend.
+
+After pulling schema changes, run `npx prisma db push` from `backend/` to add the schema to your local database, then run `npm run seed:rules` to load the statutory rule configuration. This does not provision demo accounts. The backend test command seeds rules and runs the rule-engine suite using temporary test records.
 
 ### 1. Environment Variables
 Create `.env` file in root:
@@ -32,7 +34,8 @@ This starts:
 ### 3. Database Migrations
 ```bash
 cd backend
-npm run migrate
+npx prisma db push
+npm run seed:rules
 ```
 
 ## Production Deployment

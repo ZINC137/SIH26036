@@ -17,14 +17,11 @@ import {
   Alert,
 } from '@mui/material';
 import CheckCircleRoundedIcon from '@mui/icons-material/CheckCircleRounded';
-import CancelRoundedIcon from '@mui/icons-material/CancelRounded';
 import PendingActionsRoundedIcon from '@mui/icons-material/PendingActionsRounded';
 import GroupRoundedIcon from '@mui/icons-material/GroupRounded';
-import VisibilityRoundedIcon from '@mui/icons-material/VisibilityRounded';
 import VerifiedUserRoundedIcon from '@mui/icons-material/VerifiedUserRounded';
 import AssignmentTurnedInRoundedIcon from '@mui/icons-material/AssignmentTurnedInRounded';
 import HowToRegRoundedIcon from '@mui/icons-material/HowToRegRounded';
-import ArrowForwardRoundedIcon from '@mui/icons-material/ArrowForwardRounded';
 import RefreshRoundedIcon from '@mui/icons-material/RefreshRounded';
 import AssignmentIndIcon from '@mui/icons-material/AssignmentInd';
 import { useNavigate } from 'react-router-dom';
@@ -41,6 +38,7 @@ const priorityColor = {
 const statusColor = {
   Pending: { color: '#B45309', bg: '#FFFBEB', border: '#FDE68A' },
   'Under Inspection': { color: '#0284C7', bg: '#EFF6FF', border: '#BFDBFE' },
+  'Inspection Reported': { color: '#7E22CE', bg: '#FAF5FF', border: '#E9D5FF' },
   Approved: { color: '#15803D', bg: '#F0FDF4', border: '#BBF7D0' },
   Rejected: { color: '#B91C1C', bg: '#FEF2F2', border: '#FECACA' },
 };
@@ -50,6 +48,7 @@ export default function LMODashboard({ userEmail }) {
   const [stats, setStats] = useState({
     pending: 0,
     underInspection: 0,
+    inspectionReported: 0,
     approved: 0,
     rejected: 0,
     officers: 0,
@@ -95,12 +94,19 @@ export default function LMODashboard({ userEmail }) {
         credentials: 'include',
         body: JSON.stringify({
           action,
-          notes: action === 'approve' ? 'Direct LMO Stamping Approval' : 'Rejected after territorial scrutiny.',
+          notes: action === 'approve'
+            ? 'FO inspection report reviewed and verified. Certificate issued under Section 24 of Legal Metrology Act.'
+            : 'Rejected after territorial scrutiny.',
         }),
       });
+      const data = await res.json();
       if (res.ok) {
-        setFeedback(`Application ${action === 'approve' ? 'approved & certificate issued' : 'rejected'}.`);
+        setFeedback(action === 'approve'
+          ? `Certificate issued! ${data.message}`
+          : 'Application rejected.');
         fetchDashboardData();
+      } else {
+        setFeedback(data.error || 'Action failed.');
       }
     } catch (err) {
       console.error(err);
@@ -116,33 +122,47 @@ export default function LMODashboard({ userEmail }) {
       color: '#D97706',
       bg: '#FFFBEB',
       border: '#FDE68A',
+      path: '/dashboard/lmo/pending',
+    },
+    {
+      label: 'Awaiting LMO Signature',
+      value: stats.inspectionReported,
+      detail: 'FO reports pending your DSC sign',
+      icon: AssignmentTurnedInRoundedIcon,
+      color: '#7E22CE',
+      bg: '#FAF5FF',
+      border: '#E9D5FF',
+      path: '/dashboard/lmo/pending',
     },
     {
       label: 'Certificates Issued',
       value: stats.approved,
-      detail: 'Passed on-site stamping',
+      detail: 'Passed & LMO signed',
       icon: VerifiedUserRoundedIcon,
       color: '#16A34A',
       bg: '#F0FDF4',
       border: '#BBF7D0',
+      path: '/dashboard/lmo/certificates',
     },
     {
       label: 'Field Inspections Active',
       value: stats.underInspection,
       detail: 'Dispatched to officers',
-      icon: AssignmentTurnedInRoundedIcon,
+      icon: GroupRoundedIcon,
       color: '#0284C7',
       bg: '#EFF6FF',
       border: '#BFDBFE',
+      path: '/dashboard/lmo/pending',
     },
     {
       label: 'Officers In Jurisdiction',
       value: officers.length,
       detail: 'Delhi North Zone Staff',
       icon: HowToRegRoundedIcon,
-      color: '#7E22CE',
-      bg: '#FAF5FF',
-      border: '#E9D5FF',
+      color: '#15803D',
+      bg: '#F0FDF4',
+      border: '#BBF7D0',
+      path: '/dashboard/lmo/officers',
     },
   ];
 
@@ -255,12 +275,14 @@ export default function LMODashboard({ userEmail }) {
             <Paper
               key={s.label}
               elevation={0}
+              onClick={() => s.path && navigate(s.path)}
               sx={{
                 p: 3,
                 borderRadius: '18px',
                 border: '1.5px solid #E2E8F0',
                 bgcolor: '#FFFFFF',
                 boxShadow: '0 4px 16px -2px rgba(15, 23, 42, 0.04)',
+                cursor: s.path ? 'pointer' : 'default',
                 transition: 'transform 0.2s, box-shadow 0.2s',
                 '&:hover': {
                   transform: 'translateY(-3px)',
@@ -590,6 +612,122 @@ export default function LMODashboard({ userEmail }) {
           </Box>
         </Paper>
       </Box>
+
+      {/* ── Recently Issued Certificates & Stamping Records ── */}
+      <Paper
+        elevation={0}
+        sx={{
+          mt: 4,
+          borderRadius: '20px',
+          border: '1.5px solid #E2E8F0',
+          bgcolor: '#FFFFFF',
+          overflow: 'hidden',
+          boxShadow: '0 4px 16px -2px rgba(15, 23, 42, 0.04)',
+        }}
+      >
+        <Box
+          sx={{
+            p: 3,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            borderBottom: '1px solid #E2E8F0',
+            flexWrap: 'wrap',
+            gap: 2,
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <Box
+              sx={{
+                width: 36,
+                height: 36,
+                borderRadius: '10px',
+                bgcolor: '#F0FDF4',
+                color: '#15803D',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <VerifiedUserRoundedIcon sx={{ fontSize: 20 }} />
+            </Box>
+            <Box>
+              <Typography variant="h6" sx={{ fontWeight: 800, color: '#0F172A', fontSize: '1.05rem' }}>
+                Recently Issued Stamping Certificates
+              </Typography>
+              <Typography variant="caption" sx={{ color: '#64748B' }}>
+                Form D certificates signed with Class-3 DSC in North Delhi jurisdiction
+              </Typography>
+            </Box>
+          </Box>
+
+          <Button
+            size="small"
+            onClick={() => navigate('/dashboard/lmo/certificates')}
+            sx={{ color: '#15803D', fontWeight: 700, fontSize: '0.78rem' }}
+          >
+            Open Certificate Registry →
+          </Button>
+        </Box>
+
+        {applications.filter((a) => a.status === 'Approved' && a.certificateNo).length === 0 ? (
+          <Box sx={{ p: 4, textAlign: 'center' }}>
+            <Typography variant="body2" sx={{ color: '#64748B', fontWeight: 600 }}>
+              No certificates issued yet in this session.
+            </Typography>
+            <Typography variant="caption" sx={{ color: '#94A3B8', display: 'block', mt: 0.5 }}>
+              Review reported inspections in the Pending Queue to issue and sign Form D certificates.
+            </Typography>
+          </Box>
+        ) : (
+          <Box sx={{ overflowX: 'auto' }}>
+            <Table sx={{ minWidth: 640 }}>
+              <TableHead>
+                <TableRow sx={{ bgcolor: '#F8FAFC' }}>
+                  {['CERTIFICATE NO', 'APPLICANT FIRM', 'INSTRUMENT', 'INSPECTING FO', 'LEAD SEAL', 'STATUS'].map((h) => (
+                    <TableCell key={h} sx={{ fontWeight: 800, fontSize: '0.72rem', color: '#475569', py: 1.5 }}>
+                      {h}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {applications
+                  .filter((a) => a.status === 'Approved' && a.certificateNo)
+                  .slice(0, 5)
+                  .map((app) => (
+                    <TableRow key={app.id} hover sx={{ '&:last-child td': { border: 0 } }}>
+                      <TableCell sx={{ fontWeight: 800, color: '#15803D', fontSize: '0.82rem', fontFamily: 'monospace' }}>
+                        {app.certificateNo}
+                      </TableCell>
+                      <TableCell sx={{ fontWeight: 700, color: '#0F172A', fontSize: '0.85rem' }}>
+                        {app.applicant}
+                      </TableCell>
+                      <TableCell sx={{ color: '#334155', fontSize: '0.82rem' }}>
+                        {app.instrument}
+                      </TableCell>
+                      <TableCell sx={{ color: '#475569', fontSize: '0.82rem' }}>
+                        {app.assignedFoName || 'Field Inspector'}
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="caption" sx={{ fontFamily: 'monospace', bgcolor: '#F8FAFC', px: 1, py: 0.4, borderRadius: '4px', border: '1px solid #E2E8F0', fontWeight: 700 }}>
+                          {app.securitySealNo || 'SEAL-DL-ACTIVE'}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Chip
+                          label="Valid Certificate"
+                          size="small"
+                          sx={{ bgcolor: '#F0FDF4', color: '#15803D', border: '1px solid #BBF7D0', fontWeight: 800, fontSize: '0.65rem' }}
+                        />
+                      </TableCell>
+                    </TableRow>
+                  ))}
+              </TableBody>
+            </Table>
+          </Box>
+        )}
+      </Paper>
     </Box>
   );
 }

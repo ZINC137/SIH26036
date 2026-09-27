@@ -36,6 +36,11 @@ coverage/
 tmp/
 temp/
 *.tmp
+*.bak
+*.backup*
+uploads/
+!backend/uploads/.gitkeep
+backend/prisma/*.db
 
 # OS
 Thumbs.db

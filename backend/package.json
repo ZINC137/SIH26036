@@ -9,7 +9,8 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "seed:rules": "node src/rules/seedRules.js",
+    "test": "npm run seed:rules && node test_rules_engine.js"
   },
   "keywords": [],
   "author": "",
@@ -23,6 +24,7 @@
     "express": "^5.2.1",
     "express-rate-limit": "^8.7.0",
     "jsonwebtoken": "^9.0.3",
+    "multer": "^2.4.0",
     "nodemailer": "^10.0.10",
     "resend": "^6.28.1"
   },

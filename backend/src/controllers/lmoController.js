@@ -3,6 +3,7 @@ const crypto = require('crypto');
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const { recordAuditLog } = require('./adminController');
+const { validateAuthorityAssignment, calculateValidityDates } = require('../services/ruleEngineService');
 
 // 1. Nominate Field Inspector for Circle / Zone -> writes to FieldOfficerProfile table
 const nominateOfficer = async (req, res) => {
@@ -143,6 +144,49 @@ const getOfficers = async (req, res) => {
   }
 };
 
+// 2b. Get Accredited GATC Test Centres in Jurisdiction
+const getGatcCentres = async (req, res) => {
+  try {
+    const centres = await prisma.user.findMany({
+      where: { role: 'gatc' },
+      include: { gatcProfile: true },
+      orderBy: { created_at: 'desc' },
+    });
+
+    const formatted = await Promise.all(centres.map(async (c) => {
+      const profile = c.gatcProfile;
+      const assignedCount = await prisma.application.count({
+        where: { assigned_gatc_id: c.id, status: { in: ['Under Inspection', 'Pending'] } },
+      });
+      const completedCount = await prisma.application.count({
+        where: { assigned_gatc_id: c.id, status: { in: ['Inspection Reported', 'Approved'] } },
+      });
+
+      return {
+        id: profile?.gatc_code || c.id.slice(0, 8),
+        dbId: c.id,
+        userId: c.id,
+        gatcCode: profile?.gatc_code || null,
+        name: profile?.centre_name || 'GATC Laboratory',
+        email: c.email,
+        phone: profile?.phone || '',
+        accreditationNo: profile?.accreditation_no || null,
+        authorizedScopes: profile?.authorized_scopes || null,
+        state: profile?.state || 'Delhi',
+        district: profile?.district || 'North Delhi',
+        status: c.status,
+        assigned: assignedCount,
+        completed: completedCount,
+      };
+    }));
+
+    return res.status(200).json({ centres: formatted });
+  } catch (error) {
+    console.error('Get GATC centres error:', error);
+    return res.status(500).json({ error: 'Failed to retrieve GATC test centres.' });
+  }
+};
+
 // 3. Get Applications in Jurisdiction for LMO review
 const getLmoApplications = async (req, res) => {
   try {
@@ -214,9 +258,10 @@ const getLmoApplications = async (req, res) => {
 // 4. Get LMO Dashboard Key Performance Indicators (Live DB stats)
 const getLmoStats = async (req, res) => {
   try {
-    const [pendingCount, underInspectionCount, approvedCount, rejectedCount, officersCount] = await Promise.all([
+    const [pendingCount, underInspectionCount, inspectionReportedCount, approvedCount, rejectedCount, officersCount] = await Promise.all([
       prisma.application.count({ where: { status: 'Pending' } }),
       prisma.application.count({ where: { status: 'Under Inspection' } }),
+      prisma.application.count({ where: { status: 'Inspection Reported' } }),
       prisma.application.count({ where: { status: 'Approved' } }),
       prisma.application.count({ where: { status: 'Rejected' } }),
       prisma.user.count({ where: { role: 'field_officer', status: 'ACTIVE' } }),
@@ -226,10 +271,11 @@ const getLmoStats = async (req, res) => {
       stats: {
         pending: pendingCount,
         underInspection: underInspectionCount,
+        inspectionReported: inspectionReportedCount, // FO reports awaiting LMO signing
         approved: approvedCount,
         rejected: rejectedCount,
         officers: officersCount,
-        total: pendingCount + underInspectionCount + approvedCount + rejectedCount,
+        total: pendingCount + underInspectionCount + inspectionReportedCount + approvedCount + rejectedCount,
       },
     });
   } catch (error) {
@@ -238,14 +284,101 @@ const getLmoStats = async (req, res) => {
   }
 };
 
-// 5. Assign Field Officer to Application
+// 5. Assign Field Officer or GATC to Application (Requirement 3: Scheduling & Allocation)
 const assignFieldOfficer = async (req, res) => {
   try {
     const { id } = req.params;
-    const { foUserId, scheduledDate, scheduledTime, priority, notes } = req.body;
+    const { foUserId, gatcUserId, assigneeType, scheduledDate, scheduledTime, priority, notes } = req.body;
 
+    const app = await prisma.application.findUnique({ where: { id } });
+    if (!app) {
+      return res.status(404).json({ error: 'Application not found.' });
+    }
+
+    // 5A. Allocation to Government Approved Test Centre (GATC)
+    if (assigneeType === 'GATC' || gatcUserId) {
+      const targetGatcId = gatcUserId || foUserId;
+
+      // Authoritative Legal Metrology Validation: GATC Eligibility & Scope
+      try {
+        await validateAuthorityAssignment({
+          application: app,
+          assigneeType: 'GATC',
+          targetId: targetGatcId,
+        });
+      } catch (validationErr) {
+        return res.status(400).json({ error: validationErr.message });
+      }
+
+      let gatcUser = await prisma.user.findUnique({
+        where: { id: targetGatcId },
+        include: { gatcProfile: true },
+      });
+
+      if (!gatcUser) {
+        const prof = await prisma.gatcProfile.findUnique({
+          where: { gatc_code: targetGatcId },
+          include: { user: true },
+        });
+        if (prof?.user) {
+          gatcUser = { ...prof.user, gatcProfile: prof };
+        }
+      }
+
+      if (!gatcUser || gatcUser.role !== 'gatc') {
+        return res.status(404).json({ error: 'Selected Government Approved Test Centre (GATC) not found.' });
+      }
+      if (!gatcUser.gatcProfile) {
+        return res.status(409).json({ error: 'The selected GATC does not have an accreditation profile.' });
+      }
+
+      const centreName = gatcUser.gatcProfile.centre_name;
+      const gatcCode = gatcUser.gatcProfile.gatc_code;
+
+      const updatedApp = await prisma.application.update({
+        where: { id },
+        data: {
+          status: 'Under Inspection',
+          assigned_gatc_id: gatcUser.id,
+          assigned_gatc_name: centreName,
+          assigned_gatc_code: gatcCode,
+          assigned_lmo_id: req.user ? req.user.id : null,
+          assigned_at: new Date(),
+          inspection_mode: 'GATC_LAB',
+          scheduled_date: scheduledDate || new Date().toISOString().split('T')[0],
+          scheduled_time: scheduledTime || '10:00 AM',
+          priority: priority || app.priority || 'Normal',
+          inspection_notes: notes || app.inspection_notes,
+        },
+      });
+
+      await recordAuditLog(
+        'APPLICATION_ASSIGNED_TO_GATC',
+        req.user ? req.user.email : 'lmo@gov.in',
+        app.app_number,
+        `Assigned application ${app.app_number} (${app.instrument_type} at ${app.business_name}) to GATC ${centreName} (${gatcCode}) for high-precision laboratory verification.`
+      );
+
+      // Notify citizen of GATC scheduling
+      await prisma.notification.create({
+        data: {
+          user_id: app.user_id,
+          type: 'INSPECTION_SCHEDULED',
+          title: `Verification Scheduled at GATC: ${centreName}`,
+          message: `Your application ${app.app_number} has been allocated to accredited testing centre ${centreName}. Scheduled date: ${scheduledDate || 'Within 3 days'}.`,
+          reference_id: app.app_number,
+        },
+      });
+
+      return res.status(200).json({
+        message: `Application successfully allocated to GATC: ${centreName}.`,
+        application: updatedApp,
+      });
+    }
+
+    // 5B. Allocation to Field Verification Officer
     if (!foUserId) {
-      return res.status(400).json({ error: 'Field Officer selection is required.' });
+      return res.status(400).json({ error: 'Field Officer or GATC selection is required.' });
     }
 
     const officer = await prisma.user.findUnique({
@@ -255,11 +388,6 @@ const assignFieldOfficer = async (req, res) => {
 
     if (!officer || officer.role !== 'field_officer') {
       return res.status(404).json({ error: 'Selected Field Officer not found.' });
-    }
-
-    const app = await prisma.application.findUnique({ where: { id } });
-    if (!app) {
-      return res.status(404).json({ error: 'Application not found.' });
     }
 
     const foName = officer.fieldOfficerProfile?.full_name || officer.email;
@@ -274,6 +402,7 @@ const assignFieldOfficer = async (req, res) => {
         assigned_fo_code: foCode,
         assigned_lmo_id: req.user ? req.user.id : null,
         assigned_at: new Date(),
+        inspection_mode: 'ON_SITE',
         scheduled_date: scheduledDate || new Date().toISOString().split('T')[0],
         scheduled_time: scheduledTime || '11:00 AM',
         priority: priority || app.priority || 'Normal',
@@ -285,8 +414,19 @@ const assignFieldOfficer = async (req, res) => {
       'APPLICATION_ASSIGNED_TO_FO',
       req.user ? req.user.email : 'lmo@gov.in',
       app.app_number,
-      `Assigned application ${app.app_number} (${app.instrument_type} at ${app.business_name}) to Inspector ${foName} (${foCode}) for on-ground stamping. Inspection scheduled for ${scheduledDate || 'immediate'} ${scheduledTime || ''}.`
+      `Assigned application ${app.app_number} (${app.instrument_type} at ${app.business_name}) to Inspector ${foName} (${foCode}) for on-ground stamping. Scheduled for ${scheduledDate || 'immediate'} ${scheduledTime || ''}.`
     );
+
+    // Notify citizen of FO inspection schedule
+    await prisma.notification.create({
+      data: {
+        user_id: app.user_id,
+        type: 'INSPECTION_SCHEDULED',
+        title: `Field Inspection Scheduled: ${app.app_number}`,
+        message: `Inspector ${foName} has been assigned to verify ${app.instrument_type} at ${app.business_name}. Scheduled on: ${scheduledDate || 'Immediate inspection'}.`,
+        reference_id: app.app_number,
+      },
+    });
 
     return res.status(200).json({
       message: `Application successfully assigned to Inspector ${foName}.`,
@@ -294,11 +434,14 @@ const assignFieldOfficer = async (req, res) => {
     });
   } catch (error) {
     console.error('Assign field officer error:', error);
-    return res.status(500).json({ error: 'Failed to assign field officer.' });
+    return res.status(500).json({ error: 'Failed to assign field officer or GATC.' });
   }
 };
 
-// 6. Direct LMO Application Review / Approval / Rejection
+// 6. LMO Application Review & Statutory Certificate Endorsement:
+// - For 'Pending' apps: LMO can reject after document scrutiny, or assign FO/GATC for inspection
+// - For 'Inspection Reported' apps: LMO verifies findings, signs with Class-3 DSC, updates Instrument repository, and issues Form D certificate
+// This matches Section 24 of the Legal Metrology Act: only a gazetted LMO may legally issue the stamping certificate.
 const reviewApplication = async (req, res) => {
   try {
     const { id } = req.params;
@@ -309,13 +452,98 @@ const reviewApplication = async (req, res) => {
       return res.status(404).json({ error: 'Application not found.' });
     }
 
+    // Get LMO's profile for certificate signing
+    let lmoName = req.user?.email || 'Legal Metrology Officer';
+    let lmoCode = 'LMO-DL';
+    let lmoDscId = 'DSC-DL-2026-SHA256';
+    if (req.user?.id) {
+      const lmoProfile = await prisma.lmoProfile.findUnique({ where: { user_id: req.user.id } });
+      if (lmoProfile) {
+        lmoName = lmoProfile.full_name;
+        lmoCode = lmoProfile.employeeCode;
+        lmoDscId = lmoProfile.dscKeyId || lmoDscId;
+      }
+    }
+
     if (action === 'approve') {
+      if (app.status !== 'Inspection Reported' && app.status !== 'Pending') {
+        return res.status(400).json({
+          error: `Cannot approve application in "${app.status}" status. Only "Inspection Reported" or "Pending" applications can be approved.`,
+        });
+      }
+
       const year = new Date().getFullYear();
       const randHex = crypto.randomBytes(2).toString('hex').toUpperCase();
       const certificate_no = `CERT-DL-${year}-${randHex}`;
       const certificate_issued_at = new Date();
-      const certificate_valid_until = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000); // 1 year validity
 
+      // Dynamic Legal Metrology Validity Rule Calculation (Section 21 & 22)
+      const categoryCode = app.selected_category_code || app.instrument_type;
+      const validityData = await calculateValidityDates(categoryCode, certificate_issued_at, app.application_type);
+      const certificate_valid_until = validityData.validUntil;
+
+      // 1. Maintain Centralized Instrument Repository (Requirement 6, 10)
+      let instrumentRecord = null;
+      if (app.instrument_id) {
+        instrumentRecord = await prisma.instrument.update({
+          where: { id: app.instrument_id },
+          data: {
+            current_status: 'VERIFIED',
+            last_verification_date: certificate_issued_at,
+            validity_expiry_date: certificate_valid_until,
+            current_certificate_no: certificate_no,
+            current_security_seal_no: app.security_seal_no,
+            reverification_count: { increment: 1 },
+          },
+        });
+      } else {
+        const instCount = await prisma.instrument.count();
+        const instrument_id = `INST-${year}-${String(instCount + 1).padStart(4, '0')}`;
+        instrumentRecord = await prisma.instrument.create({
+          data: {
+            instrument_id,
+            user_id: app.user_id,
+            instrument_type: app.instrument_type,
+            make: app.make,
+            model: app.model,
+            serial_no: app.serial_no,
+            capacity: app.capacity,
+            unit: app.unit,
+            accuracy_class: app.accuracy_class,
+            location_address: `${app.address}, ${app.city}, ${app.state} - ${app.pincode}`,
+            business_name: app.business_name,
+            current_status: 'VERIFIED',
+            last_verification_date: certificate_issued_at,
+            validity_expiry_date: certificate_valid_until,
+            current_certificate_no: certificate_no,
+            current_security_seal_no: app.security_seal_no,
+          },
+        });
+      }
+
+      // 2. Persist Immutable Verification Event in Central Repository (Requirement 4, 10)
+      await prisma.verificationRecord.create({
+        data: {
+          application_id: app.id,
+          instrument_id: instrumentRecord?.id || null,
+          verification_type: app.application_type === 'RE_VERIFICATION' ? 'PERIODICAL_REVERIFICATION' : 'INITIAL',
+          verifier_type: app.assigned_gatc_id ? 'GATC' : 'FIELD_OFFICER',
+          verifier_id: app.assigned_gatc_id || app.assigned_fo_id,
+          verifier_name: app.stamped_by || app.assigned_fo_name || app.assigned_gatc_name || lmoName,
+          verifier_code: app.assigned_fo_code || app.assigned_gatc_code || lmoCode,
+          test_date: app.inspection_date || new Date(),
+          test_error_percentage: app.test_error_percentage ?? 0.015,
+          environmental_conditions: app.environmental_temp || '24°C, 48% RH',
+          working_standards_used: 'Legal Metrology Secondary Working Standards',
+          test_observations: app.inspection_notes || 'All statutory MPE tests satisfied.',
+          result: 'Pass',
+          security_seal_no: app.security_seal_no,
+          remarks: `Endorsed by LMO ${lmoName} with DSC [${lmoDscId}] under Sec 24 Legal Metrology Act.`,
+          certificate_no,
+        },
+      });
+
+      // 3. Update Application Record
       const updated = await prisma.application.update({
         where: { id },
         data: {
@@ -323,24 +551,76 @@ const reviewApplication = async (req, res) => {
           certificate_no,
           certificate_issued_at,
           certificate_valid_until,
-          stamped_by: req.user ? req.user.email : 'LMO Officer (Class-3 DSC)',
-          inspection_result: 'Pass',
-          inspection_notes: notes || 'Verified and approved under Section 24 of Legal Metrology Act.',
+          instrument_id: instrumentRecord?.id || app.instrument_id,
+          inspection_notes: notes
+            ? `LMO Review: ${notes}. ${app.inspection_notes || ''}`
+            : app.inspection_notes || 'Verified and approved under Section 24 of Legal Metrology Act.',
+          inspection_result: app.inspection_result || 'Pass',
+          assigned_lmo_id: req.user ? req.user.id : app.assigned_lmo_id,
+        },
+      });
+
+      // 4. Create Notification for Trader
+      await prisma.notification.create({
+        data: {
+          user_id: app.user_id,
+          type: 'CERTIFICATE_ISSUED',
+          title: `Statutory Form D Certificate Issued: ${certificate_no}`,
+          message: `Official Legal Metrology Certificate ${certificate_no} has been endorsed by LMO ${lmoName} for ${app.instrument_type} (${app.make} ${app.serial_no}). Valid until ${certificate_valid_until.toLocaleDateString('en-IN')}.`,
+          reference_id: certificate_no,
         },
       });
 
       await recordAuditLog(
-        'APPLICATION_APPROVED_CERTIFICATE_ISSUED',
+        'CERTIFICATE_ISSUED_BY_LMO',
         req.user ? req.user.email : 'lmo@gov.in',
         app.app_number,
-        `Approved verification for ${app.app_number}. Issued Legal Metrology Stamping Certificate ${certificate_no} valid until ${certificate_valid_until.toISOString().split('T')[0]}.`
+        `LMO ${lmoName} (${lmoCode}) endorsed inspection report for ${app.app_number} at ${app.business_name}. Signed with DSC [${lmoDscId}]. Issued Legal Metrology Stamping Certificate ${certificate_no} valid until ${certificate_valid_until.toISOString().split('T')[0]}.`
       );
 
       return res.status(200).json({
-        message: 'Application approved and digital Stamping Certificate issued.',
+        message: `Certificate issued successfully. ${certificate_no} signed by LMO ${lmoName} and valid for 1 year.`,
+        certificateNo: certificate_no,
         application: updated,
       });
+
+    } else if (action === 'correction') {
+      const updated = await prisma.application.update({
+        where: { id },
+        data: {
+          status: 'Correction Required',
+          rejection_reason: notes || 'Instrument requires recalibration or adjustment by authorized repairer.',
+          inspection_notes: `Correction Order: ${notes}. ${app.inspection_notes || ''}`,
+        },
+      });
+
+      await prisma.notification.create({
+        data: {
+          user_id: app.user_id,
+          type: 'CORRECTION_REQUIRED',
+          title: `Correction Required: ${app.app_number}`,
+          message: `LMO ${lmoName} has requested instrument adjustment / recalibration: ${notes || 'MPE exceeded.'}. Please arrange repair and schedule retest.`,
+          reference_id: app.app_number,
+        },
+      });
+
+      await recordAuditLog(
+        'APPLICATION_CORRECTION_ORDERED',
+        req.user ? req.user.email : 'lmo@gov.in',
+        app.app_number,
+        `Ordered correction for ${app.app_number} by LMO ${lmoName}. Reason: ${notes || 'MPE tolerance exceeded.'}`
+      );
+
+      return res.status(200).json({
+        message: 'Correction order issued to applicant.',
+        application: updated,
+      });
+
     } else if (action === 'reject') {
+      if (!['Pending', 'Inspection Reported', 'Correction Required'].includes(app.status)) {
+        return res.status(400).json({ error: `Cannot reject application in "${app.status}" status.` });
+      }
+
       const updated = await prisma.application.update({
         where: { id },
         data: {
@@ -350,19 +630,30 @@ const reviewApplication = async (req, res) => {
         },
       });
 
+      await prisma.notification.create({
+        data: {
+          user_id: app.user_id,
+          type: 'APPLICATION_UPDATE',
+          title: `Application Rejected: ${app.app_number}`,
+          message: `Your application has been rejected by LMO ${lmoName}. Reason: ${notes || 'Statutory criteria not met.'}`,
+          reference_id: app.app_number,
+        },
+      });
+
       await recordAuditLog(
-        'APPLICATION_REJECTED',
+        'APPLICATION_REJECTED_BY_LMO',
         req.user ? req.user.email : 'lmo@gov.in',
         app.app_number,
-        `Rejected application ${app.app_number}. Reason: ${notes || 'Statutory criteria not met.'}`
+        `Rejected application ${app.app_number} by LMO ${lmoName}. Reason: ${notes || 'Statutory criteria not met.'}`
       );
 
       return res.status(200).json({
         message: 'Application rejected.',
         application: updated,
       });
+
     } else {
-      return res.status(400).json({ error: "Invalid action. Use 'approve' or 'reject'." });
+      return res.status(400).json({ error: "Invalid action. Use 'approve', 'correction', or 'reject'." });
     }
   } catch (error) {
     console.error('Review application error:', error);
@@ -370,11 +661,86 @@ const reviewApplication = async (req, res) => {
   }
 };
 
+// 6. Get Certificate Registry & Past Verification History for LMO
+const getLmoCertificates = async (req, res) => {
+  try {
+    const applications = await prisma.application.findMany({
+      where: {
+        status: { in: ['Approved', 'Rejected', 'Inspection Reported'] },
+      },
+      orderBy: { updated_at: 'desc' },
+      include: {
+        user: {
+          select: { email: true, profile: true },
+        },
+      },
+    });
+
+    const formatted = applications.map((a) => {
+      const isApproved = a.status === 'Approved';
+      const isRejected = a.status === 'Rejected';
+      const validUntil = a.certificate_valid_until ? new Date(a.certificate_valid_until) : null;
+      const isValid = isApproved && validUntil && validUntil > new Date();
+
+      return {
+        id: a.id,
+        certificateNo: a.certificate_no || null,
+        appNumber: a.app_number,
+        businessName: a.business_name,
+        contactName: a.contact_name,
+        contactEmail: a.contact_email,
+        contactPhone: a.contact_phone,
+        address: `${a.address}, ${a.city}, ${a.state} - ${a.pincode}`,
+        city: a.city,
+        state: a.state,
+        pincode: a.pincode,
+        instrumentType: a.instrument_type,
+        make: a.make,
+        model: a.model,
+        serialNo: a.serial_no,
+        capacity: `${a.capacity} ${a.unit}`,
+        accuracyClass: a.accuracy_class,
+        assignedFoName: a.assigned_fo_name || 'Field Inspector',
+        assignedFoCode: a.assigned_fo_code || 'FO',
+        stampedBy: a.stamped_by || a.assigned_fo_name || 'Authorized Field Inspector',
+        inspectionDate: a.inspection_date ? new Date(a.inspection_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : null,
+        inspectionResult: a.inspection_result || (isApproved ? 'Pass' : isRejected ? 'Fail' : 'Pending'),
+        errorPercentage: a.test_error_percentage ?? 0.02,
+        securitySealNo: a.security_seal_no,
+        inspectionNotes: a.inspection_notes,
+        rejectionReason: a.rejection_reason,
+        certificateIssuedAt: a.certificate_issued_at ? new Date(a.certificate_issued_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : null,
+        certificateValidUntil: a.certificate_valid_until ? new Date(a.certificate_valid_until).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : null,
+        validityStatus: isValid ? 'Active' : (isApproved ? 'Expired' : a.status),
+        status: a.status,
+        submittedAt: new Date(a.submitted_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
+        feeAmount: a.fee_amount,
+        paymentStatus: a.payment_status,
+        raw: a,
+      };
+    });
+
+    const stats = {
+      totalCertificates: formatted.filter((c) => c.status === 'Approved').length,
+      activeCertificates: formatted.filter((c) => c.validityStatus === 'Active').length,
+      rejectedVerifications: formatted.filter((c) => c.status === 'Rejected').length,
+      awaitingSigning: formatted.filter((c) => c.status === 'Inspection Reported').length,
+    };
+
+    return res.status(200).json({ certificates: formatted, stats });
+  } catch (error) {
+    console.error('Get LMO certificates error:', error);
+    return res.status(500).json({ error: 'Failed to retrieve certificate history.' });
+  }
+};
+
 module.exports = {
   nominateOfficer,
   getOfficers,
+  getGatcCentres,
   getLmoApplications,
   getLmoStats,
   assignFieldOfficer,
   reviewApplication,
+  getLmoCertificates,
 };

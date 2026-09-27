@@ -21,7 +21,8 @@ router.get('/stats', getOfficerStats);
 // Submit Field Inspection & Issue Certificate
 router.post('/applications/:id/inspect', submitInspection);
 
-// Completed Inspection History
+// Completed Inspection History & Past Verifications
 router.get('/history', getInspectionHistory);
+router.get('/reports', getInspectionHistory);
 
 module.exports = router;

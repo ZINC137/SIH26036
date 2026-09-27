@@ -56,6 +56,15 @@ const ROLE_META = {
     bg: '#FAF5FF',
     accentBorder: '#E9D5FF',
   },
+  gatc: {
+    label: 'GATC Centre Portal',
+    roleTag: 'GOVT APPROVED TEST CENTRE',
+    color: '#0D9488',
+    darkColor: '#0F766E',
+    gradient: 'linear-gradient(135deg, #14B8A6 0%, #0D9488 100%)',
+    bg: '#F0FDFA',
+    accentBorder: '#99F6E4',
+  },
   admin: {
     label: 'Administrator Portal',
     roleTag: 'SYSTEM ADMIN',
@@ -189,7 +198,9 @@ export default function RoleLayout({ userRole, userEmail, onLogout, navItems }) 
 
         <List disablePadding>
           {navItems.map((item) => {
-            const isActive = location.pathname === item.path;
+            const currentCleanPath = location.pathname.replace(/\/+$/, '');
+            const itemCleanPath = item.path.replace(/\/+$/, '');
+            const isActive = currentCleanPath === itemCleanPath;
             return (
               <ListItemButton
                 key={item.label}
@@ -202,6 +213,7 @@ export default function RoleLayout({ userRole, userEmail, onLogout, navItems }) 
                   mb: 0.75,
                   py: 1.1,
                   px: 1.75,
+                  cursor: 'pointer',
                   bgcolor: isActive ? `${meta.color}25` : 'transparent',
                   border: isActive ? `1px solid ${meta.color}66` : '1px solid transparent',
                   transition: 'all 0.2s ease',

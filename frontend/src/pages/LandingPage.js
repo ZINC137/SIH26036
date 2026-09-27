@@ -36,6 +36,7 @@ import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
 import GavelRoundedIcon from '@mui/icons-material/GavelRounded';
 import PublicRoundedIcon from '@mui/icons-material/PublicRounded';
 import ShieldRoundedIcon from '@mui/icons-material/ShieldRounded';
+import ScienceRoundedIcon from '@mui/icons-material/ScienceRounded';
 
 const portals = [
   {
@@ -105,6 +106,28 @@ const portals = [
     ],
   },
   {
+    role: 'gatc',
+    title: 'GATC Centre Portal',
+    subtitle: 'NABL Accredited Testing & Calibration Labs',
+    badge: 'GOVT APPROVED TEST CENTRES',
+    description:
+      'Manage statutory laboratory testing queues, perform high-precision calibration under Rule 3(1), calculate Maximum Permissible Error (MPE) tolerances, affix tamper-proof security seals, and submit verification reports for Form D endorsement.',
+    icon: ScienceRoundedIcon,
+    color: '#0D9488', // Refined Teal
+    darkColor: '#0F766E',
+    lightBg: '#F0FDFA',
+    accentBorder: '#99F6E4',
+    hoverBorder: '#14B8A6',
+    hoverShadow: 'rgba(13, 148, 136, 0.22)',
+    gradient: 'linear-gradient(135deg, #14B8A6 0%, #0D9488 100%)',
+    features: [
+      'Statutory Laboratory Testing Queue & Batching',
+      'Rule 3(1) Calibration & MPE Tolerance Verification',
+      'Tamper-Proof GATC Security Seal Management',
+      'Official Test Certificate & Report Submission',
+    ],
+  },
+  {
     role: 'admin',
     title: 'Administrator Portal',
     subtitle: 'Central System & Security Administration',
@@ -154,6 +177,8 @@ function PortalCard({ portal }) {
         borderRadius: '20px',
         p: { xs: 3, sm: 3.5, md: 4 },
         minHeight: { xs: 'auto', md: 360 },
+        width: '100%',
+        height: '100%',
         display: 'flex',
         flexDirection: 'column',
         position: 'relative',
@@ -909,27 +934,69 @@ export default function LandingPage() {
                 lineHeight: 1.65,
               }}
             >
-              Select the operational portal matching your role to access role-tailored dashboards,
-              inspection queues, and certification workflows.
+              Select the operational portal matching your statutory role to access role-tailored dashboards,
+              verification queues, laboratory testing modules, and certification workflows.
             </Typography>
           </Box>
 
-          {/* Responsive 2 Columns × 2 Rows Desktop Grid */}
+          {/* Responsive 5-Portal Grid */}
           <Box
             sx={{
               display: 'grid',
               gridTemplateColumns: {
                 xs: '1fr',
-                md: 'repeat(2, 1fr)',
+                sm: 'repeat(2, 1fr)',
+                lg: 'repeat(6, 1fr)',
               },
               gap: { xs: 3, sm: 3.5, md: 4 },
-              maxWidth: 1200,
+              maxWidth: 1240,
               mx: 'auto',
             }}
           >
-            {portals.map((portal) => (
-              <PortalCard key={portal.role} portal={portal} />
-            ))}
+            {portals.map((portal, index) => {
+              // 6-column grid on desktop (lg):
+              // Row 1 (first 3 cards: User, LMO, Field Officer) each take span 2 (2+2+2 = 6)
+              // Row 2 (cards 4 & 5: GATC, Admin) each take span 2, with Card 4 starting at col 2 (centered!)
+              let gridCol = { xs: 'span 1' };
+              if (index < 3) {
+                gridCol = {
+                  xs: 'span 1',
+                  sm: 'span 1',
+                  lg: 'span 2',
+                };
+              } else if (index === 3) {
+                gridCol = {
+                  xs: 'span 1',
+                  sm: 'span 1',
+                  lg: '2 / span 2',
+                };
+              } else if (index === 4) {
+                gridCol = {
+                  xs: 'span 1',
+                  sm: 'span 2',
+                  lg: 'span 2',
+                };
+              }
+
+              return (
+                <Box
+                  key={portal.role}
+                  sx={{
+                    gridColumn: gridCol,
+                    display: 'flex',
+                    ...(index === 4
+                      ? {
+                          maxWidth: { sm: 580, lg: 'none' },
+                          mx: { sm: 'auto', lg: 0 },
+                          width: '100%',
+                        }
+                      : { width: '100%' }),
+                  }}
+                >
+                  <PortalCard portal={portal} />
+                </Box>
+              );
+            })}
           </Box>
         </Box>
       </Box>

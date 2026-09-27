@@ -2,12 +2,15 @@ const express = require('express');
 const {
   appointLMO,
   listLMOs,
+  appointGATC,
+  listGATCs,
   getPendingInspectorApprovals,
   clearInspector,
   getAuditLogs,
   getAllUsers,
   updateUserStatus,
   getAdminAnalytics,
+  getAllVerifications,
 } = require('../controllers/adminController');
 const { authMiddleware, requireRole } = require('../middleware/authMiddleware');
 
@@ -21,6 +24,10 @@ router.use(requireRole('admin'));
 router.post('/lmo/appoint', appointLMO);
 router.get('/lmo/list', listLMOs);
 
+// GATC accreditation, appointment & registry
+router.post('/gatc/appoint', appointGATC);
+router.get('/gatc/list', listGATCs);
+
 // Field Officer multi-tier verification & security clearance
 router.get('/officers/pending-approvals', getPendingInspectorApprovals);
 router.post('/officers/clear', clearInspector);
@@ -30,6 +37,9 @@ router.get('/audit-logs', getAuditLogs);
 
 // System analytics & metrics
 router.get('/analytics', getAdminAnalytics);
+
+// State-wide verification & certificate registry
+router.get('/verifications', getAllVerifications);
 
 // System user management
 router.get('/users', getAllUsers);

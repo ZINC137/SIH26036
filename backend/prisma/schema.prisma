@@ -10,7 +10,7 @@ datasource db {
 model User {
   id                            String                @id @default(uuid())
   email                         String                @unique
-  role                          String                @default("user") // 'admin' | 'lmo' | 'field_officer' | 'user'
+  role                          String                @default("user") // 'admin' | 'lmo' | 'field_officer' | 'gatc' | 'user'
   status                        String                @default("ACTIVE") // ACTIVE | PENDING_VERIFICATION | PENDING_ACTIVATION | SUSPENDED | REJECTED
   password_hash                 String
   is_verified                   Boolean               @default(false)
@@ -25,9 +25,13 @@ model User {
   adminProfile                  AdminProfile?
   lmoProfile                    LmoProfile?
   fieldOfficerProfile           FieldOfficerProfile?
+  gatcProfile                   GatcProfile?
   profile                       UserProfile?
 
   applications                  Application[]
+  instruments                   Instrument[]
+  notifications                 Notification[]
+  documents                     Document[]
 }
 
 model LmoProfile {
@@ -66,6 +70,33 @@ model FieldOfficerProfile {
   updated_at            DateTime  @updatedAt
 }
 
+model GatcProfile {
+  id                    String    @id @default(uuid())
+  user_id               String    @unique
+  user                  User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  centre_name           String
+  gatc_code             String    @unique
+  accreditation_no      String
+  valid_until           DateTime
+  authorized_scopes     String    // e.g. "Weighbridges, High Capacity Tank Provers, Fuel Dispensers, Flow Meters"
+  authorized_categories String?   // Comma-separated category codes e.g. "WATER_METER,GAS_METER,FLOW_METER"
+  authorized_state      String?   @default("Delhi")
+  authorized_districts  String?   @default("ALL") // "North Delhi,South Delhi" or "ALL"
+  authorized_area_type  String?   @default("STATE") // "DISTRICT" | "STATE" | "NATIONAL"
+  authorization_start   DateTime? @default(now())
+  authorization_end     DateTime?
+  is_active_recognition Boolean   @default(true)
+  state                 String    @default("Delhi")
+  district              String    @default("North Delhi")
+  address               String
+  lab_head_name         String
+  phone                 String?
+  contact_email         String?
+  status                String    @default("ACTIVE") // ACTIVE | ACCREDITED | SUSPENDED
+  appointed_by          String?
+  created_at            DateTime  @default(now())
+  updated_at            DateTime  @updatedAt
+}
 
 model AdminProfile {
   id                    String   @id @default(uuid())
@@ -90,11 +121,45 @@ model AuditLog {
   timestamp DateTime @default(now())
 }
 
+model Instrument {
+  id                        String                @id @default(uuid())
+  instrument_id             String                @unique // e.g. INST-2026-0012
+  user_id                   String
+  user                      User                  @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  instrument_type           String
+  make                      String
+  model                     String?
+  serial_no                 String
+  capacity                  String
+  unit                      String
+  accuracy_class            String?               @default("Class III (Medium Accuracy)")
+  location_address          String
+  business_name             String
+  current_status            String                @default("VERIFIED") // VERIFIED | REVERIFICATION_DUE | EXPIRING_SOON | EXPIRED | UNDER_TEST | UNVERIFIED
+  last_verification_date    DateTime?
+  validity_expiry_date      DateTime?
+  current_certificate_no    String?
+  current_security_seal_no  String?
+  reverification_count      Int                   @default(0)
+  created_at                DateTime              @default(now())
+  updated_at                DateTime              @updatedAt
+
+  applications              Application[]
+  verification_history      VerificationRecord[]
+}
+
 model Application {
   id                    String    @id @default(uuid())
   app_number            String    @unique
   user_id               String
   user                  User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  // Verification vs Re-verification Workflow
+  application_type      String    @default("INITIAL_VERIFICATION") // INITIAL_VERIFICATION | RE_VERIFICATION | REPAIR_REVERIFICATION
+  instrument_id         String?
+  instrument            Instrument? @relation(fields: [instrument_id], references: [id], onDelete: SetNull)
+  previous_certificate_no String?
+
   instrument_type       String
   make                  String
   model                 String?
@@ -116,13 +181,21 @@ model Application {
   fee_amount            Float     @default(500.0)
   payment_status        String    @default("PAID") // PAID | PENDING
   payment_ref           String?
-  status                String    @default("Pending") // Pending | Under Inspection | Approved | Rejected
+  status                String    @default("Pending") // Pending | Under Inspection | Inspection Reported | Approved | Rejected | Correction Required
 
-  // LMO & Field Officer Assignment
+  // Scheduling Preferences
+  preferred_date        String?
+  preferred_time        String?
+  inspection_mode       String?   @default("ON_SITE") // ON_SITE | GATC_LAB
+
+  // Allocation to LMO, Field Officer, or GATC
   assigned_lmo_id       String?
   assigned_fo_id        String?
   assigned_fo_name      String?
   assigned_fo_code      String?
+  assigned_gatc_id      String?
+  assigned_gatc_name    String?
+  assigned_gatc_code    String?
   assigned_at           DateTime?
   scheduled_date        String?
   scheduled_time        String?
@@ -134,7 +207,7 @@ model Application {
   test_readings         String?   // JSON representation of test points
   security_seal_no      String?
   inspection_notes      String?
-  inspection_result     String?   // Pass | Fail | Conditional
+  inspection_result     String?   // Pass | Fail | Correction Required | Conditional
   rejection_reason      String?
 
   // Statutory Legal Metrology Certificate (Form D - Rule 11)
@@ -143,8 +216,74 @@ model Application {
   certificate_valid_until DateTime?
   stamped_by            String?
 
+  // Legal Metrology Rule Configuration & Snapshot (SIH Objective A & B)
+  rule_set_id                  String?
+  rule_version                 Int?
+  authority_eligibility_version String?
+  rule_snapshot                String?   // Complete frozen JSON snapshot of rules, checklist, and tests at submission
+  legacy_rule_snapshot         Boolean   @default(false)
+  preferred_verification_route String?   @default("NO_PREFERENCE") // NO_PREFERENCE | LMO | GATC
+  eligible_authority_types     String?   @default("LMO") // e.g. "LMO" or "LMO,GATC"
+  category_fields_data         String?   // JSON object storing category-specific dynamic fields
+  selected_category_code       String?   // Exact InstrumentCategory.code
+
   submitted_at          DateTime  @default(now())
   updated_at            DateTime  @updatedAt
+
+  // Supporting Documents & Historical Verifications
+  documents             Document[]
+  verifications         VerificationRecord[]
+}
+
+model VerificationRecord {
+  id                        String      @id @default(uuid())
+  application_id            String
+  application               Application @relation(fields: [application_id], references: [id], onDelete: Cascade)
+  instrument_id             String?
+  instrument                Instrument? @relation(fields: [instrument_id], references: [id], onDelete: SetNull)
+  verification_type         String      @default("INITIAL") // INITIAL | PERIODICAL_REVERIFICATION | REPAIR_RETEST
+  verifier_type             String      @default("FIELD_OFFICER") // FIELD_OFFICER | GATC | LMO
+  verifier_id               String?
+  verifier_name             String
+  verifier_code             String
+  test_date                 DateTime    @default(now())
+  test_error_percentage     Float?
+  environmental_conditions  String?
+  working_standards_used    String?     // e.g. "500kg Class M1 Working Standard Weights, Thermohygrometer TH-04"
+  test_observations         String?     // Structured test observations
+  result                    String      // Pass | Fail | Correction Required
+  security_seal_no          String?
+  remarks                   String?
+  certificate_no            String?
+  created_at                DateTime    @default(now())
+
+  tests                     VerificationTest[]
+}
+
+model Document {
+  id            String       @id @default(uuid())
+  application_id String?
+  application   Application? @relation(fields: [application_id], references: [id], onDelete: Cascade)
+  user_id       String
+  user          User         @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  doc_type      String       // INSTRUMENT_PHOTO | INVOICE | MANUFACTURER_CALIBRATION | SEAL_PHOTO | TEST_OBSERVATION_SHEET | GATC_TEST_REPORT
+  file_name     String
+  file_path     String
+  file_size     Int
+  mime_type     String
+  uploaded_at   DateTime     @default(now())
+}
+
+model Notification {
+  id            String   @id @default(uuid())
+  user_id       String
+  user          User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  type          String   // EXPIRY_WARNING_30D | EXPIRY_WARNING_7D | EXPIRED | APPLICATION_UPDATE | INSPECTION_SCHEDULED | CERTIFICATE_ISSUED | CORRECTION_REQUIRED
+  title         String
+  message       String
+  reference_id  String?  // App number or Certificate No
+  is_read       Boolean  @default(false)
+  created_at    DateTime @default(now())
 }
 
 model UserProfile {
@@ -160,4 +299,196 @@ model UserProfile {
   organization String?
   created_at   DateTime @default(now())
   updated_at   DateTime @updatedAt
+}
+
+// =========================================================================
+// LEGAL METROLOGY RULE CONFIGURATION & ROUTING LAYER (SIH26036 OBJECTIVES)
+// =========================================================================
+
+model InstrumentCategory {
+  id                        String                      @id @default(uuid())
+  code                      String                      @unique // e.g. "WATER_METER", "SPHYGMOMANOMETER", "NAWI_CLASS_III_150KG", etc.
+  name                      String                      // Human-readable title
+  description               String?
+  parent_category           String?                     // e.g. "WEIGHING_INSTRUMENTS", "MEASURING_INSTRUMENTS", "FLOW_DISPENSERS"
+  units                     String                      // JSON array, e.g. ["kg", "g"] or ["L", "m³"]
+  is_gatc_eligible          Boolean                     @default(false)
+  applicable_authorities    String                      @default("LMO") // "LMO" or "LMO,GATC"
+  field_schema              String?                     // JSON string of category-specific field definitions
+  source_document           String?                     // Official legal act / rule reference
+  source_rule               String?                     // Rule reference, e.g. "First Schedule, Sl. No. 1"
+  source_notification       String?                     // Gazette notification, e.g. "G.S.R. 346(E)"
+  active                    Boolean                     @default(true)
+  created_at                DateTime                    @default(now())
+  updated_at                DateTime                    @updatedAt
+
+  rule_sets                 RuleSet[]
+  authority_eligibilities   AuthorityEligibility[]
+  test_definitions          TestDefinition[]
+  validity_rules            ValidityRule[]
+  document_requirements     DocumentRequirement[]
+  checklist_items           VerificationChecklistItem[]
+}
+
+model RuleSet {
+  id                        String                @id @default(uuid())
+  code                      String                // e.g. "RS_WATER_METER", "RS_NAWI_CLASS_III"
+  name                      String
+  jurisdiction              String                @default("CENTRAL") // CENTRAL | STATE
+  state_code                String?               // e.g. "DL", "MH" or null for national
+  instrument_category_id    String
+  instrument_category       InstrumentCategory    @relation(fields: [instrument_category_id], references: [id], onDelete: Cascade)
+  instrument_subcategory_id String?
+  verification_type         String                @default("ALL") // INITIAL_VERIFICATION | RE_VERIFICATION | ALL
+  version                   Int                   @default(1)
+  source_document           String                // e.g. "Legal Metrology (General) Rules, 2011"
+  source_reference          String                // e.g. "Seventh Schedule, Part II"
+  source_notification       String?               // e.g. "G.S.R. 779(E)"
+  effective_from            DateTime
+  effective_to              DateTime?             // Nullable for active open rules
+  status                    String                @default("ACTIVE") // DRAFT | SCHEDULED | ACTIVE | SUPERSEDED | RETIRED
+  priority                  Int                   @default(1)
+  notes                     String?
+  created_at                DateTime              @default(now())
+  updated_at                DateTime              @updatedAt
+}
+
+model AuthorityEligibility {
+  id                        String                @id @default(uuid())
+  instrument_category_id    String
+  instrument_category       InstrumentCategory    @relation(fields: [instrument_category_id], references: [id], onDelete: Cascade)
+  instrument_subcategory_id String?
+  authority_type            String                // "LMO" | "GATC"
+  jurisdiction_type         String                @default("CENTRAL") // "CENTRAL" | "STATE"
+  state_code                String?               // e.g. "DL", "MH" or null
+  verification_type         String                @default("ALL") // "INITIAL_VERIFICATION" | "RE_VERIFICATION" | "ALL"
+  allowed                   Boolean               @default(true)
+  priority                  Int                   @default(1)
+  source_document           String                // e.g. "Legal Metrology (GATC) Rules, 2013"
+  source_rule               String                // e.g. "Rule 3(1) and First Schedule"
+  source_notification       String?               // e.g. "G.S.R. 346(E) dated 08-05-2026"
+  effective_from            DateTime
+  effective_to              DateTime?
+  notes                     String?
+  active                    Boolean               @default(true)
+  created_at                DateTime              @default(now())
+  updated_at                DateTime              @updatedAt
+}
+
+model ValidityRule {
+  id                                    String              @id @default(uuid())
+  instrument_category_id                String
+  instrument_category                   InstrumentCategory  @relation(fields: [instrument_category_id], references: [id], onDelete: Cascade)
+  subcategory                           String?
+  verification_type                     String              @default("ALL") // INITIAL_VERIFICATION | RE_VERIFICATION | ALL
+  initial_verification_period           Int                 // e.g. 12, 24, 60
+  subsequent_verification_period        Int                 // e.g. 12, 24, 60
+  period_unit                           String              @default("MONTHS") // MONTHS | YEARS
+  repair_reverification_behaviour       String              @default("MANDATORY_FULL_TEST")
+  installation_reverification_behaviour String              @default("ON_SITE_CALIBRATION")
+  source_document                       String              // e.g. "Legal Metrology (General) Rules, 2011"
+  source_rule                           String              // e.g. "Rule 27 & Schedule"
+  source_notification                   String?             // e.g. "G.S.R. 2025 volumetric meter insertion"
+  effective_from                        DateTime            @default(now())
+  effective_to                          DateTime?
+  active                                Boolean             @default(true)
+  created_at                            DateTime            @default(now())
+  updated_at                            DateTime            @updatedAt
+}
+
+model DocumentRequirement {
+  id                        String              @id @default(uuid())
+  instrument_category_id    String
+  instrument_category       InstrumentCategory  @relation(fields: [instrument_category_id], references: [id], onDelete: Cascade)
+  verification_type         String              @default("ALL") // INITIAL_VERIFICATION | RE_VERIFICATION | ALL
+  document_code             String              // e.g. "IDENTITY_PROOF", "INVOICE", "MODEL_APPROVAL", "CALIBRATION_CURVE"
+  name                      String
+  description               String?
+  mandatory                 Boolean             @default(true)
+  source_document           String?
+  source_rule               String?
+  effective_from            DateTime            @default(now())
+  effective_to              DateTime?
+  active                    Boolean             @default(true)
+  created_at                DateTime            @default(now())
+  updated_at                DateTime            @updatedAt
+}
+
+model TestDefinition {
+  id                        String              @id @default(uuid())
+  instrument_category_id    String
+  instrument_category       InstrumentCategory  @relation(fields: [instrument_category_id], references: [id], onDelete: Cascade)
+  subcategory               String?
+  test_code                 String              // e.g. "TEST_REPEATABILITY", "TEST_ZERO_LOAD", "TEST_ECCENTRICITY", "TEST_FLOW_MPE"
+  test_name                 String
+  description               String?
+  verification_type         String              @default("ALL")
+  sequence                  Int                 @default(1)
+  input_fields              String?             // JSON array of required input fields
+  units                     String?             // e.g. "%", "kg", "mg", "L/min"
+  formula                   String?             // e.g. "((observed - reference) / reference) * 100"
+  calculation_method        String              @default("ERROR_PERCENTAGE") // ERROR_PERCENTAGE | DIFFERENCE | MPE_BOUNDS | MANUAL_RULE_REVIEW_REQUIRED
+  max_permissible_error     Float?              // In percentage or unit
+  mpe_rule_text             String?             // Textual specification from Schedule
+  mandatory                 Boolean             @default(true)
+  source_document           String              // e.g. "Legal Metrology (General) Rules, 2011"
+  source_rule               String              // e.g. "Schedule VII Part I"
+  effective_from            DateTime            @default(now())
+  effective_to              DateTime?
+  active                    Boolean             @default(true)
+  created_at                DateTime            @default(now())
+  updated_at                DateTime            @updatedAt
+}
+
+model VerificationChecklistItem {
+  id                        String              @id @default(uuid())
+  instrument_category_id    String
+  instrument_category       InstrumentCategory  @relation(fields: [instrument_category_id], references: [id], onDelete: Cascade)
+  check_code                String              // e.g. "CHK_PHYSICAL_AVAILABILITY", "CHK_SERIAL_MATCH", "CHK_NAMEPLATE"
+  check_name                String
+  description               String?
+  sequence                  Int                 @default(1)
+  mandatory                 Boolean             @default(true)
+  source_document           String?
+  active                    Boolean             @default(true)
+  created_at                DateTime            @default(now())
+  updated_at                DateTime            @updatedAt
+}
+
+model VerificationTest {
+  id                            String                  @id @default(uuid())
+  verification_record_id        String
+  verification_record           VerificationRecord      @relation(fields: [verification_record_id], references: [id], onDelete: Cascade)
+  test_definition_id            String?
+  test_code                     String
+  test_name                     String
+  attempt_number                Int                     @default(1)
+  result                        String                  // PASS | FAIL | CORRECTION_REQUIRED
+  calculated_error              Float?
+  calculated_percentage_error   Float?
+  maximum_permissible_error     Float?
+  officer_remarks               String?
+  defect_code                   String?                 // If failed: defect code
+  defect_description            String?                 // If failed: defect details
+  repair_required               Boolean                 @default(false)
+  created_at                    DateTime                @default(now())
+
+  measurements                  VerificationMeasurement[]
+}
+
+model VerificationMeasurement {
+  id                            String            @id @default(uuid())
+  verification_test_id          String
+  verification_test             VerificationTest  @relation(fields: [verification_test_id], references: [id], onDelete: Cascade)
+  sequence                      Int               @default(1)
+  reference_value               Float
+  observed_value                Float
+  indicated_value               Float?
+  unit                          String
+  raw_reading                   String
+  calculated_error              Float
+  calculated_percentage_error   Float
+  maximum_permissible_error     Float
+  result                        String            // PASS | FAIL
+  created_at                    DateTime          @default(now())
 }

@@ -23,6 +23,7 @@ import UserCertificates from './pages/dashboards/user/UserCertificates';
 // ── Sub-pages: LMO portal ────────────────────────────────────────────────────
 import LMOPending from './pages/dashboards/lmo/LMOPending';
 import LMOOfficers from './pages/dashboards/lmo/LMOOfficers';
+import LMOCertificates from './pages/dashboards/lmo/LMOCertificates';
 
 // ── Sub-pages: Field Officer portal ─────────────────────────────────────────
 import FOReport from './pages/dashboards/field_officer/FOReport';
@@ -30,6 +31,13 @@ import FOHistory from './pages/dashboards/field_officer/FOHistory';
 
 // ── Sub-pages: Admin portal ──────────────────────────────────────────────────
 import AdminUsers from './pages/dashboards/admin/AdminUsers';
+import AdminCertificates from './pages/dashboards/admin/AdminCertificates';
+import AdminRules from './pages/dashboards/admin/AdminRules';
+
+// GATC Portal
+import GATCDashboard from './pages/dashboards/GATCDashboard';
+import GATCQueue from './pages/dashboards/gatc/GATCQueue';
+import GATCHistory from './pages/dashboards/gatc/GATCHistory';
 
 // ── Shared sub-pages ─────────────────────────────────────────────────────────
 import PortalSettings from './pages/dashboards/shared/PortalSettings';
@@ -46,6 +54,7 @@ import Settings from './pages/Settings';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import AddCircleIcon from '@mui/icons-material/AddCircle';
 import AssignmentIcon from '@mui/icons-material/Assignment';
+import GavelIcon from '@mui/icons-material/Gavel';
 import DownloadIcon from '@mui/icons-material/Download';
 import SettingsIcon from '@mui/icons-material/Settings';
 import PendingActionsIcon from '@mui/icons-material/PendingActions';
@@ -68,11 +77,11 @@ const NAV = {
     { label: 'Settings',        icon: <SettingsIcon />,   path: '/dashboard/user/settings' },
   ],
   lmo: [
-    { label: 'Dashboard',         icon: <DashboardIcon />,      path: '/dashboard/lmo' },
-    { label: 'Pending Queue',     icon: <PendingActionsIcon />, path: '/dashboard/lmo/pending', badge: '24' },
-    { label: 'Field Officers',    icon: <GroupIcon />,          path: '/dashboard/lmo/officers' },
-    { label: 'Issue Certificate', icon: <VerifiedIcon />,       path: '/dashboard/lmo/certificates' },
-    { label: 'Settings',          icon: <SettingsIcon />,       path: '/dashboard/lmo/settings' },
+    { label: 'Dashboard',             icon: <DashboardIcon />,      path: '/dashboard/lmo' },
+    { label: 'Pending Queue',         icon: <PendingActionsIcon />, path: '/dashboard/lmo/pending' },
+    { label: 'Field Officers',        icon: <GroupIcon />,          path: '/dashboard/lmo/officers' },
+    { label: 'Certificates & History', icon: <VerifiedIcon />,       path: '/dashboard/lmo/certificates' },
+    { label: 'Settings',              icon: <SettingsIcon />,       path: '/dashboard/lmo/settings' },
   ],
   field_officer: [
     { label: 'Dashboard',        icon: <DashboardIcon />,  path: '/dashboard/field-officer' },
@@ -85,8 +94,16 @@ const NAV = {
     { label: 'Dashboard',       icon: <DashboardIcon />, path: '/dashboard/admin' },
     { label: 'User Management', icon: <PeopleIcon />,    path: '/dashboard/admin/users' },
     { label: 'Analytics',       icon: <BarChartIcon />,  path: '/dashboard/admin/analytics' },
+    { label: 'Rule Management', icon: <GavelIcon />,     path: '/dashboard/admin/rules' },
+    { label: 'Certificates',    icon: <VerifiedIcon />,  path: '/dashboard/admin/certificates' },
     { label: 'Security Logs',   icon: <SecurityIcon />,  path: '/dashboard/admin/logs' },
     { label: 'System Settings', icon: <SettingsIcon />,  path: '/dashboard/admin/settings' },
+  ],
+  gatc: [
+    { label: 'Dashboard',          icon: <DashboardIcon />,      path: '/dashboard/gatc' },
+    { label: 'Testing Queue',      icon: <PendingActionsIcon />, path: '/dashboard/gatc/tasks' },
+    { label: 'Testing History',    icon: <VerifiedIcon />,       path: '/dashboard/gatc/history' },
+    { label: 'Settings',           icon: <SettingsIcon />,       path: '/dashboard/gatc/settings' },
   ],
 };
 
@@ -95,6 +112,7 @@ const ROLE_HOME = {
   user: '/dashboard/user',
   lmo: '/dashboard/lmo',
   field_officer: '/dashboard/field-officer',
+  gatc: '/dashboard/gatc',
   admin: '/dashboard/admin',
 };
 
@@ -169,15 +187,20 @@ function App() {
     localStorage.removeItem('userEmail');
   };
 
-  // Helper: wrap a route group in RoleLayout (Priyanshu's sidebar shell)
-  const portalLayout = (role) => (
-    <RoleLayout
-      userRole={role}
-      userEmail={userEmail}
-      onLogout={handleLogout}
-      navItems={NAV[role]}
-    />
-  );
+  // Helper: wrap a route group in RoleLayout with strict role validation
+  const portalLayout = (role) => {
+    if (userRole && userRole !== role) {
+      return <Navigate to={ROLE_HOME[userRole] || '/dashboard/user'} replace />;
+    }
+    return (
+      <RoleLayout
+        userRole={role}
+        userEmail={userEmail}
+        onLogout={handleLogout}
+        navItems={NAV[role]}
+      />
+    );
+  };
 
   return (
     <ThemeProvider theme={theme}>
@@ -206,7 +229,7 @@ function App() {
                 <Route path="/dashboard/lmo"              element={<LMODashboard userEmail={userEmail} />} />
                 <Route path="/dashboard/lmo/pending"      element={<LMOPending />} />
                 <Route path="/dashboard/lmo/officers"     element={<LMOOfficers />} />
-                <Route path="/dashboard/lmo/certificates" element={<LMOPending />} /> {/* placeholder */}
+                <Route path="/dashboard/lmo/certificates" element={<LMOCertificates />} />
                 <Route path="/dashboard/lmo/settings"     element={<PortalSettings userRole="lmo" userEmail={userEmail} />} />
               </Route>
 
@@ -224,12 +247,21 @@ function App() {
                 <Route path="/dashboard/admin"           element={<AdminDashboard userEmail={userEmail} />} />
                 <Route path="/dashboard/admin/users"     element={<AdminUsers />} />
                 <Route path="/dashboard/admin/analytics" element={<AdminDashboard userEmail={userEmail} />} />
+                <Route path="/dashboard/admin/rules"     element={<AdminRules />} />
+                <Route path="/dashboard/admin/certificates" element={<AdminCertificates />} />
                 <Route path="/dashboard/admin/logs"      element={<AdminDashboard userEmail={userEmail} />} />
                 <Route path="/dashboard/admin/settings"  element={<PortalSettings userRole="admin" userEmail={userEmail} />} />
               </Route>
 
-              {/* ── LEGACY routes (from main branch) ────────────── */}
-              {/* Kept so old pages (RegisterInstrument, MyApplications, Certificates, Settings) still work */}
+              {/* ── GATC PORTAL ── */}
+              <Route element={portalLayout('gatc')}>
+                <Route path="/dashboard/gatc"          element={<GATCDashboard userEmail={userEmail} />} />
+                <Route path="/dashboard/gatc/tasks"    element={<GATCQueue userEmail={userEmail} />} />
+                <Route path="/dashboard/gatc/history"  element={<GATCHistory userEmail={userEmail} />} />
+                <Route path="/dashboard/gatc/settings" element={<PortalSettings userRole="gatc" userEmail={userEmail} />} />
+              </Route>
+
+              {/* Keep legacy URLs working for existing users. */}
               <Route element={<Layout userRole={userRole} onLogout={handleLogout} />}>
                 <Route path="/register-instrument" element={<RegisterInstrument />} />
                 <Route path="/my-applications"     element={<MyApplications />} />

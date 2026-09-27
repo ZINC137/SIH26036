@@ -6,8 +6,6 @@ import {
   Chip,
   Button,
   LinearProgress,
-  IconButton,
-  Tooltip,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -28,8 +26,6 @@ import CheckCircleRoundedIcon from '@mui/icons-material/CheckCircleRounded';
 import TodayRoundedIcon from '@mui/icons-material/TodayRounded';
 import UploadFileRoundedIcon from '@mui/icons-material/UploadFileRounded';
 import FactCheckRoundedIcon from '@mui/icons-material/FactCheckRounded';
-import HourglassTopRoundedIcon from '@mui/icons-material/HourglassTopRounded';
-import CalendarMonthRoundedIcon from '@mui/icons-material/CalendarMonthRounded';
 import RefreshRoundedIcon from '@mui/icons-material/RefreshRounded';
 import VerifiedRoundedIcon from '@mui/icons-material/VerifiedRounded';
 import SecurityRoundedIcon from '@mui/icons-material/SecurityRounded';
@@ -124,7 +120,7 @@ export default function FieldOfficerDashboard({ userEmail }) {
 
       const data = await res.json();
       if (res.ok) {
-        setSuccess(`Inspection submitted! ${inspectModal.result === 'Pass' ? 'Certificate issued and instrument stamped.' : 'Rejection notice issued.'}`);
+        setSuccess(`Inspection submitted! ${inspectModal.result === 'Pass' ? 'Findings and seal details forwarded to LMO for statutory verification and certificate issuance.' : 'Rejection notice issued.'}`);
         setInspectModal({ open: false, task: null, testError: '', envTemp: '', securitySealNo: '', result: 'Pass', notes: '', submitting: false });
         fetchData();
       } else {
@@ -155,6 +151,7 @@ export default function FieldOfficerDashboard({ userEmail }) {
       color: '#16A34A',
       bg: '#F0FDF4',
       border: '#BBF7D0',
+      path: '/dashboard/field-officer/history',
     },
     {
       label: 'Current Month Total',
@@ -164,6 +161,7 @@ export default function FieldOfficerDashboard({ userEmail }) {
       color: '#0284C7',
       bg: '#EFF6FF',
       border: '#BFDBFE',
+      path: '/dashboard/field-officer/history',
     },
     {
       label: 'Geofence Radius Lock',
@@ -283,16 +281,19 @@ export default function FieldOfficerDashboard({ userEmail }) {
             <Paper
               key={s.label}
               elevation={0}
+              onClick={() => s.path && navigate(s.path)}
               sx={{
                 p: 3,
                 borderRadius: '18px',
                 border: '1.5px solid #E2E8F0',
                 bgcolor: '#FFFFFF',
                 boxShadow: '0 4px 16px -2px rgba(15, 23, 42, 0.04)',
+                cursor: s.path ? 'pointer' : 'default',
                 transition: 'transform 0.2s, box-shadow 0.2s',
                 '&:hover': {
-                  transform: 'translateY(-3px)',
-                  boxShadow: '0 12px 24px -6px rgba(15, 23, 42, 0.08)',
+                  transform: s.path ? 'translateY(-3px)' : 'none',
+                  boxShadow: s.path ? '0 12px 24px -6px rgba(15, 23, 42, 0.08)' : '0 4px 16px -2px rgba(15, 23, 42, 0.04)',
+                  borderColor: s.path ? s.color : '#E2E8F0',
                 },
               }}
             >
@@ -653,10 +654,10 @@ export default function FieldOfficerDashboard({ userEmail }) {
               }}
             >
               {inspectModal.submitting
-                ? 'Processing Stamping...'
+                ? 'Submitting Report...'
                 : inspectModal.result === 'Fail'
                 ? 'Issue Rejection Notice'
-                : 'Affix Seal & Issue Certificate'}
+                : 'Affix Seal & Forward Report to LMO'}
             </Button>
           </DialogActions>
         </Box>

@@ -59,7 +59,7 @@ const appointLMO = async (req, res) => {
 
     const assignedJurisdiction = jurisdiction || `${district || 'North Delhi'}, ${state || 'Delhi'}${zone ? ` (${zone})` : ''}`;
     const generatedDscKey = dscKeyId || `DSC-${state ? state.substring(0, 2).toUpperCase() : 'DL'}-${new Date().getFullYear()}-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
-    const defaultPassword = initialPassword || 'LmoPassword2026!';
+    const defaultPassword = initialPassword || crypto.randomBytes(18).toString('base64url');
 
     const password_hash = await argon2.hash(defaultPassword, {
       type: argon2.argon2id,
@@ -150,6 +150,137 @@ const listLMOs = async (req, res) => {
   } catch (error) {
     console.error('List LMOs error:', error);
     return res.status(500).json({ error: 'Failed to retrieve LMO registry.' });
+  }
+};
+
+// 2b. Commission / Appoint Government Approved Test Centre (GATC)
+const appointGATC = async (req, res) => {
+  try {
+    const {
+      centreName,
+      email,
+      gatcCode,
+      accreditationNo,
+      validUntil,
+      authorizedScopes,
+      state,
+      district,
+      address,
+      labHeadName,
+      phone,
+      initialPassword,
+    } = req.body;
+
+    if (!centreName || !email || !accreditationNo) {
+      return res.status(400).json({
+        error: 'Centre Name, Official Lab Email, and NABL Accreditation Number are required.',
+      });
+    }
+
+    const existingUser = await prisma.user.findUnique({
+      where: { email: email.toLowerCase() },
+    });
+    if (existingUser) {
+      return res.status(409).json({ error: 'A user account with this email address already exists.' });
+    }
+
+    // Auto-generate GATC Code if not provided
+    const count = await prisma.gatcProfile.count();
+    const code = gatcCode || `GATC-${(state || 'DL').substring(0, 2).toUpperCase()}-${String(count + 1).padStart(2, '0')}`;
+    const defaultPassword = initialPassword || crypto.randomBytes(18).toString('base64url');
+
+    const password_hash = await argon2.hash(defaultPassword, {
+      type: argon2.argon2id,
+      memoryCost: 2 ** 16,
+      hashLength: 50,
+    });
+
+    const result = await prisma.$transaction(async (tx) => {
+      const user = await tx.user.create({
+        data: {
+          email: email.toLowerCase(),
+          role: 'gatc',
+          status: 'ACTIVE',
+          is_verified: true,
+          password_hash,
+        },
+      });
+
+      const gatcProfile = await tx.gatcProfile.create({
+        data: {
+          user_id: user.id,
+          centre_name: centreName,
+          gatc_code: code,
+          accreditation_no: accreditationNo,
+          valid_until: validUntil ? new Date(validUntil) : new Date(Date.now() + 3 * 365 * 24 * 60 * 60 * 1000),
+          authorized_scopes: authorizedScopes || 'Weighbridges, Platform Balances, Fuel Dispensers, Precision Flow Meters',
+          state: state || 'Delhi',
+          district: district || 'North Delhi',
+          address: address || 'Accredited Testing Facility Premises',
+          lab_head_name: labHeadName || 'Chief Metrologist',
+          phone: phone || '',
+          contact_email: email.toLowerCase(),
+          status: 'ACTIVE',
+          appointed_by: req.user ? req.user.id : 'ADMIN_SUPER',
+        },
+      });
+
+      return { user, gatcProfile };
+    });
+
+    await recordAuditLog(
+      'GATC_COMMISSIONED',
+      req.user ? req.user.email : 'admin@gov.in',
+      result.user.email,
+      `Commissioned GATC Laboratory ${centreName} (${code}) with NABL Accr: [${accreditationNo}], Scopes: [${authorizedScopes || 'General Standards'}]`
+    );
+
+    return res.status(201).json({
+      message: 'Government Approved Test Centre (GATC) accredited and commissioned successfully.',
+      gatc: {
+        id: result.user.id,
+        email: result.user.email,
+        centreName: result.gatcProfile.centre_name,
+        gatcCode: result.gatcProfile.gatc_code,
+        accreditationNo: result.gatcProfile.accreditation_no,
+        defaultPassword,
+      },
+    });
+  } catch (error) {
+    console.error('GATC appointment error:', error);
+    return res.status(500).json({ error: 'Internal Server Error during GATC commissioning.' });
+  }
+};
+
+// 2c. List all accredited GATCs from GatcProfile table
+const listGATCs = async (req, res) => {
+  try {
+    const gatcs = await prisma.user.findMany({
+      where: { role: 'gatc' },
+      include: { gatcProfile: true },
+      orderBy: { created_at: 'desc' },
+    });
+
+    const formatted = gatcs.map((u) => ({
+      id: u.id,
+      name: u.gatcProfile?.centre_name || 'GATC Laboratory',
+      email: u.email,
+      gatcCode: u.gatcProfile?.gatc_code || null,
+      accreditationNo: u.gatcProfile?.accreditation_no || 'NABL/2026/01',
+      validUntil: u.gatcProfile?.valid_until ? new Date(u.gatcProfile.valid_until).toLocaleDateString('en-IN') : '—',
+      scopes: u.gatcProfile?.authorized_scopes,
+      state: u.gatcProfile?.state,
+      district: u.gatcProfile?.district,
+      labHead: u.gatcProfile?.lab_head_name,
+      status: u.status,
+      phone: u.gatcProfile?.phone,
+      created_at: u.created_at,
+    }));
+
+    return res.status(200).json({ gatcs: formatted });
+  } catch (error) {
+    console.error('List GATCs error:', error);
+    return res.status(500).json({ error: 'Failed to retrieve GATC registry.' });
   }
 };
 
@@ -409,14 +540,89 @@ const getAdminAnalytics = async (req, res) => {
   }
 };
 
+// 9. Get State-Wide Verification Records & Certificate Registry
+const getAllVerifications = async (req, res) => {
+  try {
+    const applications = await prisma.application.findMany({
+      orderBy: { updated_at: 'desc' },
+      include: {
+        user: {
+          select: { email: true, profile: true },
+        },
+      },
+    });
+
+    const formatted = applications.map((a) => {
+      const isApproved = a.status === 'Approved';
+      const validUntil = a.certificate_valid_until ? new Date(a.certificate_valid_until) : null;
+      const isValid = isApproved && validUntil && validUntil > new Date();
+
+      return {
+        id: a.id,
+        certificateNo: a.certificate_no || null,
+        appNumber: a.app_number,
+        businessName: a.business_name,
+        contactName: a.contact_name,
+        contactEmail: a.contact_email,
+        contactPhone: a.contact_phone,
+        address: `${a.address}, ${a.city}, ${a.state} - ${a.pincode}`,
+        city: a.city,
+        state: a.state,
+        pincode: a.pincode,
+        instrumentType: a.instrument_type,
+        make: a.make,
+        model: a.model,
+        serialNo: a.serial_no,
+        capacity: `${a.capacity} ${a.unit}`,
+        accuracyClass: a.accuracy_class,
+        assignedFoName: a.assigned_fo_name || 'Field Inspector',
+        assignedFoCode: a.assigned_fo_code || 'FO',
+        stampedBy: a.stamped_by || a.assigned_fo_name || 'Legal Metrology Inspector',
+        inspectionDate: a.inspection_date ? new Date(a.inspection_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : null,
+        inspectionResult: a.inspection_result || (isApproved ? 'Pass' : a.status === 'Rejected' ? 'Fail' : a.status),
+        errorPercentage: a.test_error_percentage ?? 0.02,
+        securitySealNo: a.security_seal_no,
+        inspectionNotes: a.inspection_notes,
+        rejectionReason: a.rejection_reason,
+        certificateIssuedAt: a.certificate_issued_at ? new Date(a.certificate_issued_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : null,
+        certificateValidUntil: a.certificate_valid_until ? new Date(a.certificate_valid_until).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : null,
+        validityStatus: isValid ? 'Active' : (isApproved ? 'Expired' : a.status),
+        status: a.status,
+        submittedAt: new Date(a.submitted_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
+        feeAmount: a.fee_amount,
+        paymentStatus: a.payment_status,
+        raw: a,
+      };
+    });
+
+    const stats = {
+      totalVerifications: applications.length,
+      certificatesIssued: formatted.filter((c) => c.status === 'Approved').length,
+      activeCertificates: formatted.filter((c) => c.validityStatus === 'Active').length,
+      underInspection: formatted.filter((c) => c.status === 'Under Inspection').length,
+      awaitingSigning: formatted.filter((c) => c.status === 'Inspection Reported').length,
+      rejected: formatted.filter((c) => c.status === 'Rejected').length,
+      pending: formatted.filter((c) => c.status === 'Pending').length,
+    };
+
+    return res.status(200).json({ verifications: formatted, stats });
+  } catch (error) {
+    console.error('Get all verifications error:', error);
+    return res.status(500).json({ error: 'Failed to retrieve state-wide verifications.' });
+  }
+};
+
 module.exports = {
   appointLMO,
   listLMOs,
+  appointGATC,
+  listGATCs,
   getPendingInspectorApprovals,
   clearInspector,
   getAuditLogs,
   getAllUsers,
   updateUserStatus,
   getAdminAnalytics,
+  getAllVerifications,
   recordAuditLog,
 };

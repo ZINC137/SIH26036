@@ -49,6 +49,33 @@ export default function Register() {
   const [state, setState] = useState('');
   const [pincode, setPincode] = useState('');
 
+  // Email verification extra state
+  const [verificationUrl, setVerificationUrl] = useState(null);
+  const [resending, setResending] = useState(false);
+  const [resendStatus, setResendStatus] = useState(null);
+
+  const handleResend = async () => {
+    setResending(true);
+    setResendStatus(null);
+    try {
+      const res = await fetch('/api/auth/resend-verification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim().toLowerCase() }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setResendStatus({ type: 'success', message: data.message || 'Verification email resent! Please check your inbox and spam folder.' });
+        if (data.verificationUrl) setVerificationUrl(data.verificationUrl);
+      } else {
+        setResendStatus({ type: 'error', message: data.error || 'Failed to resend verification email.' });
+      }
+    } catch (err) {
+      setResendStatus({ type: 'error', message: 'Could not connect to verification server.' });
+    } finally {
+      setResending(false);
+    }
+  };
 
   // --- Step 1: Validate credentials locally, no API call yet ---
   const handleRegister = (e) => {
@@ -99,7 +126,7 @@ export default function Register() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          email,
+          email: email.trim().toLowerCase(),
           password,
           full_name: fullName,
           phone,
@@ -113,6 +140,9 @@ export default function Register() {
       const data = await res.json();
 
       if (res.ok) {
+        if (data.verificationUrl) {
+          setVerificationUrl(data.verificationUrl);
+        }
         setActiveStep(2);
       } else {
         setError(data.error || 'Registration failed.');
@@ -388,24 +418,72 @@ export default function Register() {
                 <Typography variant="body1" sx={{ color: '#757575', mb: 1 }}>
                   Your account has been created successfully.
                 </Typography>
-                <Box sx={{ mt: 3, p: 2, bgcolor: '#E8F5E9', borderRadius: 2, border: '1px solid #A5D6A7', mb: 3 }}>
-                  <Typography variant="body2" sx={{ color: '#2E7D32' }}>
-                    📧 A verification email has been sent to <strong>{email}</strong>.<br />
-                    Please check your inbox and verify your email before logging in.
+
+                <Box sx={{ mt: 3, p: 2.5, bgcolor: '#E8F5E9', borderRadius: 2, border: '1px solid #A5D6A7', mb: 3, textAlign: 'left' }}>
+                  <Typography variant="body2" sx={{ color: '#2E7D32', fontWeight: 600, mb: 0.5 }}>
+                    📧 Statutory verification email sent to:
                   </Typography>
+                  <Typography variant="subtitle1" sx={{ color: '#1B5E20', fontWeight: 700, mb: 1 }}>
+                    {email}
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: '#388E3C', fontSize: '0.85rem', lineHeight: 1.5 }}>
+                    Please check your inbox (including Spam/Junk folder) and click the verification button to activate your account.
+                  </Typography>
+
+                  {verificationUrl && (
+                    <Box sx={{ mt: 2, pt: 1.5, borderTop: '1px dashed #A5D6A7' }}>
+                      <Typography variant="caption" sx={{ color: '#2E7D32', fontWeight: 700, display: 'block', mb: 0.5 }}>
+                        ⚡ LOCAL DEVELOPMENT SHORTCUT:
+                      </Typography>
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        href={verificationUrl}
+                        target="_blank"
+                        sx={{
+                          textTransform: 'none',
+                          fontSize: '0.78rem',
+                          borderColor: '#2E7D32',
+                          color: '#1B5E20',
+                          '&:hover': { bgcolor: '#C8E6C9' },
+                        }}
+                      >
+                        Click to Verify Instantly (Localhost) →
+                      </Button>
+                    </Box>
+                  )}
                 </Box>
-                <Button
-                  id="register-goto-login-btn"
-                  variant="contained"
-                  fullWidth
-                  onClick={() => navigate('/login')}
-                  sx={{
-                    py: 1.5, fontWeight: 700, fontSize: '1rem', borderRadius: 2,
-                    background: 'linear-gradient(135deg, #0D47A1 0%, #1565C0 100%)',
-                  }}
-                >
-                  Go to Login
-                </Button>
+
+                {resendStatus && (
+                  <Alert severity={resendStatus.type} sx={{ mb: 2.5, textAlign: 'left', borderRadius: 2 }}>
+                    {resendStatus.message}
+                  </Alert>
+                )}
+
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                  <Button
+                    id="register-goto-login-btn"
+                    variant="contained"
+                    fullWidth
+                    onClick={() => navigate('/login')}
+                    sx={{
+                      py: 1.5, fontWeight: 700, fontSize: '1rem', borderRadius: 2,
+                      background: 'linear-gradient(135deg, #0D47A1 0%, #1565C0 100%)',
+                    }}
+                  >
+                    Go to Login
+                  </Button>
+
+                  <Button
+                    id="register-resend-btn"
+                    variant="text"
+                    disabled={resending}
+                    onClick={handleResend}
+                    sx={{ textTransform: 'none', color: '#1565C0', fontWeight: 600, fontSize: '0.85rem' }}
+                  >
+                    {resending ? 'Resending verification email...' : "Didn't receive the email? Click here to resend"}
+                  </Button>
+                </Box>
               </Box>
             )}
           </Paper>

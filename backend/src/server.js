@@ -6,6 +6,9 @@ const authRoutes = require('./routes/auth');
 const adminRoutes = require('./routes/admin');
 const lmoRoutes = require('./routes/lmo');
 const fieldOfficerRoutes = require('./routes/fieldOfficer');
+const gatcRoutes = require('./routes/gatc');
+const uploadRoutes = require('./routes/upload');
+const rulesRoutes = require('./routes/rules');
 
 dotenv.config();
 
@@ -24,6 +27,9 @@ app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/lmo', lmoRoutes);
 app.use('/api/field-officer', fieldOfficerRoutes);
+app.use('/api/gatc', gatcRoutes);
+app.use('/api/upload', uploadRoutes);
+app.use('/api/rules', rulesRoutes);
 
 
 // Global Error Handler

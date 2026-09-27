@@ -11,6 +11,8 @@ import {
   TableCell,
   TableHead,
   TableRow,
+  Alert,
+  AlertTitle,
 } from '@mui/material';
 import AssignmentRoundedIcon from '@mui/icons-material/AssignmentRounded';
 import CheckCircleRoundedIcon from '@mui/icons-material/CheckCircleRounded';
@@ -19,6 +21,8 @@ import DownloadRoundedIcon from '@mui/icons-material/DownloadRounded';
 import AddCircleRoundedIcon from '@mui/icons-material/AddCircleRounded';
 import ArrowForwardRoundedIcon from '@mui/icons-material/ArrowForwardRounded';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import NotificationsActiveRoundedIcon from '@mui/icons-material/NotificationsActiveRounded';
+import AutorenewRoundedIcon from '@mui/icons-material/AutorenewRounded';
 import { useNavigate } from 'react-router-dom';
 
 const COLOR = '#D97706';
@@ -92,10 +96,13 @@ export default function UserDashboard({ userEmail }) {
   const navigate = useNavigate();
   const [stats, setStats] = useState({ total: 0, pending: 0, approved: 0, certificates: 0 });
   const [applications, setApplications] = useState([]);
+  const [notifications, setNotifications] = useState([]);
+  const [instruments, setInstruments] = useState([]);
   const [loadingStats, setLoadingStats] = useState(true);
   const [loadingApps, setLoadingApps] = useState(true);
+  const [loadingInstruments, setLoadingInstruments] = useState(true);
 
-  useEffect(() => {
+  const fetchDashboardData = () => {
     fetch('/api/auth/dashboard-stats', { credentials: 'include' })
       .then((r) => r.json())
       .then((d) => {
@@ -111,7 +118,36 @@ export default function UserDashboard({ userEmail }) {
       })
       .catch(() => {})
       .finally(() => setLoadingApps(false));
+
+    fetch('/api/auth/notifications', { credentials: 'include' })
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.notifications) setNotifications(d.notifications);
+      })
+      .catch(() => {});
+
+    fetch('/api/auth/instruments', { credentials: 'include' })
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.instruments) setInstruments(d.instruments);
+      })
+      .catch(() => {})
+      .finally(() => setLoadingInstruments(false));
+  };
+
+  useEffect(() => {
+    fetchDashboardData();
   }, []);
+
+  const handleDismissNotification = async (notifId) => {
+    try {
+      await fetch(`/api/auth/notifications/${notifId}/read`, {
+        method: 'PUT',
+        credentials: 'include',
+      });
+      setNotifications((prev) => prev.filter((n) => n.id !== notifId));
+    } catch {}
+  };
 
   const statCards = [
     { label: 'Total Applications', value: stats.total, icon: <AssignmentRoundedIcon sx={{ fontSize: 24 }} />, color: '#0284C7', bg: '#EFF6FF', border: '#BFDBFE' },
@@ -195,6 +231,35 @@ export default function UserDashboard({ userEmail }) {
           New Verification Application
         </Button>
       </Box>
+
+      {/* Automated Expiry Alerts & Reminders (SIH Requirement 5 & 6) */}
+      {notifications.length > 0 && (
+        <Box sx={{ mb: 3 }}>
+          {notifications.map((n) => (
+            <Alert
+              key={n.id}
+              severity={n.type === 'EXPIRED' ? 'error' : n.type === 'EXPIRY_WARNING_7D' ? 'warning' : 'info'}
+              icon={<NotificationsActiveRoundedIcon />}
+              onClose={() => handleDismissNotification(n.id)}
+              action={
+                <Button
+                  color="inherit"
+                  size="small"
+                  startIcon={<AutorenewRoundedIcon />}
+                  onClick={() => navigate('/dashboard/user/apply')}
+                  sx={{ fontWeight: 800, textTransform: 'none', ml: 1 }}
+                >
+                  Renew / Re-verify
+                </Button>
+              }
+              sx={{ mb: 1.5, borderRadius: 3, boxShadow: '0 2px 10px rgba(0,0,0,0.04)' }}
+            >
+              <AlertTitle sx={{ fontWeight: 800 }}>{n.title}</AlertTitle>
+              {n.message}
+            </Alert>
+          ))}
+        </Box>
+      )}
 
       {/* Advisory Banner */}
       <Paper
@@ -409,6 +474,174 @@ export default function UserDashboard({ userEmail }) {
                       </TableCell>
                     </TableRow>
                   ))
+                )}
+              </TableBody>
+            </Table>
+          </Box>
+        )}
+      </Paper>
+
+      {/* ── Registered Instruments & Lifecycle Validity (Requirement 5 & 10) ── */}
+      <Paper
+        elevation={0}
+        sx={{
+          mt: 4,
+          borderRadius: '20px',
+          border: '1.5px solid #E2E8F0',
+          bgcolor: '#FFFFFF',
+          overflow: 'hidden',
+          boxShadow: '0 4px 16px -2px rgba(15, 23, 42, 0.04)',
+        }}
+      >
+        <Box
+          sx={{
+            p: 3,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            borderBottom: '1px solid #E2E8F0',
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <Box
+              sx={{
+                width: 36,
+                height: 36,
+                borderRadius: '10px',
+                bgcolor: '#F0FDF4',
+                color: '#15803D',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <CheckCircleRoundedIcon sx={{ fontSize: 20 }} />
+            </Box>
+            <Box>
+              <Typography variant="h6" sx={{ fontWeight: 800, color: '#0F172A', fontSize: '1.1rem' }}>
+                My Registered Instruments &amp; Statutory Validity
+              </Typography>
+              <Typography variant="caption" sx={{ color: '#64748B' }}>
+                Active equipment tracked under Legal Metrology Act lifecycle (Requirements 5 &amp; 10)
+              </Typography>
+            </Box>
+          </Box>
+          <Button
+            size="small"
+            variant="contained"
+            startIcon={<AutorenewRoundedIcon sx={{ fontSize: 16 }} />}
+            onClick={() => navigate('/dashboard/user/apply')}
+            sx={{
+              background: GRADIENT,
+              fontWeight: 700,
+              fontSize: '0.82rem',
+              borderRadius: '8px',
+              textTransform: 'none',
+            }}
+          >
+            Apply for Re-verification
+          </Button>
+        </Box>
+
+        {loadingInstruments ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
+            <CircularProgress sx={{ color: COLOR }} />
+          </Box>
+        ) : (
+          <Box sx={{ overflowX: 'auto' }}>
+            <Table sx={{ minWidth: 640 }}>
+              <TableHead>
+                <TableRow sx={{ bgcolor: '#F8FAFC' }}>
+                  {['INSTRUMENT ID', 'CATEGORY & MAKE', 'SERIAL NO.', 'CURRENT STAMPING NO.', 'LAST VERIFIED', 'VALIDITY EXPIRY', 'LIFECYCLE STATUS', 'ACTION'].map((h) => (
+                    <TableCell
+                      key={h}
+                      sx={{
+                        fontWeight: 800,
+                        fontSize: '0.72rem',
+                        color: '#475569',
+                        letterSpacing: '0.04em',
+                        py: 1.5,
+                      }}
+                    >
+                      {h}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {instruments.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={8} sx={{ textAlign: 'center', py: 5 }}>
+                      <Typography variant="body2" sx={{ color: '#64748B' }}>
+                        No instruments currently registered. Once your verification application is certified, your instrument will appear here with lifetime stamping history.
+                      </Typography>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  instruments.map((inst) => {
+                    const isExpiring = inst.current_status === 'EXPIRING_SOON';
+                    const isDue = inst.current_status === 'REVERIFICATION_DUE' || inst.current_status === 'EXPIRED';
+                    const chipBg = isDue ? '#FEF2F2' : isExpiring ? '#FFFBEB' : '#F0FDF4';
+                    const chipColor = isDue ? '#B91C1C' : isExpiring ? '#B45309' : '#15803D';
+                    const chipBorder = isDue ? '#FECACA' : isExpiring ? '#FDE68A' : '#BBF7D0';
+
+                    return (
+                      <TableRow key={inst.id} hover>
+                        <TableCell sx={{ fontWeight: 800, color: '#D97706', fontSize: '0.84rem' }}>
+                          {inst.instrument_id}
+                        </TableCell>
+                        <TableCell sx={{ fontSize: '0.86rem', fontWeight: 700, color: '#0F172A' }}>
+                          {inst.instrument_type} — {inst.make}
+                          {inst.model ? ` (${inst.model})` : ''}
+                        </TableCell>
+                        <TableCell sx={{ fontSize: '0.84rem', color: '#64748B', fontFamily: 'monospace' }}>
+                          {inst.serial_no}
+                        </TableCell>
+                        <TableCell sx={{ fontSize: '0.84rem', fontWeight: 700, color: '#4338CA' }}>
+                          {inst.current_certificate_no || '—'}
+                        </TableCell>
+                        <TableCell sx={{ fontSize: '0.84rem', color: '#64748B' }}>
+                          {formatDate(inst.last_verification_date)}
+                        </TableCell>
+                        <TableCell sx={{ fontSize: '0.84rem', fontWeight: 700, color: isDue ? '#B91C1C' : '#0F172A' }}>
+                          {formatDate(inst.validity_expiry_date)}
+                        </TableCell>
+                        <TableCell>
+                          <Chip
+                            label={inst.current_status}
+                            size="small"
+                            sx={{
+                              bgcolor: chipBg,
+                              color: chipColor,
+                              border: `1px solid ${chipBorder}`,
+                              fontWeight: 800,
+                              fontSize: '0.68rem',
+                              borderRadius: '6px',
+                            }}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            startIcon={<AutorenewRoundedIcon sx={{ fontSize: 14 }} />}
+                            onClick={() => navigate('/dashboard/user/apply')}
+                            sx={{
+                              borderColor: '#F59E0B',
+                              color: '#B45309',
+                              fontWeight: 700,
+                              fontSize: '0.74rem',
+                              borderRadius: '6px',
+                              textTransform: 'none',
+                              '&:hover': { bgcolor: '#FFFBEB' },
+                            }}
+                          >
+                            Re-verify
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
                 )}
               </TableBody>
             </Table>

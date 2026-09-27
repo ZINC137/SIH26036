@@ -51,7 +51,7 @@ export default function AdminUsers() {
     district: 'North Delhi',
     zone: 'Zone 1 (Civil Lines & Sadar)',
     dscKeyId: '',
-    initialPassword: 'LmoPassword2026!',
+    initialPassword: '',
   });
 
   // Commissioned LMO Credentials Dialog
@@ -127,7 +127,7 @@ export default function AdminUsers() {
 
     const payload = {
       ...lmoForm,
-      initialPassword: lmoForm.initialPassword || 'LmoPassword2026!',
+      initialPassword: lmoForm.initialPassword || undefined,
       dscKeyId: lmoForm.dscKeyId || `DSC-${lmoForm.state.substring(0, 2).toUpperCase()}-2026-SHA256`,
       jurisdiction: `${lmoForm.district}, ${lmoForm.state} (${lmoForm.zone})`,
     };
@@ -153,7 +153,7 @@ export default function AdminUsers() {
             name: payload.name,
             email: payload.email,
             employeeCode: payload.employeeCode,
-            password: data.lmo?.defaultPassword || payload.initialPassword || 'LmoPassword2026!',
+            password: data.lmo?.defaultPassword || payload.initialPassword || '',
             dscKeyId: data.lmo?.dscKeyId || payload.dscKeyId,
             jurisdiction: payload.jurisdiction,
           },
@@ -168,7 +168,7 @@ export default function AdminUsers() {
           district: 'North Delhi',
           zone: 'Zone 1 (Civil Lines & Sadar)',
           dscKeyId: '',
-          initialPassword: 'LmoPassword2026!',
+          initialPassword: '',
         });
         refreshData();
       } else {
@@ -932,7 +932,7 @@ export default function AdminUsers() {
                   required
                   value={lmoForm.initialPassword}
                   onChange={(e) => setLmoForm({ ...lmoForm, initialPassword: e.target.value })}
-                  helperText="Officer uses this password to log in for the first time at /login"
+                  helperText="Officer uses this password to log in for the first time at /login?role=lmo"
                 />
               </Grid>
 
@@ -1029,7 +1029,7 @@ export default function AdminUsers() {
               fullWidth
               startIcon={<ContentCopyIcon />}
               onClick={() => {
-                const creds = `LMO Login Credentials:\nPortal: http://localhost:3000/login\nEmail: ${commissionedLmoModal.lmo?.email}\nPassword: ${commissionedLmoModal.lmo?.password}\nDSC Key: ${commissionedLmoModal.lmo?.dscKeyId}\nJurisdiction: ${commissionedLmoModal.lmo?.jurisdiction}`;
+                const creds = `LMO Login Credentials:\nPortal: /login?role=lmo\nEmail: ${commissionedLmoModal.lmo?.email}\nPassword: ${commissionedLmoModal.lmo?.password}\nDSC Key: ${commissionedLmoModal.lmo?.dscKeyId}\nJurisdiction: ${commissionedLmoModal.lmo?.jurisdiction}`;
                 copyToClipboard(creds);
                 setFeedback({ type: 'success', message: 'Credentials copied to clipboard!' });
               }}
@@ -1044,7 +1044,7 @@ export default function AdminUsers() {
               How the LMO Logs In:
             </Typography>
             <Typography variant="body2" sx={{ color: '#546E7A', mb: 0.5 }}>
-              1. Officer opens <strong>http://localhost:3000/login</strong>.
+              1. Officer opens <strong>/login?role=lmo</strong> (LMO Officer Portal).
             </Typography>
             <Typography variant="body2" sx={{ color: '#546E7A', mb: 0.5 }}>
               2. Signs in with official email (<code>{commissionedLmoModal.lmo?.email}</code>) and temporary password (<code>{commissionedLmoModal.lmo?.password}</code>).
