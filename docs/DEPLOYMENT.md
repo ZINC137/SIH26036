@@ -8,6 +8,8 @@
 
 ## Local Development Setup
 
+For the local backend, create `backend/.env` from [`backend/.env.example`](../backend/.env.example). Keep `DATABASE_URL` set to `file:./dev.db`; Prisma resolves it relative to `backend/prisma/schema.prisma`, selecting `backend/prisma/dev.db`. The frontend development server proxies same-origin `/api` requests to `http://localhost:5001`; restart it after changing the frontend proxy configuration. In production, configure the web server to proxy `/api` to the backend.
+
 ### 1. Environment Variables
 Create `.env` file in root:
 ```

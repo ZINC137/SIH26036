@@ -22,7 +22,7 @@ export default function UserCertificates() {
   const [selectedCert, setSelectedCert] = useState(null);
 
   useEffect(() => {
-    fetch('http://localhost:5000/api/auth/certificates', { credentials: 'include' })
+    fetch('/api/auth/certificates', { credentials: 'include' })
       .then((res) => res.json())
       .then((data) => {
         if (data.certificates) {

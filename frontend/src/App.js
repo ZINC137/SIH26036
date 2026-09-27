@@ -130,7 +130,7 @@ function App() {
 
   // Check backend session on mount
   React.useEffect(() => {
-    fetch('http://localhost:5000/api/auth/me', { credentials: 'include' })
+    fetch('/api/auth/me', { credentials: 'include' })
       .then((res) => {
         if (res.ok) return res.json();
         throw new Error('Unauthenticated');
@@ -160,7 +160,7 @@ function App() {
   };
 
   const handleLogout = () => {
-    fetch('http://localhost:5000/api/auth/logout', { method: 'POST', credentials: 'include' }).catch(() => {});
+    fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }).catch(() => {});
     setIsLoggedIn(false);
     setUserRole(null);
     setUserEmail('');

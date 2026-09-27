@@ -96,7 +96,7 @@ export default function UserDashboard({ userEmail }) {
   const [loadingApps, setLoadingApps] = useState(true);
 
   useEffect(() => {
-    fetch('http://localhost:5000/api/auth/dashboard-stats', { credentials: 'include' })
+    fetch('/api/auth/dashboard-stats', { credentials: 'include' })
       .then((r) => r.json())
       .then((d) => {
         if (d.stats) setStats(d.stats);
@@ -104,7 +104,7 @@ export default function UserDashboard({ userEmail }) {
       .catch(() => {})
       .finally(() => setLoadingStats(false));
 
-    fetch('http://localhost:5000/api/auth/applications', { credentials: 'include' })
+    fetch('/api/auth/applications', { credentials: 'include' })
       .then((r) => r.json())
       .then((d) => {
         if (d.applications) setApplications(d.applications.slice(0, 5));

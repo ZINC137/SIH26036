@@ -64,9 +64,9 @@ export default function LMODashboard({ userEmail }) {
     setLoading(true);
     try {
       const [statsRes, appsRes, officersRes] = await Promise.all([
-        fetch('http://localhost:5000/api/lmo/stats', { credentials: 'include' }),
-        fetch('http://localhost:5000/api/lmo/applications', { credentials: 'include' }),
-        fetch('http://localhost:5000/api/lmo/officers', { credentials: 'include' }),
+        fetch('/api/lmo/stats', { credentials: 'include' }),
+        fetch('/api/lmo/applications', { credentials: 'include' }),
+        fetch('/api/lmo/officers', { credentials: 'include' }),
       ]);
 
       const statsData = await statsRes.json();
@@ -89,7 +89,7 @@ export default function LMODashboard({ userEmail }) {
 
   const handleAction = async (id, action) => {
     try {
-      const res = await fetch(`http://localhost:5000/api/lmo/applications/${id}/review`, {
+      const res = await fetch(`/api/lmo/applications/${id}/review`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

@@ -63,8 +63,8 @@ export default function AdminDashboard({ userEmail }) {
     setLoading(true);
     try {
       const [analyticsRes, usersRes] = await Promise.all([
-        fetch('http://localhost:5000/api/admin/analytics', { credentials: 'include' }),
-        fetch('http://localhost:5000/api/admin/users', { credentials: 'include' }),
+        fetch('/api/admin/analytics', { credentials: 'include' }),
+        fetch('/api/admin/users', { credentials: 'include' }),
       ]);
 
       const analyticsData = await analyticsRes.json();

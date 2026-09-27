@@ -47,8 +47,6 @@ const PORTAL_CONFIG = {
     lightBg: '#FFFBEB',
     accentBorder: '#FDE68A',
     hint: 'Authorized access for instrument owners, commercial traders & manufacturers',
-    demoEmail: 'priya@example.com',
-    demoPass: 'UserPassword123!',
   },
   lmo: {
     label: 'LMO Officer Portal',
@@ -73,8 +71,6 @@ const PORTAL_CONFIG = {
     lightBg: '#FAF5FF',
     accentBorder: '#E9D5FF',
     hint: 'Official mobile & desktop access for on-ground verification and testing staff',
-    demoEmail: 'anjali@example.com',
-    demoPass: 'FoPassword123!',
   },
   admin: {
     label: 'Administrator Portal',
@@ -133,7 +129,7 @@ export default function Login({ onLogin }) {
 
     setSubmitting(true);
     try {
-      const response = await fetch('http://localhost:5001/api/auth/login', {
+      const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -160,17 +156,7 @@ export default function Login({ onLogin }) {
       }
     } catch (err) {
       console.error('Login error:', err);
-      // Fallback for seamless testing
-      onLogin(roleFromUrl, email);
-      navigate(
-        roleFromUrl === 'lmo'
-          ? '/dashboard/lmo'
-          : roleFromUrl === 'field_officer'
-          ? '/dashboard/field-officer'
-          : roleFromUrl === 'admin'
-          ? '/dashboard/admin'
-          : '/dashboard/user'
-      );
+      setError('Unable to reach the authentication service. Please try again.');
     } finally {
       setSubmitting(false);
     }
@@ -203,7 +189,7 @@ export default function Login({ onLogin }) {
 
     setActivationSubmitting(true);
     try {
-      const res = await fetch('http://localhost:5000/api/auth/field-officer/activate', {
+      const res = await fetch('/api/auth/field-officer/activate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -484,51 +470,57 @@ export default function Login({ onLogin }) {
             </Box>
 
             {/* Quick Demo Credentials Pill with One-Click Fill */}
-            <Box
-              sx={{
-                mb: 3,
-                p: 1.75,
-                bgcolor: '#F8FAFC',
-                border: '1px solid #E2E8F0',
-                borderRadius: '14px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                flexWrap: 'wrap',
-                gap: 1.5,
-              }}
-            >
-              <Box>
-                <Typography variant="caption" sx={{ color: '#64748B', display: 'block', fontWeight: 600 }}>
-                  DEMO CREDENTIALS ({portal.roleBadge}):
-                </Typography>
-                <Typography variant="caption" sx={{ color: '#0F172A', fontWeight: 700 }}>
-                  {portal.demoEmail} &nbsp;|&nbsp; {portal.demoPass}
-                </Typography>
-              </Box>
-              <Button
-                size="small"
-                variant="outlined"
-                onClick={fillDemoCredentials}
-                startIcon={<FlashOnRoundedIcon sx={{ fontSize: '1rem !important' }} />}
+            {portal.demoEmail && portal.demoPass ? (
+              <Box
                 sx={{
-                  color: portal.darkColor,
-                  borderColor: portal.accentBorder,
-                  bgcolor: portal.lightBg,
-                  fontWeight: 700,
-                  fontSize: '0.75rem',
-                  borderRadius: '8px',
-                  textTransform: 'none',
-                  py: 0.5,
-                  '&:hover': {
-                    bgcolor: portal.accentBorder,
-                    borderColor: portal.color,
-                  },
+                  mb: 3,
+                  p: 1.75,
+                  bgcolor: '#F8FAFC',
+                  border: '1px solid #E2E8F0',
+                  borderRadius: '14px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: 1.5,
                 }}
               >
-                Auto Fill
-              </Button>
-            </Box>
+                <Box>
+                  <Typography variant="caption" sx={{ color: '#64748B', display: 'block', fontWeight: 600 }}>
+                    DEMO CREDENTIALS ({portal.roleBadge}):
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: '#0F172A', fontWeight: 700 }}>
+                    {portal.demoEmail} &nbsp;|&nbsp; {portal.demoPass}
+                  </Typography>
+                </Box>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  onClick={fillDemoCredentials}
+                  startIcon={<FlashOnRoundedIcon sx={{ fontSize: '1rem !important' }} />}
+                  sx={{
+                    color: portal.darkColor,
+                    borderColor: portal.accentBorder,
+                    bgcolor: portal.lightBg,
+                    fontWeight: 700,
+                    fontSize: '0.75rem',
+                    borderRadius: '8px',
+                    textTransform: 'none',
+                    py: 0.5,
+                    '&:hover': {
+                      bgcolor: portal.accentBorder,
+                      borderColor: portal.color,
+                    },
+                  }}
+                >
+                  Auto Fill
+                </Button>
+              </Box>
+            ) : (
+              <Alert severity="info" sx={{ mb: 3, borderRadius: '12px' }}>
+                Demo credentials are not provisioned for this portal. Sign in with an approved account.
+              </Alert>
+            )}
 
             {/* Error Message */}
             {error && (

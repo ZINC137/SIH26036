@@ -80,21 +80,21 @@ export default function AdminUsers() {
     setLoading(true);
     try {
       // 1. Fetch system users
-      const usersRes = await fetch('http://localhost:5000/api/admin/users', { credentials: 'include' });
+      const usersRes = await fetch('/api/admin/users', { credentials: 'include' });
       if (usersRes.ok) {
         const data = await usersRes.json();
         if (data.users) setUsers(data.users);
       }
 
       // 2. Fetch pending officers
-      const officersRes = await fetch('http://localhost:5000/api/admin/officers/pending-approvals', { credentials: 'include' });
+      const officersRes = await fetch('/api/admin/officers/pending-approvals', { credentials: 'include' });
       if (officersRes.ok) {
         const offData = await officersRes.json();
         setPendingOfficers(offData.officers || []);
       }
 
       // 3. Fetch audit logs
-      const logsRes = await fetch('http://localhost:5000/api/admin/audit-logs', { credentials: 'include' });
+      const logsRes = await fetch('/api/admin/audit-logs', { credentials: 'include' });
       if (logsRes.ok) {
         const logData = await logsRes.json();
         setAuditLogs(logData.logs || []);
@@ -133,7 +133,7 @@ export default function AdminUsers() {
     };
 
     try {
-      const res = await fetch('http://localhost:5000/api/admin/lmo/appoint', {
+      const res = await fetch('/api/admin/lmo/appoint', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -182,7 +182,7 @@ export default function AdminUsers() {
   // Clear or Reject Field Inspector
   const handleClearanceAction = async (officerId, action) => {
     try {
-      const res = await fetch('http://localhost:5000/api/admin/officers/clear', {
+      const res = await fetch('/api/admin/officers/clear', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -228,7 +228,7 @@ export default function AdminUsers() {
   const toggleSuspend = async (user) => {
     const nextStatus = user.status === 'SUSPENDED' ? 'ACTIVE' : 'SUSPENDED';
     try {
-      await fetch('http://localhost:5000/api/admin/users/status', {
+      await fetch('/api/admin/users/status', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -1142,7 +1142,7 @@ export default function AdminUsers() {
             sx={{ background: GRADIENT, fontWeight: 700 }}
             onClick={async () => {
               try {
-                await fetch('http://localhost:5000/api/admin/users/status', {
+                await fetch('/api/admin/users/status', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
                   credentials: 'include',

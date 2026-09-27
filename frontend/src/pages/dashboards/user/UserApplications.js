@@ -38,7 +38,7 @@ export default function UserApplications() {
   const [selectedApp, setSelectedApp] = useState(null);
 
   const fetchApps = () => {
-    fetch("http://localhost:5000/api/auth/applications", { credentials: "include" })
+    fetch("/api/auth/applications", { credentials: "include" })
       .then((r) => r.json())
       .then((d) => {
         if (d.applications) setApplications(d.applications);

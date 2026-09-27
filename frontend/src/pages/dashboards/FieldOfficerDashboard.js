@@ -70,8 +70,8 @@ export default function FieldOfficerDashboard({ userEmail }) {
     setError('');
     try {
       const [tasksRes, statsRes] = await Promise.all([
-        fetch('http://localhost:5000/api/field-officer/tasks', { credentials: 'include' }),
-        fetch('http://localhost:5000/api/field-officer/stats', { credentials: 'include' }),
+        fetch('/api/field-officer/tasks', { credentials: 'include' }),
+        fetch('/api/field-officer/stats', { credentials: 'include' }),
       ]);
 
       const tasksData = await tasksRes.json();
@@ -109,7 +109,7 @@ export default function FieldOfficerDashboard({ userEmail }) {
 
     setInspectModal((prev) => ({ ...prev, submitting: true }));
     try {
-      const res = await fetch(`http://localhost:5000/api/field-officer/applications/${inspectModal.task.id}/inspect`, {
+      const res = await fetch(`/api/field-officer/applications/${inspectModal.task.id}/inspect`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

@@ -56,8 +56,8 @@ export default function LMOPending() {
     setError('');
     try {
       const [appsRes, officersRes] = await Promise.all([
-        fetch('http://localhost:5000/api/lmo/applications', { credentials: 'include' }),
-        fetch('http://localhost:5000/api/lmo/officers', { credentials: 'include' }),
+        fetch('/api/lmo/applications', { credentials: 'include' }),
+        fetch('/api/lmo/officers', { credentials: 'include' }),
       ]);
 
       const appsData = await appsRes.json();
@@ -104,7 +104,7 @@ export default function LMOPending() {
 
     setAssignModal((prev) => ({ ...prev, submitting: true }));
     try {
-      const res = await fetch(`http://localhost:5000/api/lmo/applications/${assignModal.app.id}/assign`, {
+      const res = await fetch(`/api/lmo/applications/${assignModal.app.id}/assign`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -134,7 +134,7 @@ export default function LMOPending() {
 
   const handleDirectAction = async (appId, action) => {
     try {
-      const res = await fetch(`http://localhost:5000/api/lmo/applications/${appId}/review`, {
+      const res = await fetch(`/api/lmo/applications/${appId}/review`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

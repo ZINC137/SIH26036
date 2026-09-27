@@ -27,7 +27,7 @@ export default function FOHistory() {
   const fetchHistory = () => {
     setLoading(true);
     setError('');
-    fetch('http://localhost:5000/api/field-officer/history', { credentials: 'include' })
+    fetch('/api/field-officer/history', { credentials: 'include' })
       .then((res) => res.json())
       .then((data) => {
         if (data.reports) {

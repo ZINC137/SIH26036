@@ -35,7 +35,7 @@ export default function FOReport() {
   });
 
   useEffect(() => {
-    fetch('http://localhost:5000/api/field-officer/tasks', { credentials: 'include' })
+    fetch('/api/field-officer/tasks', { credentials: 'include' })
       .then((res) => res.json())
       .then((data) => {
         if (data.tasks && data.tasks.length > 0) {
@@ -58,7 +58,7 @@ export default function FOReport() {
     setSubmitting(true);
     setError('');
     try {
-      const res = await fetch(`http://localhost:5000/api/field-officer/applications/${selectedTaskId}/inspect`, {
+      const res = await fetch(`/api/field-officer/applications/${selectedTaskId}/inspect`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

@@ -40,7 +40,7 @@ export default function LMOOfficers() {
   const fetchOfficers = async () => {
     setLoading(true);
     try {
-      const res = await fetch('http://localhost:5000/api/lmo/officers', { credentials: 'include' });
+      const res = await fetch('/api/lmo/officers', { credentials: 'include' });
       if (res.ok) {
         const data = await res.json();
         setOfficers(data.officers || []);
@@ -73,7 +73,7 @@ export default function LMOOfficers() {
     };
 
     try {
-      const res = await fetch('http://localhost:5000/api/lmo/officer/nominate', {
+      const res = await fetch('/api/lmo/officer/nominate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

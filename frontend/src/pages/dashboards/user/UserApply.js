@@ -78,7 +78,7 @@ export default function UserApply() {
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
   useEffect(() => {
-    fetch("http://localhost:5000/api/auth/me", { credentials: "include" })
+    fetch("/api/auth/me", { credentials: "include" })
       .then((r) => r.json())
       .then((data) => {
         const p = data.user?.profile || {};
@@ -102,7 +102,7 @@ export default function UserApply() {
     setError("");
     setSubmitting(true);
     try {
-      const res = await fetch("http://localhost:5000/api/auth/applications", {
+      const res = await fetch("/api/auth/applications", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",

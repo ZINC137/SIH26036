@@ -43,7 +43,7 @@ export default function Settings() {
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const res = await fetch('http://localhost:5000/api/auth/me', {
+        const res = await fetch('/api/auth/me', {
           credentials: 'include',
         });
         if (res.ok) {
@@ -88,7 +88,7 @@ export default function Settings() {
     setError('');
     setSaving(true);
     try {
-      const res = await fetch('http://localhost:5000/api/auth/profile', {
+      const res = await fetch('/api/auth/profile', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
