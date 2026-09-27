@@ -9,6 +9,7 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
+    "seed:demo-portals": "node scripts/seed-demo-portals.js",
     "seed:rules": "node src/rules/seedRules.js",
     "test": "npm run seed:rules && node test_rules_engine.js"
   },

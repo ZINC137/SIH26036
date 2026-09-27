@@ -17,37 +17,38 @@ import {
 import DownloadIcon from '@mui/icons-material/Download';
 import PrintIcon from '@mui/icons-material/Print';
 import VerifiedIcon from '@mui/icons-material/Verified';
+import CertificateQrCode from '../components/CertificateQrCode';
 
 const mockCertificates = [
   {
     id: 'CERT-2024-001',
     instrumentType: 'Electronic Scale',
     serialNumber: 'ES-2024-001',
+    ownerName: 'Demo Owner',
     certificateNumber: 'LM/DL/2024/0001',
     issuedDate: '2026-08-25',
     validUntil: '2027-08-25',
     status: 'Active',
-    qrCode: '████████████████████',
   },
   {
     id: 'CERT-2024-002',
     instrumentType: 'Weighing Balance',
     serialNumber: 'WB-2024-002',
+    ownerName: 'Demo Owner',
     certificateNumber: 'LM/DL/2024/0002',
     issuedDate: '2026-08-20',
     validUntil: '2027-08-20',
     status: 'Active',
-    qrCode: '████████████████████',
   },
   {
     id: 'CERT-2024-003',
     instrumentType: 'Pressure Gauge',
     serialNumber: 'PG-2024-003',
+    ownerName: 'Demo Owner',
     certificateNumber: 'LM/DL/2024/0003',
     issuedDate: '2026-07-15',
     validUntil: '2027-07-15',
     status: 'Active',
-    qrCode: '████████████████████',
   },
 ];
 
@@ -189,19 +190,12 @@ export default function Certificates() {
                   <Typography variant="caption" sx={{ color: '#757575', display: 'block', mb: 1 }}>
                     QR Code
                   </Typography>
-                  <Box
-                    sx={{
-                      display: 'inline-block',
-                      p: 2,
-                      bgcolor: 'white',
-                      border: '2px solid #0D47A1',
-                      borderRadius: 1,
-                      fontSize: '12px',
-                      fontFamily: 'monospace',
-                    }}
-                  >
-                    {cert.qrCode}
-                  </Box>
+                  <CertificateQrCode
+                    certificateNumber={cert.certificateNumber}
+                    serialNumber={cert.serialNumber}
+                    ownerName={cert.ownerName}
+                    instrumentType={cert.instrumentType}
+                  />
                 </Box>
 
                 {/* Action Buttons */}
@@ -309,31 +303,18 @@ export default function Certificates() {
                 <Typography variant="caption" sx={{ color: '#757575', display: 'block', mb: 1 }}>
                   Verification QR Code
                 </Typography>
-                <Box
-                  sx={{
-                    display: 'inline-block',
-                    p: 3,
-                    bgcolor: 'white',
-                    border: '3px solid #0D47A1',
-                    borderRadius: 1,
-                    fontSize: '10px',
-                    fontFamily: 'monospace',
-                  }}
-                >
-                  █ █ █ █ █ █ █ █ █ █ █ █ █ █ █ █ █<br/>
-                  █ ▀ ▀ ▀ ▀ ▀ ▀ ▀ ▀ ▀ ▀ ▀ ▀ ▀ ▀ ▀ █<br/>
-                  █ ▀ █ █ █ █ █ ▀ █ █ █ █ █ ▀ █ ▀ █<br/>
-                  █ ▀ █ ▀ ▀ ▀ █ ▀ █ ▀ ▀ ▀ █ ▀ █ ▀ █<br/>
-                  █ ▀ █ ▀ █ ▀ █ ▀ █ ▀ █ ▀ █ ▀ █ ▀ █<br/>
-                  █ ▀ █ ▀ ▀ ▀ █ ▀ █ ▀ ▀ ▀ █ ▀ █ ▀ █<br/>
-                  █ ▀ █ █ █ █ █ ▀ █ █ █ █ █ ▀ █ ▀ █<br/>
-                </Box>
+                <CertificateQrCode
+                  certificateNumber={selectedCert.certificateNumber}
+                  serialNumber={selectedCert.serialNumber}
+                  ownerName={selectedCert.ownerName}
+                  instrumentType={selectedCert.instrumentType}
+                />
               </Box>
 
               {/* Footer */}
               <Box sx={{ borderTop: '2px solid #0D47A1', pt: 2 }}>
                 <Typography variant="caption" sx={{ color: '#757575' }}>
-                  This is a digitally signed certificate. Scan the QR code to verify authenticity.
+                  Demo certificate data only. The QR signature is a placeholder, not an official signature or authenticity check.
                 </Typography>
               </Box>
             </Paper>

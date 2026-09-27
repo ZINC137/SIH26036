@@ -1,5 +1,5 @@
 const express = require('express');
-const { register, verify, resendVerification, login, logout, me, saveProfile, activateFieldOfficer } = require('../controllers/authController');
+const { getDemoPortalCredentials, register, verify, resendVerification, login, logout, me, saveProfile, activateFieldOfficer } = require('../controllers/authController');
 const {
   submitApplication,
   getMyApplications,
@@ -22,6 +22,7 @@ router.use(authRateLimiter);
 router.post('/register', register);
 router.get('/verify', verify);
 router.post('/resend-verification', resendVerification);
+router.get('/demo-credentials', getDemoPortalCredentials);
 router.post('/login', login);
 router.post('/logout', logout);
 router.post('/field-officer/activate', activateFieldOfficer);

@@ -10,6 +10,7 @@ import RefreshRoundedIcon from '@mui/icons-material/RefreshRounded';
 import PrintIcon from '@mui/icons-material/Print';
 import CloseIcon from '@mui/icons-material/Close';
 import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
+import CertificateQrCode from '../../../components/CertificateQrCode';
 
 const COLOR = '#0D9488';
 
@@ -326,8 +327,16 @@ export default function GATCHistory({ userEmail }) {
                 <Box sx={{ textAlign: 'right' }}>
                   <Typography variant="caption" sx={{ color: '#64748B', display: 'block' }}>Verified &amp; Endorsed By</Typography>
                   <Typography variant="body2" sx={{ fontWeight: 800, color: '#0F172A' }}>Legal Metrology Officer (LMO)</Typography>
-                  <Typography variant="caption" sx={{ color: '#16A34A', fontWeight: 700 }}>Digitally Endorsed Form D</Typography>
+                  <Typography variant="caption" sx={{ color: '#16A34A', fontWeight: 700 }}>Report status: {viewCertModal.status}</Typography>
                 </Box>
+              </Box>
+              <Box sx={{ mt: 2 }}>
+                <CertificateQrCode
+                  certificateNumber={viewCertModal.certNo || viewCertModal.id}
+                  serialNumber={viewCertModal.serialNo}
+                  ownerName={viewCertModal.contactName || viewCertModal.businessName || viewCertModal.applicant}
+                  instrumentType={viewCertModal.instrumentType || viewCertModal.instrument}
+                />
               </Box>
             </Box>
           </DialogContent>

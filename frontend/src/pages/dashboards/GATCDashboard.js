@@ -15,6 +15,7 @@ import PrintIcon from '@mui/icons-material/Print';
 import CloseIcon from '@mui/icons-material/Close';
 import ArrowForwardRoundedIcon from '@mui/icons-material/ArrowForwardRounded';
 import UploadFileRoundedIcon from '@mui/icons-material/UploadFileRounded';
+import CertificateQrCode from '../../components/CertificateQrCode';
 
 const COLOR = '#0D9488';
 const GRADIENT = 'linear-gradient(135deg, #14B8A6 0%, #0D9488 100%)';
@@ -791,8 +792,16 @@ export default function GATCDashboard({ userEmail }) {
                 <Box sx={{ textAlign: 'right' }}>
                   <Typography variant="caption" sx={{ color: '#64748B', display: 'block' }}>Verified &amp; Endorsed By</Typography>
                   <Typography variant="body2" sx={{ fontWeight: 800, color: '#0F172A' }}>Legal Metrology Officer (LMO)</Typography>
-                  <Typography variant="caption" sx={{ color: '#16A34A', fontWeight: 700 }}>Digitally Endorsed Form D</Typography>
+                  <Typography variant="caption" sx={{ color: '#16A34A', fontWeight: 700 }}>Report status: {viewCertModal.status}</Typography>
                 </Box>
+              </Box>
+              <Box sx={{ mt: 2 }}>
+                <CertificateQrCode
+                  certificateNumber={viewCertModal.certificateNo || viewCertModal.id}
+                  serialNumber={viewCertModal.serialNo}
+                  ownerName={viewCertModal.contactName || viewCertModal.businessName || viewCertModal.applicant}
+                  instrumentType={viewCertModal.instrumentType || viewCertModal.instrument}
+                />
               </Box>
             </Box>
           </DialogContent>

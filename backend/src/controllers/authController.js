@@ -3,7 +3,20 @@ const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const { PrismaClient } = require('@prisma/client');
 const { sendVerificationEmail } = require('../utils/emailService');
+const { demoPortals } = require('../config/demoPortals');
 const prisma = new PrismaClient();
+
+const getDemoPortalCredentials = (req, res) => {
+  if (process.env.NODE_ENV === 'production' || !process.env.DATABASE_URL?.startsWith('file:')) {
+    return res.status(404).json({ error: 'Demo portal credentials are only available for local development.' });
+  }
+
+  return res.status(200).json({
+    portals: Object.fromEntries(
+      demoPortals.map(({ email, password, role }) => [role, { email, password }])
+    ),
+  });
+};
 
 const renderVerificationHtml = ({ success, title, message, redirectUrl, buttonText }) => {
   return `<!DOCTYPE html>
@@ -664,6 +677,7 @@ const activateFieldOfficer = async (req, res) => {
 
 
 module.exports = {
+  getDemoPortalCredentials,
   register,
   verify,
   resendVerification,
@@ -673,4 +687,3 @@ module.exports = {
   saveProfile,
   activateFieldOfficer,
 };
-

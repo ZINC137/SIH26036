@@ -11,10 +11,10 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 import VerifiedIcon from '@mui/icons-material/Verified';
 import PrintIcon from '@mui/icons-material/Print';
 import CloseIcon from '@mui/icons-material/Close';
-import QrCode2Icon from '@mui/icons-material/QrCode2';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import FactCheckIcon from '@mui/icons-material/FactCheck';
 import CancelIcon from '@mui/icons-material/Cancel';
+import CertificateQrCode from '../../../components/CertificateQrCode';
 
 const COLOR = '#7E22CE';
 
@@ -430,18 +430,21 @@ export default function FOHistory() {
               <Box sx={{ p: 2, bgcolor: '#F0FDF4', borderRadius: '10px', border: '1px solid #BBF7D0', mb: 3 }}>
                 <Typography variant="caption" sx={{ color: '#15803D', fontWeight: 800 }}>PHYSICAL VERIFICATION ENDORSEMENT</Typography>
                 <Typography variant="body2" sx={{ color: '#166534', mt: 0.5, fontWeight: 600 }}>
-                  This instrument was verified on-site by you (<strong>{selectedCert.stampedBy}</strong>) with recorded MPE tolerance error of {selectedCert.errorPct}%. Stamping certificate was reviewed and issued under DSC by the jurisdictional LMO.
+                  This instrument was verified on-site by you (<strong>{selectedCert.stampedBy}</strong>) with recorded MPE tolerance error of {selectedCert.errorPct}%. The certificate status is shown below; this demo does not implement official DSC validation.
                 </Typography>
               </Box>
 
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', pt: 2, flexWrap: 'wrap', gap: 2 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <QrCode2Icon sx={{ fontSize: 56, color: '#0F2B4E' }} />
-                  <Typography variant="caption" sx={{ color: '#64748B' }}>Traceable on National Stamping Gateway</Typography>
-                </Box>
+                <CertificateQrCode
+                  certificateNumber={selectedCert.certificateNo || selectedCert.appId}
+                  serialNumber={selectedCert.serialNo}
+                  ownerName={selectedCert.contactPerson || selectedCert.applicant}
+                  instrumentType={selectedCert.instrumentType || selectedCert.instrument}
+                />
                 <Box sx={{ textAlign: 'right', border: '1px dashed #15803D', p: 1.5, borderRadius: '8px', bgcolor: '#F0FDF4' }}>
-                  <Typography variant="caption" sx={{ color: '#15803D', fontWeight: 800, display: 'block' }}>DSC SIGNED BY LMO</Typography>
+                  <Typography variant="caption" sx={{ color: '#15803D', fontWeight: 800, display: 'block' }}>DEMO SIGNATURE PLACEHOLDER</Typography>
                   <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#166534' }}>Legal Metrology Officer</Typography>
+                  <Typography variant="caption" sx={{ color: '#64748B', display: 'block' }}>Not an official DSC signature</Typography>
                 </Box>
               </Box>
             </Box>

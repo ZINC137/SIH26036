@@ -12,6 +12,8 @@ For the local backend, create `backend/.env` from [`backend/.env.example`](../ba
 
 After pulling schema changes, run `npx prisma db push` from `backend/` to add the schema to your local database, then run `npm run seed:rules` to load the statutory rule configuration. This does not provision demo accounts. The backend test command seeds rules and runs the rule-engine suite using temporary test records.
 
+For local portal sign-in shortcuts, run `npm run seed:demo-portals` from `backend/`. This adds or refreshes only the dedicated `demo.*@example.test` accounts and their role profiles; it does not clear or rewrite other users. The autofill card and demo credentials are available only in the frontend development server and are not included in production builds. Do not use these demo passwords for real accounts.
+
 ### 1. Environment Variables
 Create `.env` file in root:
 ```

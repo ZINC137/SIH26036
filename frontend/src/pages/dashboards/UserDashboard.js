@@ -13,6 +13,7 @@ import {
   TableRow,
   Alert,
   AlertTitle,
+  Grid,
 } from '@mui/material';
 import AssignmentRoundedIcon from '@mui/icons-material/AssignmentRounded';
 import CheckCircleRoundedIcon from '@mui/icons-material/CheckCircleRounded';
@@ -98,11 +99,25 @@ export default function UserDashboard({ userEmail }) {
   const [applications, setApplications] = useState([]);
   const [notifications, setNotifications] = useState([]);
   const [instruments, setInstruments] = useState([]);
+  const [profile, setProfile] = useState(null);
+  const [profileError, setProfileError] = useState('');
+  const [loadingProfile, setLoadingProfile] = useState(true);
   const [loadingStats, setLoadingStats] = useState(true);
   const [loadingApps, setLoadingApps] = useState(true);
   const [loadingInstruments, setLoadingInstruments] = useState(true);
 
   const fetchDashboardData = () => {
+    fetch('/api/auth/me', { credentials: 'include' })
+      .then(async (response) => {
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.error || 'Could not load your profile.');
+        }
+        setProfile(data.user?.profile || null);
+      })
+      .catch((error) => setProfileError(error.message || 'Could not load your profile.'))
+      .finally(() => setLoadingProfile(false));
+
     fetch('/api/auth/dashboard-stats', { credentials: 'include' })
       .then((r) => r.json())
       .then((d) => {
@@ -204,7 +219,11 @@ export default function UserDashboard({ userEmail }) {
             My Instruments &amp; Applications
           </Typography>
           <Typography variant="body2" sx={{ color: '#64748B', mt: 0.5 }}>
-            Enrolled User: <strong style={{ color: '#0F172A' }}>{userEmail || 'user@example.com'}</strong>
+            {profile?.full_name ? (
+              <>Welcome, <strong style={{ color: '#0F172A' }}>{profile.full_name}</strong></>
+            ) : (
+              <>Enrolled User: <strong style={{ color: '#0F172A' }}>{userEmail}</strong></>
+            )}
           </Typography>
         </Box>
 
@@ -231,6 +250,73 @@ export default function UserDashboard({ userEmail }) {
           New Verification Application
         </Button>
       </Box>
+
+      <Paper
+        elevation={0}
+        sx={{
+          p: { xs: 2.5, sm: 3 },
+          mb: 3.5,
+          borderRadius: '18px',
+          border: '1.5px solid #E2E8F0',
+          bgcolor: '#FFFFFF',
+        }}
+      >
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2, mb: 2 }}>
+          <Box>
+            <Typography variant="h6" sx={{ fontWeight: 800, color: '#0F172A' }}>
+              My Account Details
+            </Typography>
+            <Typography variant="body2" sx={{ color: '#64748B' }}>
+              Personal and organization details saved to your public-user account.
+            </Typography>
+          </Box>
+          <Button
+            size="small"
+            onClick={() => navigate('/dashboard/user/settings')}
+            sx={{ color: '#B45309', fontWeight: 700, textTransform: 'none', flexShrink: 0 }}
+          >
+            Edit details
+          </Button>
+        </Box>
+
+        {profileError && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {profileError}
+          </Alert>
+        )}
+
+        {loadingProfile ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
+            <CircularProgress size={24} sx={{ color: COLOR }} />
+          </Box>
+        ) : profile ? (
+          <Grid container spacing={2}>
+            {[
+              ['Full name', profile.full_name],
+              ['Email', userEmail],
+              ['Phone', profile.phone],
+              ['Organization', profile.organization],
+              ['Address', profile.address],
+              ['City', profile.city],
+              ['State', profile.state],
+              ['Pincode', profile.pincode],
+            ].map(([label, value]) => (
+              <Grid item xs={12} sm={6} md={3} key={label}>
+                <Typography variant="caption" sx={{ display: 'block', color: '#64748B', fontWeight: 700 }}>
+                  {label}
+                </Typography>
+                <Typography variant="body2" sx={{ color: '#0F172A', fontWeight: 600, overflowWrap: 'anywhere' }}>
+                  {value || 'Not provided'}
+                </Typography>
+              </Grid>
+            ))}
+          </Grid>
+        ) : (
+          <Alert severity="info">
+            No profile details are saved yet. Add your information in Settings to complete your account.
+          </Alert>
+        )}
+      </Paper>
 
       {/* Automated Expiry Alerts & Reminders (SIH Requirement 5 & 6) */}
       {notifications.length > 0 && (

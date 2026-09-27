@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Box,
   Container,
@@ -111,6 +111,23 @@ export default function Login({ onLogin }) {
   const [error, setError] = useState('');
   const [roleMismatch, setRoleMismatch] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const showDemoCredentials = process.env.NODE_ENV === 'development';
+  const [demoCredentials, setDemoCredentials] = useState(null);
+  const [demoCredentialsError, setDemoCredentialsError] = useState('');
+
+  useEffect(() => {
+    if (!showDemoCredentials) return;
+
+    fetch('/api/auth/demo-credentials', { credentials: 'include' })
+      .then(async (response) => {
+        if (!response.ok) {
+          throw new Error('Could not load local demo credentials.');
+        }
+        return response.json();
+      })
+      .then((data) => setDemoCredentials(data.portals))
+      .catch((error) => setDemoCredentialsError(error.message));
+  }, [showDemoCredentials]);
 
   // Email verification states
   const [emailNotVerified, setEmailNotVerified] = useState(false);
@@ -152,6 +169,16 @@ export default function Login({ onLogin }) {
     setEmailNotVerified(false);
     setResendVerificationSuccess(null);
     navigate(`/login?role=${newRole}`);
+  };
+
+  const fillDemoCredentials = () => {
+    const credentials = demoCredentials?.[roleFromUrl];
+    if (!credentials) return;
+    setEmail(credentials.email);
+    setPassword(credentials.password);
+    setError('');
+    setRoleMismatch(null);
+    setEmailNotVerified(false);
   };
 
   // Field Officer Activation State
@@ -492,6 +519,54 @@ export default function Login({ onLogin }) {
               );
             })}
           </Paper>
+
+          {showDemoCredentials && demoCredentials && (
+            <Paper
+              elevation={0}
+              sx={{
+                p: 2,
+                mb: 3,
+                borderRadius: '16px',
+                border: `1.5px solid ${portal.accentBorder}`,
+                bgcolor: portal.lightBg,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: 1.5,
+              }}
+            >
+              <Box>
+                <Typography variant="caption" sx={{ color: portal.darkColor, fontWeight: 800, display: 'block' }}>
+                  LOCAL DEMO LOGIN · {portal.roleBadge}
+                </Typography>
+                <Typography variant="body2" sx={{ color: '#0F172A', mt: 0.5 }}>
+                  Email: <strong>{demoCredentials[roleFromUrl]?.email}</strong>
+                </Typography>
+                <Typography variant="body2" sx={{ color: '#0F172A' }}>
+                  Password: <strong>{demoCredentials[roleFromUrl]?.password}</strong>
+                </Typography>
+              </Box>
+              <Button
+                variant="contained"
+                onClick={fillDemoCredentials}
+                startIcon={<FlashOnRoundedIcon />}
+                sx={{
+                  bgcolor: portal.color,
+                  fontWeight: 800,
+                  textTransform: 'none',
+                  '&:hover': { bgcolor: portal.darkColor },
+                }}
+              >
+                Autofill credentials
+              </Button>
+            </Paper>
+          )}
+          {showDemoCredentials && demoCredentialsError && (
+            <Alert severity="warning" sx={{ mb: 3 }}>
+              {demoCredentialsError} Start the local backend and run <code>npm run seed:demo-portals</code> from <code>backend/</code>.
+            </Alert>
+          )}
 
           {/* Form Card */}
           <Paper

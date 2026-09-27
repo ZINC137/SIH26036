@@ -249,6 +249,7 @@ const getGatcHistory = async (req, res) => {
         rawId: a.id,
         appNumber: a.app_number,
         businessName: a.business_name,
+        contactName: a.contact_name,
         instrumentType: a.instrument_type,
         make: a.make,
         model: a.model,

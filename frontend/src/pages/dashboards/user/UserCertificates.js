@@ -6,10 +6,10 @@ import {
 import VerifiedIcon from '@mui/icons-material/Verified';
 import PrintIcon from '@mui/icons-material/Print';
 import CloseIcon from '@mui/icons-material/Close';
-import QrCode2Icon from '@mui/icons-material/QrCode2';
 import ShieldIcon from '@mui/icons-material/Shield';
 import AddCircleIcon from '@mui/icons-material/AddCircle';
 import { useNavigate } from 'react-router-dom';
+import CertificateQrCode from '../../../components/CertificateQrCode';
 
 const COLOR = '#E65100';
 const GRADIENT = 'linear-gradient(135deg, #FF6D00, #E65100)';
@@ -299,23 +299,16 @@ export default function UserCertificates() {
 
               {/* Signatures & QR Code */}
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', pt: 2, flexWrap: 'wrap', gap: 2 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                  <Box sx={{ p: 1, bgcolor: '#F1F5F9', borderRadius: 1.5, display: 'flex' }}>
-                    <QrCode2Icon sx={{ fontSize: 60, color: '#0F172A' }} />
-                  </Box>
-                  <Box>
-                    <Typography variant="caption" sx={{ color: '#64748B', display: 'block', fontWeight: 600 }}>
-                      SCAN TO VERIFY STAMP
-                    </Typography>
-                    <Typography variant="caption" sx={{ color: '#94A3B8', fontFamily: 'monospace' }}>
-                      gov.lm.delhi/{selectedCert.id}
-                    </Typography>
-                  </Box>
-                </Box>
+                <CertificateQrCode
+                  certificateNumber={selectedCert.id}
+                  serialNumber={selectedCert.serial}
+                  ownerName={selectedCert.ownerFirstName}
+                  instrumentType={selectedCert.instrumentType}
+                />
 
                 <Box sx={{ textAlign: 'right' }}>
                   <Typography variant="caption" sx={{ color: '#15803D', fontWeight: 800, display: 'block' }}>
-                    [DIGITALLY SIGNED &amp; STAMPED]
+                    [DEMO SIGNATURE PLACEHOLDER]
                   </Typography>
                   <Typography variant="body2" sx={{ fontWeight: 800, color: '#0F172A' }}>
                     {selectedCert.stampedBy}

@@ -343,6 +343,7 @@ const getMyCertificates = async (req, res) => {
         capacity: `${c.capacity} ${c.unit}`,
         accuracyClass: c.accuracy_class,
         business: c.business_name,
+        ownerFirstName: c.contact_name?.trim().split(/\s+/)[0] || '',
         address: `${c.address}, ${c.city}, ${c.state} - ${c.pincode}`,
         issued: c.certificate_issued_at
           ? new Date(c.certificate_issued_at).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })

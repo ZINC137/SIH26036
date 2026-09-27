@@ -8,12 +8,12 @@ import {
 import VerifiedIcon from '@mui/icons-material/Verified';
 import PrintIcon from '@mui/icons-material/Print';
 import CloseIcon from '@mui/icons-material/Close';
-import QrCode2Icon from '@mui/icons-material/QrCode2';
 import SearchIcon from '@mui/icons-material/Search';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import FactCheckIcon from '@mui/icons-material/FactCheck';
 import CancelIcon from '@mui/icons-material/Cancel';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import CertificateQrCode from '../../../components/CertificateQrCode';
 
 const COLOR = '#B91C1C';
 
@@ -599,27 +599,22 @@ export default function AdminCertificates() {
               </Box>
 
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', pt: 2, flexWrap: 'wrap', gap: 2 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <QrCode2Icon sx={{ fontSize: 64, color: '#0F2B4E' }} />
-                  <Box>
-                    <Typography variant="caption" sx={{ display: 'block', fontWeight: 700, color: '#0F2B4E' }}>
-                      NIC e-Stamping QR
-                    </Typography>
-                    <Typography variant="caption" sx={{ color: '#64748B', fontSize: '0.68rem' }}>
-                      Directly traceable in Central Legal Metrology Database
-                    </Typography>
-                  </Box>
-                </Box>
+                <CertificateQrCode
+                  certificateNumber={selectedCert.certificateNo}
+                  serialNumber={selectedCert.serialNo}
+                  ownerName={selectedCert.contactName || selectedCert.businessName}
+                  instrumentType={selectedCert.instrumentType}
+                />
 
                 <Box sx={{ textAlign: 'right', border: '1px dashed #15803D', p: 1.5, borderRadius: '8px', bgcolor: '#F0FDF4' }}>
                   <Typography variant="caption" sx={{ color: '#15803D', fontWeight: 800, display: 'block' }}>
-                    CRYPTOGRAPHICALLY SIGNED VIA DSC
+                    DEMO SIGNATURE PLACEHOLDER
                   </Typography>
                   <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#166534' }}>
                     Authorized Legal Metrology Officer
                   </Typography>
                   <Typography variant="caption" sx={{ color: '#64748B', display: 'block' }}>
-                    Key ID: DSC-DL-2026-SHA256
+                    Not an official DSC signature
                   </Typography>
                 </Box>
               </Box>
