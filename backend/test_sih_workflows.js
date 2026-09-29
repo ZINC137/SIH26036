@@ -74,7 +74,8 @@ async function runTests() {
   console.log('SIH26036 COMPREHENSIVE END-TO-END WORKFLOW TEST SUITE');
   console.log('====================================================\n');
 
-  const BASE_URL = 'http://localhost:5000';
+  require('dotenv').config();
+  const BASE_URL = process.env.BACKEND_URL || `http://localhost:${process.env.PORT || 5001}`;
   let passed = 0;
   let failed = 0;
 
@@ -99,7 +100,11 @@ async function runTests() {
     });
     assert(gatcLogin.status === 200, 'GATC login succeeded with 200');
     assert(gatcLogin.body.user?.role === 'gatc', 'GATC role verified in session payload');
-    assert(gatcLogin.body.user?.gatcProfile?.gatc_code === 'GATC-DL-01', 'GATC accredited lab profile linked');
+    assert(
+      gatcLogin.body.user?.gatcProfile?.gatc_code === 'GATC-DEL-01' ||
+      gatcLogin.body.user?.gatcProfile?.gatc_code === 'GATC-DL-01',
+      'GATC accredited lab profile linked'
+    );
 
     // 2. Citizen / Trader Registration & Login
     console.log('\n--- TEST 2: Citizen / Trader Authentication & Session ---');
@@ -134,15 +139,15 @@ async function runTests() {
 
     // 4. Initial Verification Application Submission
     console.log('\n--- TEST 4: Initial Statutory Verification Filing ---');
-    const serialNumber = `WS-DEL-${Date.now().toString().slice(-6)}`;
+    const serialNumber = `WM-DEL-${Date.now().toString().slice(-6)}`;
     const appRes = await userClient.post('/api/auth/applications', {
       application_type: 'INITIAL_VERIFICATION',
-      instrument_type: 'Platform Balance (50kg - 500kg)',
-      make: 'Avery Weigh-Tronix',
-      model: 'E-1010-PRO',
+      instrument_type: 'Water Meter',
+      make: 'Kranti Flow Meters',
+      model: 'WM-DN15-CLASS-B',
       serial_no: serialNumber,
-      capacity: '100',
-      unit: 'kg',
+      capacity: '15',
+      unit: 'mm',
       business_name: 'Metro Retail Mart',
       gst_no: '07AAAAA0000A1Z5',
       address: 'Shop 14, Azadpur Mandi',

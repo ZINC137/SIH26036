@@ -14,6 +14,8 @@ import {
   Alert,
   AlertTitle,
   Grid,
+  IconButton,
+  Tooltip,
 } from '@mui/material';
 import AssignmentRoundedIcon from '@mui/icons-material/AssignmentRounded';
 import CheckCircleRoundedIcon from '@mui/icons-material/CheckCircleRounded';
@@ -24,6 +26,7 @@ import ArrowForwardRoundedIcon from '@mui/icons-material/ArrowForwardRounded';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import NotificationsActiveRoundedIcon from '@mui/icons-material/NotificationsActiveRounded';
 import AutorenewRoundedIcon from '@mui/icons-material/AutorenewRounded';
+import CloseRoundedIcon from '@mui/icons-material/CloseRounded';
 import { useNavigate } from 'react-router-dom';
 
 const COLOR = '#D97706';
@@ -155,13 +158,19 @@ export default function UserDashboard({ userEmail }) {
   }, []);
 
   const handleDismissNotification = async (notifId) => {
+    setNotifications((prev) => prev.filter((n) => n.id !== notifId));
     try {
+      await fetch(`/api/auth/notifications/${notifId}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
       await fetch(`/api/auth/notifications/${notifId}/read`, {
         method: 'PUT',
         credentials: 'include',
       });
-      setNotifications((prev) => prev.filter((n) => n.id !== notifId));
-    } catch {}
+    } catch (err) {
+      console.error('Failed to dismiss notification:', err);
+    }
   };
 
   const statCards = [
@@ -326,17 +335,39 @@ export default function UserDashboard({ userEmail }) {
               key={n.id}
               severity={n.type === 'EXPIRED' ? 'error' : n.type === 'EXPIRY_WARNING_7D' ? 'warning' : 'info'}
               icon={<NotificationsActiveRoundedIcon />}
-              onClose={() => handleDismissNotification(n.id)}
               action={
-                <Button
-                  color="inherit"
-                  size="small"
-                  startIcon={<AutorenewRoundedIcon />}
-                  onClick={() => navigate('/dashboard/user/apply')}
-                  sx={{ fontWeight: 800, textTransform: 'none', ml: 1 }}
-                >
-                  Renew / Re-verify
-                </Button>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  {(n.type === 'EXPIRED' || n.type === 'EXPIRY_WARNING_7D' || n.type === 'CERTIFICATE_ISSUED') && (
+                    <Button
+                      color="inherit"
+                      size="small"
+                      startIcon={<AutorenewRoundedIcon />}
+                      onClick={() => navigate('/dashboard/user/apply')}
+                      sx={{ fontWeight: 800, textTransform: 'none', whiteSpace: 'nowrap' }}
+                    >
+                      Renew / Re-verify
+                    </Button>
+                  )}
+                  <Tooltip title="Dismiss notification">
+                    <IconButton
+                      size="small"
+                      aria-label="Dismiss notification"
+                      onClick={() => handleDismissNotification(n.id)}
+                      sx={{
+                        color: 'inherit',
+                        opacity: 0.75,
+                        transition: 'all 0.2s',
+                        '&:hover': {
+                          opacity: 1,
+                          bgcolor: 'rgba(0, 0, 0, 0.08)',
+                          transform: 'scale(1.08)',
+                        },
+                      }}
+                    >
+                      <CloseRoundedIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                </Box>
               }
               sx={{ mb: 1.5, borderRadius: 3, boxShadow: '0 2px 10px rgba(0,0,0,0.04)' }}
             >

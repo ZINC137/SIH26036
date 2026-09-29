@@ -7,10 +7,11 @@
 
 const http = require('http');
 const crypto = require('crypto');
+require('dotenv').config();
 const prisma = require('./src/db');
 
-const BASE_URL = 'http://localhost:5000';
-const FRONTEND_URL = 'http://localhost:3000';
+const BASE_URL = process.env.BACKEND_URL || `http://localhost:${process.env.PORT || 5001}`;
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 const TEST_PREFIX = 'E2E-SIH26036-';
 
 // HTTP Client with Cookie Jar & Multipart Form support

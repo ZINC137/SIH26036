@@ -2,10 +2,13 @@ const jwt = require('jsonwebtoken');
 
 const authMiddleware = (req, res, next) => {
   try {
-    // Check for token in cookies or Authorization header
+    // Check for token in cookies, Authorization header, or query param
     let token = req.cookies?.sessionId;
     if (!token && req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
       token = req.headers.authorization.split(' ')[1];
+    }
+    if (!token && req.query?.token) {
+      token = req.query.token;
     }
 
     if (!token) {

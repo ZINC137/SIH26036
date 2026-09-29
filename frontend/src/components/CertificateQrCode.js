@@ -13,21 +13,20 @@ export default function CertificateQrCode({
 
   useEffect(() => {
     let active = true;
-    const serialLast3 = String(serialNumber || '').trim().slice(-3) || 'N/A';
-    const ownerFirstName = String(ownerName || '').trim().split(/\s+/)[0] || 'N/A';
-    const payload = JSON.stringify({
-      type: 'LEGAL-METROLOGY-CERTIFICATE-DEMO',
-      certificateNumber: certificateNumber || 'UNISSUED',
-      instrumentType: instrumentType || 'N/A',
-      serialLast3,
-      ownerFirstName,
-      digitalSignature: `DEMO-GOVT-SIGNATURE-${certificateNumber || 'UNISSUED'}-${instrumentType || 'N/A'}-${serialLast3}-${ownerFirstName.toUpperCase()}`,
-      notice: 'DEMO ONLY; NOT AN OFFICIAL OR CRYPTOGRAPHICALLY VALID SIGNATURE',
-    });
+    
+    // Dynamic origin resolution from environment or browser runtime
+    const frontendBase =
+      (process.env.REACT_APP_FRONTEND_URL || '').trim() ||
+      (typeof window !== 'undefined' && window.location && window.location.origin
+        ? window.location.origin
+        : 'http://localhost:3000');
+
+    const certId = encodeURIComponent(certificateNumber || 'UNISSUED');
+    const verificationUrl = `${frontendBase}/#verify?certId=${certId}`;
 
     setQrDataUrl('');
     setError('');
-    QRCode.toDataURL(payload, {
+    QRCode.toDataURL(verificationUrl, {
       errorCorrectionLevel: 'M',
       margin: 1,
       width: 180,
@@ -42,7 +41,7 @@ export default function CertificateQrCode({
     return () => {
       active = false;
     };
-  }, [certificateNumber, instrumentType, ownerName, serialNumber]);
+  }, [certificateNumber]);
 
   return (
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>

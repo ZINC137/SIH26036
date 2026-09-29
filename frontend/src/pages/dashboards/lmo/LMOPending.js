@@ -893,6 +893,12 @@ export default function LMOPending() {
                           <img
                             src={fileUrl}
                             alt={doc.file_name}
+                            crossOrigin="use-credentials"
+                            onError={(e) => {
+                              if (fileUrl !== doc.file_path) {
+                                e.currentTarget.src = doc.file_path;
+                              }
+                            }}
                             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                           />
                         ) : (
@@ -1045,6 +1051,12 @@ export default function LMOPending() {
             <img
               src={`${API_BASE}${previewDoc?.file_path}`}
               alt={previewDoc?.file_name}
+              crossOrigin="use-credentials"
+              onError={(e) => {
+                if (previewDoc?.file_path && e.currentTarget.src !== previewDoc.file_path) {
+                  e.currentTarget.src = previewDoc.file_path;
+                }
+              }}
               style={{ maxWidth: '100%', maxHeight: '72vh', objectFit: 'contain', borderRadius: 4 }}
             />
           ) : (

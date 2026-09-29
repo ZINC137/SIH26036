@@ -11,7 +11,8 @@
     "dev": "nodemon src/server.js",
     "seed:demo-portals": "node scripts/seed-demo-portals.js",
     "seed:rules": "node src/rules/seedRules.js",
-    "test": "npm run seed:rules && node test_rules_engine.js",
+    "test": "npm run seed:rules && node test_rules_engine.js && node test_qr_environment.js",
+    "test:qr": "node test_qr_environment.js",
     "test:e2e": "node test_e2e_qa_engine.js",
     "test:security": "node test_security_audit.js && node test_security_audit_comprehensive.js"
   },
@@ -20,6 +21,7 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "@prisma/client": "^5.22.0",
     "argon2": "^0.45.1",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
@@ -29,10 +31,10 @@
     "jsonwebtoken": "^9.0.3",
     "multer": "^2.4.0",
     "nodemailer": "^10.0.10",
+    "qrcode": "^1.5.4",
     "resend": "^6.28.1"
   },
   "devDependencies": {
-    "@prisma/client": "^5.22.0",
     "nodemon": "^3.1.14",
     "prisma": "^5.22.0"
   },

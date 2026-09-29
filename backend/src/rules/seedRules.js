@@ -76,9 +76,12 @@ async function seedRules() {
       });
     }
 
-    // Special Requirement: Future Rule for Active Electrical Energy Meters (commencement 180 days in future)
+    // Statutory Requirement: Future Rule for Active Electrical Energy Meters (G.S.R. 809(E))
+    // Published in Gazette on 18 September 2026; comes into force 180 days after publication (17 March 2027)
     if (cat.code === 'ENERGY_METER') {
-      const futureDate = new Date(Date.now() + 180 * 24 * 60 * 60 * 1000); // 180 days delayed commencement
+      const gazettePublicationDate = new Date('2026-09-18T00:00:00.000Z');
+      const statutoryCommencementDate = new Date(gazettePublicationDate.getTime() + (180 * 24 * 60 * 60 * 1000)); // Exactly 2027-03-17T00:00:00.000Z
+      
       const existingFutureRule = await prisma.ruleSet.findFirst({
         where: { code: ruleSetCode, version: 2 },
       });
@@ -93,15 +96,25 @@ async function seedRules() {
             version: 2,
             source_document: 'Legal Metrology (General) Fifth Amendment Rules, 2026',
             source_reference: 'Schedule VII - Active Electrical Energy Meters Requirements',
-            source_notification: 'G.S.R. 5th Amendment (Commencement in 180 days)',
-            effective_from: futureDate,
+            source_notification: 'G.S.R. 809(E) dated 18-09-2026 (Commencement 180 days: 17-03-2027)',
+            effective_from: statutoryCommencementDate,
             effective_to: null,
             status: 'SCHEDULED', // SCHEDULED/FUTURE STATUS (Requirement 23)
             priority: 2,
-            notes: 'Delayed statutory commencement of 180 days after publication. Becomes active automatically on effective date.',
+            notes: 'Statutory commencement 180 days after Official Gazette publication on 18-09-2026 under G.S.R. 809(E). Becomes active automatically on 17-03-2027.',
           },
         });
-        console.log('   ⏰ Seeded SCHEDULED future rule version 2 for ENERGY_METER (effective in 180 days).');
+        console.log('   ⏰ Seeded SCHEDULED future rule version 2 for ENERGY_METER (effective 17 March 2027 under G.S.R. 809(E)).');
+      } else {
+        await prisma.ruleSet.update({
+          where: { id: existingFutureRule.id },
+          data: {
+            source_notification: 'G.S.R. 809(E) dated 18-09-2026 (Commencement 180 days: 17-03-2027)',
+            effective_from: statutoryCommencementDate,
+            status: 'SCHEDULED',
+            notes: 'Statutory commencement 180 days after Official Gazette publication on 18-09-2026 under G.S.R. 809(E). Becomes active automatically on 17-03-2027.',
+          },
+        });
       }
     }
 
