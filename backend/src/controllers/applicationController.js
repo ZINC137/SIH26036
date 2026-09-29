@@ -1,7 +1,7 @@
-const { PrismaClient } = require("@prisma/client");
 const crypto = require("crypto");
+const prisma = require("../db");
 const { createRuleSnapshot } = require("../services/ruleEngineService");
-const prisma = new PrismaClient();
+const { canAttachDocuments } = require("./uploadController");
 
 // Calculate statutory verification fee based on Legal Metrology Rules Schedule XII
 const calculateFee = (instrument_type, application_type) => {
@@ -17,12 +17,13 @@ const calculateFee = (instrument_type, application_type) => {
   return baseFee;
 };
 
-// Generate APP-YYYY-NNN style number
+// Generate unique APP-YYYY-NNN style number with collision-defense suffix
 const generateAppNumber = async () => {
   const year = new Date().getFullYear();
   const count = await prisma.application.count();
   const seq = String(count + 1).padStart(3, "0");
-  return `APP-${year}-${seq}`;
+  const randHex = crypto.randomBytes(2).toString("hex").toUpperCase();
+  return `APP-${year}-${seq}-${randHex}`;
 };
 
 // Check and trigger automated expiry alerts & reminder notifications (Requirement 5 & 6)
@@ -167,6 +168,27 @@ const submitApplication = async (req, res) => {
       return res.status(400).json({ error: "Missing required fields: " + missing.join(", ") });
     }
 
+    if (document_ids !== undefined && !Array.isArray(document_ids)) {
+      return res.status(400).json({ error: "document_ids must be an array." });
+    }
+
+    if (
+      Array.isArray(document_ids) &&
+      !(await canAttachDocuments(req.user.id, null, document_ids))
+    ) {
+      return res.status(403).json({ error: "One or more documents are unavailable or do not belong to your account." });
+    }
+
+    // Validate instrument ownership if re-verifying an existing instrument
+    if (instrument_id) {
+      const ownedInstrument = await prisma.instrument.findFirst({
+        where: { id: instrument_id, user_id: req.user.id },
+      });
+      if (!ownedInstrument) {
+        return res.status(400).json({ error: "Invalid instrument ID: You can only apply for re-verification of instruments registered to your account." });
+      }
+    }
+
     const app_number = await generateAppNumber();
     const appType = application_type || "INITIAL_VERIFICATION";
     const fee_amount = calculateFee(instrument_type, appType);
@@ -176,81 +198,93 @@ const submitApplication = async (req, res) => {
     const catCode = selected_category_code || instrument_type;
     const ruleSnapshotData = await createRuleSnapshot(catCode, state, appType);
 
-    const application = await prisma.application.create({
-      data: {
-        app_number,
-        user_id: req.user.id,
-        application_type: appType,
-        instrument_id: instrument_id || null,
-        previous_certificate_no: previous_certificate_no || null,
-        preferred_date: preferred_date || null,
-        preferred_time: preferred_time || null,
-        inspection_mode: inspection_mode || "ON_SITE",
-        instrument_type,
-        selected_category_code: catCode,
-        make,
-        model: model || null,
-        serial_no,
-        capacity,
-        unit: unit || "kg",
-        accuracy_class: accuracy_class || "Class III (Medium Accuracy)",
-        business_name,
-        trade_type: trade_type || "Commercial Trader",
-        gst_no: gst_no || null,
-        address,
-        city,
-        state,
-        pincode,
-        contact_name,
-        contact_phone,
-        contact_email,
-        priority: priority || "Normal",
-        fee_amount,
-        payment_status: "PAID",
-        payment_ref,
-        status: "Pending",
+    // Atomically persist application, link owned documents, write audit log, and dispatch notification
+    const application = await prisma.$transaction(async (tx) => {
+      const app = await tx.application.create({
+        data: {
+          app_number,
+          user_id: req.user.id,
+          application_type: appType,
+          instrument_id: instrument_id || null,
+          previous_certificate_no: previous_certificate_no || null,
+          preferred_date: preferred_date || null,
+          preferred_time: preferred_time || null,
+          inspection_mode: inspection_mode || "ON_SITE",
+          instrument_type,
+          selected_category_code: catCode,
+          make,
+          model: model || null,
+          serial_no,
+          capacity,
+          unit: unit || "kg",
+          accuracy_class: accuracy_class || "Class III (Medium Accuracy)",
+          business_name,
+          trade_type: trade_type || "Commercial Trader",
+          gst_no: gst_no || null,
+          address,
+          city,
+          state,
+          pincode,
+          contact_name,
+          contact_phone,
+          contact_email,
+          priority: priority || "Normal",
+          fee_amount,
+          payment_status: "PAID",
+          payment_ref,
+          status: "Pending",
 
-        // Objective A & B: Rule configuration & routing snapshot
-        rule_set_id: ruleSnapshotData.ruleSetId,
-        rule_version: ruleSnapshotData.ruleVersion,
-        authority_eligibility_version: ruleSnapshotData.authorityEligibilityVersion,
-        rule_snapshot: ruleSnapshotData.ruleSnapshot,
-        legacy_rule_snapshot: false,
-        preferred_verification_route: preferred_verification_route || "NO_PREFERENCE",
-        eligible_authority_types: ruleSnapshotData.eligibleAuthorityTypes || "LMO",
-        category_fields_data: category_fields_data
-          ? (typeof category_fields_data === 'string' ? category_fields_data : JSON.stringify(category_fields_data))
-          : null,
-      },
-    });
-
-    // Link uploaded documents to this application if provided
-    if (Array.isArray(document_ids) && document_ids.length > 0) {
-      await prisma.document.updateMany({
-        where: { id: { in: document_ids } },
-        data: { application_id: application.id },
+          // Objective A & B: Rule configuration & routing snapshot
+          rule_set_id: ruleSnapshotData.ruleSetId,
+          rule_version: ruleSnapshotData.ruleVersion,
+          authority_eligibility_version: ruleSnapshotData.authorityEligibilityVersion,
+          rule_snapshot: ruleSnapshotData.ruleSnapshot,
+          legacy_rule_snapshot: false,
+          preferred_verification_route: preferred_verification_route || "NO_PREFERENCE",
+          eligible_authority_types: ruleSnapshotData.eligibleAuthorityTypes || "LMO",
+          category_fields_data: category_fields_data
+            ? (typeof category_fields_data === 'string' ? category_fields_data : JSON.stringify(category_fields_data))
+            : null,
+        },
       });
-    }
 
-    // Record audit trail
-    await prisma.auditLog.create({
-      data: {
-        action: "APPLICATION_SUBMITTED",
-        actor: req.user.email,
-        target: app_number,
-        details: `${appType} application ${app_number} submitted for ${instrument_type} (${make} ${serial_no}) by ${business_name}. Fee ₹${fee_amount} settled via ${payment_ref}.`,
-      },
-    });
+      // Link uploaded documents to this application if provided (strictly enforcing ownership)
+      if (Array.isArray(document_ids) && document_ids.length > 0) {
+        const linkedDocuments = await tx.document.updateMany({
+          where: {
+            id: { in: [...new Set(document_ids)] },
+            user_id: req.user.id,
+            application_id: null,
+          },
+          data: { application_id: app.id },
+        });
+        if (linkedDocuments.count !== new Set(document_ids).size) {
+          throw new Error("Documents changed while the application was being submitted.");
+        }
+      }
 
-    // Create confirmation notification
-    await prisma.notification.create({
-      data: {
-        user_id: req.user.id,
-        type: "APPLICATION_UPDATE",
-        title: `Application Registered: ${app_number}`,
-        message: `Your ${appType === "RE_VERIFICATION" ? "re-verification" : "verification"} application has been lodged and sent to the jurisdictional LMO for scheduling.`,
-        reference_id: app_number,
-      },
+      // Record audit trail
+      await tx.auditLog.create({
+        data: {
+          action: "APPLICATION_SUBMITTED",
+          actor: req.user.email,
+          target: app_number,
+          details: `${appType} application ${app_number} submitted for ${instrument_type} (${make} ${serial_no}) by ${business_name}. Fee ₹${fee_amount} settled via ${payment_ref}.`,
+        },
+      });
+
+      // Create confirmation notification
+      await tx.notification.create({
+        data: {
+          user_id: req.user.id,
+          type: "APPLICATION_UPDATE",
+          title: `Application Registered: ${app_number}`,
+          message: `Your ${appType === "RE_VERIFICATION" ? "re-verification" : "verification"} application has been lodged and sent to the jurisdictional LMO for scheduling.`,
+          reference_id: app_number,
+        },
+      });
+
+      return app;
     });
 
     return res.status(201).json({
@@ -511,6 +545,11 @@ const searchRegistry = async (req, res) => {
     const queryStr = (q || "").trim().toLowerCase();
 
     const where = {};
+    // Non-supervisors (citizens/traders) can strictly search only their own registered applications and instruments
+    if (!['admin', 'lmo'].includes(req.user?.role)) {
+      where.user_id = req.user.id;
+    }
+
     if (status && status !== "All") where.status = status;
     if (type && type !== "All") where.instrument_type = { contains: type };
     if (state && state !== "All") where.state = { contains: state };

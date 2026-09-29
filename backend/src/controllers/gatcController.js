@@ -1,5 +1,5 @@
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../db');
+const { canAttachDocuments } = require('./uploadController');
 
 const recordAuditLog = async (action, actor, target, details) => {
   try {
@@ -119,11 +119,18 @@ const submitGatcInspection = async (req, res) => {
       inspection_notes,
       working_standards_used,
       test_observations,
+      document_ids,
     } = req.body;
 
     const app = await prisma.application.findUnique({ where: { id } });
     if (!app) {
       return res.status(404).json({ error: 'Application not found.' });
+    }
+
+    if (!['Under Inspection', 'Pending'].includes(app.status)) {
+      return res.status(400).json({
+        error: `Cannot submit test report for application in "${app.status}" status. Only tasks in "Under Inspection" or "Pending" can be processed.`,
+      });
     }
 
     const gatcProfile = await prisma.gatcProfile.findUnique({
@@ -135,6 +142,7 @@ const submitGatcInspection = async (req, res) => {
       !gatcProfile ||
       !gatcProfile.is_active_recognition ||
       !['ACTIVE', 'ACCREDITED'].includes(gatcProfile.status) ||
+      !gatcProfile.valid_until ||
       gatcProfile.valid_until < new Date()
     ) {
       return res.status(403).json({ error: 'An active, accredited GATC profile is required to submit test reports.' });
@@ -158,6 +166,16 @@ const submitGatcInspection = async (req, res) => {
         ? 'Correction Required'
         : 'Inspection Reported';
 
+    if (document_ids !== undefined && !Array.isArray(document_ids)) {
+      return res.status(400).json({ error: 'document_ids must be an array.' });
+    }
+    if (
+      Array.isArray(document_ids) &&
+      !(await canAttachDocuments(req.user.id, id, document_ids))
+    ) {
+      return res.status(403).json({ error: 'One or more documents are unavailable or are not attached to this test.' });
+    }
+
     // 1. Create a structured VerificationRecord
     const verificationRecord = await prisma.verificationRecord.create({
       data: {
@@ -177,6 +195,21 @@ const submitGatcInspection = async (req, res) => {
         remarks: inspection_notes || 'Tested in accordance with Legal Metrology General Rules.',
       },
     });
+
+    // Link uploaded test sheets and photos to this application
+    if (Array.isArray(document_ids) && document_ids.length > 0) {
+      const linkedDocuments = await prisma.document.updateMany({
+        where: {
+          id: { in: [...new Set(document_ids)] },
+          user_id: req.user.id,
+          OR: [{ application_id: null }, { application_id: id }],
+        },
+        data: { application_id: id },
+      });
+      if (linkedDocuments.count !== new Set(document_ids).size) {
+        return res.status(409).json({ error: 'Test evidence changed while submitting the report. Please retry.' });
+      }
+    }
 
     // 2. Update Application state
     const updatedApp = await prisma.application.update({
@@ -236,6 +269,7 @@ const getGatcHistory = async (req, res) => {
       orderBy: { updated_at: 'desc' },
       include: {
         verifications: true,
+        documents: true,
       },
     });
 
@@ -268,6 +302,7 @@ const getGatcHistory = async (req, res) => {
         notes: a.inspection_notes,
         stampedBy: a.stamped_by,
         verifications: a.verifications,
+        documents: a.documents || [],
         raw: a,
       };
     });

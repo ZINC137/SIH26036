@@ -16,16 +16,14 @@ const { authMiddleware } = require('../middleware/authMiddleware');
 
 const router = express.Router();
 
-// Apply rate limiter to all auth routes
-router.use(authRateLimiter);
-
-router.post('/register', register);
+// Public Authentication Endpoints (Rate Limited to defend against brute force & spam)
+router.post('/register', authRateLimiter, register);
 router.get('/verify', verify);
-router.post('/resend-verification', resendVerification);
+router.post('/resend-verification', authRateLimiter, resendVerification);
 router.get('/demo-credentials', getDemoPortalCredentials);
-router.post('/login', login);
+router.post('/login', authRateLimiter, login);
 router.post('/logout', logout);
-router.post('/field-officer/activate', activateFieldOfficer);
+router.post('/field-officer/activate', authRateLimiter, activateFieldOfficer);
 
 // Protected routes
 router.get('/me', authMiddleware, me);

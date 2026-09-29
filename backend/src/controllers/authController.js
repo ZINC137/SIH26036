@@ -1,10 +1,9 @@
 const argon2 = require('argon2');
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
-const { PrismaClient } = require('@prisma/client');
+const prisma = require('../db');
 const { sendVerificationEmail } = require('../utils/emailService');
 const { demoPortals } = require('../config/demoPortals');
-const prisma = new PrismaClient();
 
 const getDemoPortalCredentials = (req, res) => {
   if (process.env.NODE_ENV === 'production' || !process.env.DATABASE_URL?.startsWith('file:')) {
@@ -201,7 +200,7 @@ const register = async (req, res) => {
 
   } catch (error) {
     console.error('Registration error:', error);
-    return res.status(500).json({ error: 'Internal Server Error' });
+    return res.status(500).json({ error: 'Registration failed. Please verify your submitted information and try again.' });
   }
 };
 
@@ -232,12 +231,12 @@ const verify = async (req, res) => {
     // Validate token existence
     if (!user) {
       if (acceptsHtml) {
-        return res.status(200).send(renderVerificationHtml({
-          success: true,
-          title: 'Email Already Verified',
-          message: 'Your email address is already verified and active. You can proceed directly to sign in.',
-          redirectUrl: `${frontendUrl}/login?verified=already`,
-          buttonText: 'Proceed to Login →',
+        return res.status(400).send(renderVerificationHtml({
+          success: false,
+          title: 'Invalid Verification Link',
+          message: 'This verification link is invalid or has already been utilized. Please sign in or request a new verification link.',
+          redirectUrl: `${frontendUrl}/login?error=invalid_token`,
+          buttonText: 'Return to Login',
         }));
       }
       return res.status(400).json({ error: 'Invalid or expired verification link' });
@@ -522,6 +521,10 @@ const me = async (req, res) => {
         profile: true,
       },
     });
+
+    if (!user) {
+      return res.status(401).json({ error: 'User session not found or account deactivated.' });
+    }
 
     const employeeCode = user.adminProfile?.employeeCode || user.lmoProfile?.employeeCode || user.fieldOfficerProfile?.employeeCode || user.gatcProfile?.gatc_code || null;
     const assignedJurisdiction = user.adminProfile?.department || user.lmoProfile?.assignedJurisdiction || user.fieldOfficerProfile?.circleZone || user.gatcProfile?.centre_name || null;

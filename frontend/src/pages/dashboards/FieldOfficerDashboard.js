@@ -30,6 +30,7 @@ import RefreshRoundedIcon from '@mui/icons-material/RefreshRounded';
 import VerifiedRoundedIcon from '@mui/icons-material/VerifiedRounded';
 import SecurityRoundedIcon from '@mui/icons-material/SecurityRounded';
 import { useNavigate } from 'react-router-dom';
+import API_BASE from '../../config/api';
 
 const COLOR = '#7E22CE';
 const GRADIENT = 'linear-gradient(135deg, #A855F7 0%, #7E22CE 100%)';
@@ -66,8 +67,8 @@ export default function FieldOfficerDashboard({ userEmail }) {
     setError('');
     try {
       const [tasksRes, statsRes] = await Promise.all([
-        fetch('/api/field-officer/tasks', { credentials: 'include' }),
-        fetch('/api/field-officer/stats', { credentials: 'include' }),
+        fetch(`${API_BASE}/api/field-officer/tasks`, { credentials: 'include' }),
+        fetch(`${API_BASE}/api/field-officer/stats`, { credentials: 'include' }),
       ]);
 
       const tasksData = await tasksRes.json();
@@ -95,6 +96,7 @@ export default function FieldOfficerDashboard({ userEmail }) {
       securitySealNo: `SEAL-DL-2026-${Math.floor(1000 + Math.random() * 9000)}`,
       result: 'Pass',
       notes: `Verified against working standards. MPE is within permissible limits for ${task.instrument}. Affixed official lead/polycarbonate seal.`,
+      file: null,
       submitting: false,
     });
   };
@@ -105,7 +107,25 @@ export default function FieldOfficerDashboard({ userEmail }) {
 
     setInspectModal((prev) => ({ ...prev, submitting: true }));
     try {
-      const res = await fetch(`/api/field-officer/applications/${inspectModal.task.id}/inspect`, {
+      let docId = null;
+      if (inspectModal.file) {
+        const formData = new FormData();
+        formData.append('file', inspectModal.file);
+        formData.append('doc_type', 'SEAL_PHOTO');
+        formData.append('application_id', inspectModal.task.id);
+        const upRes = await fetch(`${API_BASE}/api/upload`, {
+          method: 'POST',
+          credentials: 'include',
+          body: formData,
+        });
+        const upData = await upRes.json();
+        if (!upRes.ok || !upData.document) {
+          throw new Error(upData.error || 'Failed to upload inspection evidence.');
+        }
+        docId = upData.document.id;
+      }
+
+      const res = await fetch(`${API_BASE}/api/field-officer/applications/${inspectModal.task.id}/inspect`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -115,13 +135,14 @@ export default function FieldOfficerDashboard({ userEmail }) {
           security_seal_no: inspectModal.securitySealNo,
           inspection_result: inspectModal.result,
           inspection_notes: inspectModal.notes,
+          document_ids: docId ? [docId] : undefined,
         }),
       });
 
       const data = await res.json();
       if (res.ok) {
-        setSuccess(`Inspection submitted! ${inspectModal.result === 'Pass' ? 'Findings and seal details forwarded to LMO for statutory verification and certificate issuance.' : 'Rejection notice issued.'}`);
-        setInspectModal({ open: false, task: null, testError: '', envTemp: '', securitySealNo: '', result: 'Pass', notes: '', submitting: false });
+        setSuccess(`Inspection submitted! ${inspectModal.result === 'Pass' ? 'Findings, seal details, and attached photographs forwarded to LMO for statutory verification and certificate issuance.' : 'Rejection notice issued.'}`);
+        setInspectModal({ open: false, task: null, testError: '', envTemp: '', securitySealNo: '', result: 'Pass', notes: '', file: null, submitting: false });
         fetchData();
       } else {
         setError(data.error || 'Failed to complete inspection.');
@@ -620,6 +641,34 @@ export default function FieldOfficerDashboard({ userEmail }) {
                 />
               </Paper>
             )}
+
+            <Box sx={{ border: '1.5px dashed #CBD5E1', p: 2, borderRadius: 2, bgcolor: '#FAFAFA' }}>
+              <Typography variant="caption" sx={{ fontWeight: 800, color: '#334155', display: 'block', mb: 0.5 }}>
+                📸 ATTACH INSPECTION EVIDENCE / SEAL PHOTOGRAPH
+              </Typography>
+              <Typography variant="caption" sx={{ color: '#64748B', display: 'block', mb: 1.5 }}>
+                Attach a photograph of the crimped lead seal or physical scale for LMO scrutiny.
+              </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                <Button variant="outlined" component="label" size="small" sx={{ textTransform: 'none', fontWeight: 700 }}>
+                  {inspectModal.file ? 'Change Photo' : 'Choose / Capture Photo'}
+                  <input
+                    type="file"
+                    hidden
+                    accept="image/*,application/pdf"
+                    onChange={(e) => setInspectModal((prev) => ({ ...prev, file: e.target.files?.[0] || null }))}
+                  />
+                </Button>
+                {inspectModal.file && (
+                  <Chip
+                    label={inspectModal.file.name}
+                    onDelete={() => setInspectModal((prev) => ({ ...prev, file: null }))}
+                    size="small"
+                    sx={{ maxWidth: 280 }}
+                  />
+                )}
+              </Box>
+            </Box>
 
             <TextField
               fullWidth

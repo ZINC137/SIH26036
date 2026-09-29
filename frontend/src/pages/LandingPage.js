@@ -151,12 +151,12 @@ const portals = [
   },
 ];
 
-function PortalCard({ portal }) {
+function PortalCard({ portal, navigate }) {
   const [hovered, setHovered] = useState(false);
   const Icon = portal.icon;
 
   const handleClick = () => {
-    window.open(`/login?role=${portal.role}`, '_blank');
+    navigate(`/login?role=${portal.role}`);
   };
 
   return (
@@ -993,7 +993,7 @@ export default function LandingPage() {
                       : { width: '100%' }),
                   }}
                 >
-                  <PortalCard portal={portal} />
+                  <PortalCard portal={portal} navigate={navigate} />
                 </Box>
               );
             })}
@@ -1388,8 +1388,6 @@ export default function LandingPage() {
                     key={p.role}
                     component="a"
                     href={`/login?role=${p.role}`}
-                    target="_blank"
-                    rel="noreferrer"
                     sx={{
                       color: '#94A3B8',
                       textDecoration: 'none',

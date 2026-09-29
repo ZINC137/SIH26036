@@ -50,3 +50,21 @@ Thumbs.db
 *.key
 *.pem
 private/
+
+# SQLite temporary journal files
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Local backups may contain personal data; keep their contents out of Git
+/backups/*
+!/backups/README.md
+!/backups/database/
+!/backups/exports/
+!/backups/uploads/
+/backups/database/*
+!/backups/database/.gitkeep
+/backups/exports/*
+!/backups/exports/.gitkeep
+/backups/uploads/*
+!/backups/uploads/.gitkeep

@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Box, Paper, Typography, Table, TableBody, TableCell, TableHead, TableRow,
   Chip, Button, TextField, InputAdornment, Select, FormControl, InputLabel,
   MenuItem, IconButton, Tooltip, Dialog, DialogTitle, DialogContent, DialogActions,
-  CircularProgress, Alert, Divider, Grid,
+  CircularProgress, Alert, Divider, Grid, Avatar,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import AssignmentIndIcon from '@mui/icons-material/AssignmentInd';
@@ -12,6 +13,11 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 import PersonIcon from '@mui/icons-material/Person';
 import GavelIcon from '@mui/icons-material/Gavel';
 import VerifiedIcon from '@mui/icons-material/Verified';
+import OpenInNewIcon from '@mui/icons-material/OpenInNew';
+import DownloadIcon from '@mui/icons-material/Download';
+import CloseIcon from '@mui/icons-material/Close';
+import InsertDriveFileIcon from '@mui/icons-material/InsertDriveFile';
+import API_BASE from '../../../config/api';
 
 const COLOR = '#15803D';
 
@@ -41,6 +47,8 @@ export default function LMOPending() {
 
   // Selected application for viewing details
   const [selectedApp, setSelectedApp] = useState(null);
+  // Selected document for full-screen preview lightbox
+  const [previewDoc, setPreviewDoc] = useState(null);
 
   const [gatcCentres, setGatcCentres] = useState([]);
   const [appEligibility, setAppEligibility] = useState(null);
@@ -89,13 +97,29 @@ export default function LMOPending() {
     }
   };
 
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const assignAppIdFromUrl = searchParams.get('assignAppId');
+
   useEffect(() => {
     fetchData();
   }, []);
 
+  useEffect(() => {
+    if (assignAppIdFromUrl && apps.length > 0 && !assignModal.open) {
+      const targetApp = apps.find((a) => a.id === assignAppIdFromUrl);
+      if (targetApp && targetApp.status === 'Pending') {
+        handleOpenAssign(targetApp);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [apps, assignAppIdFromUrl]);
+
   const handleOpenAssign = async (app) => {
-    // Pick first active officer
-    const defaultFo = officers.find((o) => o.status === 'Active')?.dbId || '';
+    // Smart load balancing: Pick active officer with lowest active workload
+    const activeOfficers = officers.filter((o) => o.status === 'Active');
+    const sorted = [...activeOfficers].sort((a, b) => (a.assigned || 0) - (b.assigned || 0));
+    const defaultFo = sorted[0]?.dbId || activeOfficers[0]?.dbId || officers[0]?.dbId || '';
     setAppEligibility(null);
 
     setAssignModal({
@@ -526,26 +550,127 @@ export default function LMOPending() {
             </FormControl>
 
             {assignModal.assigneeType === 'FIELD_OFFICER' ? (
-              <FormControl fullWidth required size="small">
-                <InputLabel>Select Authorized Field Inspector *</InputLabel>
-                <Select
-                  value={assignModal.foUserId}
-                  label="Select Authorized Field Inspector *"
-                  onChange={(e) => setAssignModal({ ...assignModal, foUserId: e.target.value })}
-                >
-                  {officers.length === 0 ? (
-                    <MenuItem value="" disabled>
-                      No Field Officers available — Nominate one first
-                    </MenuItem>
-                  ) : (
-                    officers.map((fo) => (
-                      <MenuItem key={fo.dbId} value={fo.dbId}>
-                        {fo.name} ({fo.id}) — {fo.zone} [{fo.status}]
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                <FormControl fullWidth required size="small">
+                  <InputLabel>Select Authorized Field Inspector *</InputLabel>
+                  <Select
+                    value={assignModal.foUserId}
+                    label="Select Authorized Field Inspector *"
+                    onChange={(e) => setAssignModal({ ...assignModal, foUserId: e.target.value })}
+                  >
+                    {officers.length === 0 ? (
+                      <MenuItem value="" disabled>
+                        No Field Officers available — Nominate one first
                       </MenuItem>
-                    ))
-                  )}
-                </Select>
-              </FormControl>
+                    ) : (
+                      officers.map((fo) => (
+                        <MenuItem key={fo.dbId} value={fo.dbId}>
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
+                            <Box>
+                              <Typography variant="body2" sx={{ fontWeight: 700, color: '#0F172A' }}>
+                                {fo.name} ({fo.id})
+                              </Typography>
+                              <Typography variant="caption" sx={{ color: '#64748B', display: 'block' }}>
+                                {fo.zone}
+                              </Typography>
+                            </Box>
+                            <Box sx={{ display: 'flex', gap: 0.75, alignItems: 'center' }}>
+                              <Chip
+                                size="small"
+                                label={`${fo.assigned || 0} active`}
+                                sx={{
+                                  height: 20,
+                                  fontSize: '0.68rem',
+                                  fontWeight: 700,
+                                  bgcolor: (fo.assigned || 0) === 0 ? '#DCFCE7' : '#FEF3C7',
+                                  color: (fo.assigned || 0) === 0 ? '#15803D' : '#B45309',
+                                }}
+                              />
+                              <Chip
+                                size="small"
+                                label={fo.status}
+                                sx={{
+                                  height: 20,
+                                  fontSize: '0.68rem',
+                                  fontWeight: 700,
+                                  bgcolor: fo.status === 'Active' ? '#EFF6FF' : '#F1F5F9',
+                                  color: fo.status === 'Active' ? '#1D4ED8' : '#64748B',
+                                }}
+                              />
+                            </Box>
+                          </Box>
+                        </MenuItem>
+                      ))
+                    )}
+                  </Select>
+                </FormControl>
+
+                {/* Selected Officer Preview Card */}
+                {(() => {
+                  const sel = officers.find((o) => o.dbId === assignModal.foUserId);
+                  if (!sel) return null;
+                  return (
+                    <Paper
+                      elevation={0}
+                      sx={{
+                        p: 1.5,
+                        borderRadius: 2,
+                        bgcolor: '#FAF5FF',
+                        border: '1.5px solid #E9D5FF',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        flexWrap: 'wrap',
+                        gap: 1.5,
+                      }}
+                    >
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
+                        <Avatar sx={{ bgcolor: '#7E22CE', color: '#fff', fontWeight: 800, width: 36, height: 36, fontSize: '0.85rem' }}>
+                          {sel.name?.charAt(0) || 'F'}
+                        </Avatar>
+                        <Box>
+                          <Typography variant="body2" sx={{ fontWeight: 800, color: '#4C1D95' }}>
+                            {sel.name} &nbsp;
+                            <span style={{ fontSize: '0.75rem', color: '#6B21A8', fontWeight: 600 }}>({sel.id})</span>
+                          </Typography>
+                          <Typography variant="caption" sx={{ color: '#6B21A8', display: 'block' }}>
+                            📍 {sel.zone} {sel.phone ? `• 📞 ${sel.phone}` : ''}
+                          </Typography>
+                        </Box>
+                      </Box>
+                      <Chip
+                        size="small"
+                        label={sel.assigned === 0 ? '🟢 Available (0 active tasks)' : `🟡 ${sel.assigned} task(s) assigned`}
+                        sx={{
+                          fontWeight: 700,
+                          fontSize: '0.72rem',
+                          bgcolor: '#FFFFFF',
+                          border: '1px solid #D8B4FE',
+                          color: '#6B21A8',
+                        }}
+                      />
+                    </Paper>
+                  );
+                })()}
+
+                {officers.length === 0 && (
+                  <Alert
+                    severity="warning"
+                    action={
+                      <Button
+                        size="small"
+                        color="inherit"
+                        onClick={() => navigate('/dashboard/lmo/officers')}
+                        sx={{ fontWeight: 700 }}
+                      >
+                        Nominate Officer
+                      </Button>
+                    }
+                  >
+                    No Field Officers are currently registered in this circle.
+                  </Alert>
+                )}
+              </Box>
             ) : (
               <FormControl fullWidth required size="small">
                 <InputLabel>Select Accredited GATC Test Centre *</InputLabel>
@@ -648,7 +773,7 @@ export default function LMOPending() {
       </Dialog>
 
       {/* ── DETAIL MODAL ── */}
-      <Dialog open={!!selectedApp} onClose={() => setSelectedApp(null)} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
+      <Dialog open={!!selectedApp} onClose={() => setSelectedApp(null)} maxWidth="md" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
         <DialogTitle sx={{ fontWeight: 800, color: '#1A1A2E' }}>
           Dossier Details — {selectedApp?.appNumber}
         </DialogTitle>
@@ -656,27 +781,33 @@ export default function LMOPending() {
         <DialogContent sx={{ p: 3 }}>
           {selectedApp && (
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              {[
-                ['Applicant Name', selectedApp.applicant],
-                ['Premises Address', selectedApp.address],
-                ['Contact Phone', selectedApp.contact],
-                ['Instrument Type', selectedApp.instrument],
-                ['Make & Serial No', `${selectedApp.make} · S/N: ${selectedApp.serial}`],
-                ['Submitted Date', selectedApp.submitted],
-                ['Priority', selectedApp.priority],
-                ['Status', selectedApp.status],
-                ['Assigned Inspector', selectedApp.assignedFoName || 'None assigned yet'],
-                ['Scheduled Visit', selectedApp.scheduledDate ? `${selectedApp.scheduledDate} at ${selectedApp.scheduledTime}` : 'Not scheduled'],
-                ['Certificate No', selectedApp.certificateNo || 'Pending on-site stamping'],
-              ].map(([k, v]) => (
-                <Box key={k} sx={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #F1F5F9', pb: 1 }}>
-                  <Typography variant="body2" sx={{ color: '#64748B', fontWeight: 600 }}>{k}</Typography>
-                  <Typography variant="body2" sx={{ fontWeight: 700, color: '#0F172A', textAlign: 'right' }}>{v}</Typography>
-                </Box>
-              ))}
+              <Grid container spacing={2}>
+                {[
+                  ['Applicant Name', selectedApp.applicant],
+                  ['Premises Address', selectedApp.address],
+                  ['Contact Phone', selectedApp.contact],
+                  ['Contact Email', selectedApp.contactEmail || '—'],
+                  ['Instrument Type', selectedApp.instrument],
+                  ['Make & Serial No', `${selectedApp.make} · S/N: ${selectedApp.serial}`],
+                  ['Submitted Date', selectedApp.submitted],
+                  ['Priority', selectedApp.priority],
+                  ['Status', selectedApp.status],
+                  ['Assigned Inspector', selectedApp.assignedFoName || 'None assigned yet'],
+                  ['Scheduled Visit', selectedApp.scheduledDate ? `${selectedApp.scheduledDate} at ${selectedApp.scheduledTime}` : 'Not scheduled'],
+                  ['Certificate No', selectedApp.certificateNo || 'Pending on-site stamping'],
+                ].map(([k, v]) => (
+                  <Grid item xs={12} sm={6} key={k}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #F1F5F9', pb: 1 }}>
+                      <Typography variant="body2" sx={{ color: '#64748B', fontWeight: 600 }}>{k}</Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 700, color: '#0F172A', textAlign: 'right' }}>{v}</Typography>
+                    </Box>
+                  </Grid>
+                ))}
+              </Grid>
             </Box>
           )}
         </DialogContent>
+
         {/* Show FO inspection findings for Inspection Reported apps */}
         {selectedApp?.status === 'Inspection Reported' && (
           <Box sx={{ px: 3, pb: 1 }}>
@@ -684,25 +815,155 @@ export default function LMOPending() {
             <Typography variant="caption" sx={{ fontWeight: 800, color: '#7E22CE', display: 'block', mb: 1 }}>
               📋 FIELD OFFICER INSPECTION REPORT (Awaiting Your Signature)
             </Typography>
-            {[
-              ['FO Inspector', selectedApp.raw?.stamped_by || 'Not recorded'],
-              ['Inspection Date', selectedApp.raw?.inspection_date ? new Date(selectedApp.raw.inspection_date).toLocaleDateString('en-IN') : '—'],
-              ['Test Result', selectedApp.raw?.inspection_result || '—'],
-              ['Error Margin', selectedApp.raw?.test_error_percentage != null ? `${selectedApp.raw.test_error_percentage}%` : '—'],
-              ['Environment', selectedApp.raw?.environmental_temp || '—'],
-              ['Security Seal No', selectedApp.raw?.security_seal_no || '—'],
-              ['FO Notes', selectedApp.raw?.inspection_notes || '—'],
-            ].map(([k, v]) => (
-              <Box key={k} sx={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #F1F5F9', pb: 1, mb: 1 }}>
-                <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 600 }}>{k}</Typography>
-                <Typography variant="caption" sx={{ fontWeight: 700, color: '#0F172A', textAlign: 'right', maxWidth: '60%' }}>{String(v)}</Typography>
-              </Box>
-            ))}
+            <Grid container spacing={2}>
+              {[
+                ['FO Inspector', selectedApp.raw?.stamped_by || 'Not recorded'],
+                ['Inspection Date', selectedApp.raw?.inspection_date ? new Date(selectedApp.raw.inspection_date).toLocaleDateString('en-IN') : '—'],
+                ['Test Result', selectedApp.raw?.inspection_result || '—'],
+                ['Error Margin', selectedApp.raw?.test_error_percentage != null ? `${selectedApp.raw.test_error_percentage}%` : '—'],
+                ['Environment', selectedApp.raw?.environmental_temp || '—'],
+                ['Security Seal No', selectedApp.raw?.security_seal_no || '—'],
+                ['FO Notes', selectedApp.raw?.inspection_notes || '—'],
+              ].map(([k, v]) => (
+                <Grid item xs={12} sm={6} key={k}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #F1F5F9', pb: 1, mb: 1 }}>
+                    <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 600 }}>{k}</Typography>
+                    <Typography variant="caption" sx={{ fontWeight: 700, color: '#0F172A', textAlign: 'right', maxWidth: '60%' }}>{String(v)}</Typography>
+                  </Box>
+                </Grid>
+              ))}
+            </Grid>
             <Alert severity="info" sx={{ mt: 1, borderRadius: 2, fontSize: '0.78rem' }}>
               As the gazetted Legal Metrology Officer, your signature authorises this certificate under Section 24 of the Legal Metrology Act, 2009.
             </Alert>
           </Box>
         )}
+
+        {/* ── Attached Inspection Evidence & Photographs ── */}
+        <Box sx={{ px: 3, pb: 2 }}>
+          <Divider sx={{ mb: 2 }} />
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
+            <Typography variant="caption" sx={{ fontWeight: 800, color: '#1E293B', display: 'flex', alignItems: 'center', gap: 0.75 }}>
+              📸 STATUTORY EVIDENCE &amp; INSPECTION PHOTOGRAPHS ({selectedApp?.documents?.length || selectedApp?.raw?.documents?.length || 0})
+            </Typography>
+            {((selectedApp?.documents?.length || 0) > 0 || (selectedApp?.raw?.documents?.length || 0) > 0) && (
+              <Chip
+                label="Evidence Available for Verification"
+                size="small"
+                sx={{ bgcolor: '#DCFCE7', color: '#15803D', fontWeight: 700, fontSize: '0.68rem' }}
+              />
+            )}
+          </Box>
+
+          {((selectedApp?.documents && selectedApp.documents.length > 0) ||
+            (selectedApp?.raw?.documents && selectedApp.raw.documents.length > 0)) ? (
+            <Grid container spacing={2}>
+              {(selectedApp.documents || selectedApp.raw.documents).map((doc) => {
+                const isImage = doc.mime_type?.startsWith('image/') || /\.(jpg|jpeg|png|webp)$/i.test(doc.file_name);
+                const fileUrl = `${API_BASE}${doc.file_path}`;
+
+                return (
+                  <Grid item xs={12} sm={6} md={4} key={doc.id}>
+                    <Paper
+                      variant="outlined"
+                      sx={{
+                        p: 1.5,
+                        borderRadius: 2,
+                        bgcolor: '#FFFFFF',
+                        border: '1px solid #E2E8F0',
+                        transition: 'all 0.2s',
+                        '&:hover': { borderColor: '#7E22CE', boxShadow: '0 4px 12px rgba(126, 34, 206, 0.08)' },
+                      }}
+                    >
+                      <Box
+                        onClick={() => setPreviewDoc(doc)}
+                        sx={{
+                          height: 120,
+                          bgcolor: '#F8FAFC',
+                          borderRadius: 1.5,
+                          overflow: 'hidden',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          cursor: 'pointer',
+                          position: 'relative',
+                        }}
+                      >
+                        {isImage ? (
+                          <img
+                            src={fileUrl}
+                            alt={doc.file_name}
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                          />
+                        ) : (
+                          <InsertDriveFileIcon sx={{ fontSize: 52, color: '#64748B' }} />
+                        )}
+                        <Box
+                          sx={{
+                            position: 'absolute',
+                            bottom: 0,
+                            left: 0,
+                            right: 0,
+                            bgcolor: 'rgba(0, 0, 0, 0.65)',
+                            color: '#FFFFFF',
+                            py: 0.3,
+                            textAlign: 'center',
+                          }}
+                        >
+                          <Typography variant="caption" sx={{ fontSize: '0.65rem', fontWeight: 600 }}>
+                            Click to Expand / Inspect
+                          </Typography>
+                        </Box>
+                      </Box>
+
+                      <Box sx={{ mt: 1 }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <Chip
+                            label={doc.doc_type?.replace(/_/g, ' ') || 'DOCUMENT'}
+                            size="small"
+                            sx={{
+                              height: 20,
+                              fontSize: '0.62rem',
+                              fontWeight: 800,
+                              bgcolor: doc.doc_type?.includes('SEAL') ? '#FEF3C7' : '#F1F5F9',
+                              color: doc.doc_type?.includes('SEAL') ? '#B45309' : '#475569',
+                            }}
+                          />
+                          <IconButton
+                            size="small"
+                            component="a"
+                            href={fileUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            sx={{ color: '#64748B', p: 0.5 }}
+                          >
+                            <OpenInNewIcon sx={{ fontSize: 16 }} />
+                          </IconButton>
+                        </Box>
+                        <Typography
+                          variant="caption"
+                          sx={{ display: 'block', mt: 0.5, fontWeight: 700, color: '#1E293B' }}
+                          noWrap
+                          title={doc.file_name}
+                        >
+                          {doc.file_name}
+                        </Typography>
+                        <Typography variant="caption" sx={{ color: '#94A3B8', fontSize: '0.65rem' }}>
+                          {(doc.file_size / 1024).toFixed(1)} KB · {doc.uploaded_at ? new Date(doc.uploaded_at).toLocaleDateString('en-IN') : 'Uploaded'}
+                        </Typography>
+                      </Box>
+                    </Paper>
+                  </Grid>
+                );
+              })}
+            </Grid>
+          ) : (
+            <Alert severity="info" sx={{ borderRadius: 2, fontSize: '0.78rem' }}>
+              No photographic evidence or documents uploaded for this application yet.
+            </Alert>
+          )}
+        </Box>
+
         <DialogActions sx={{ p: 2, gap: 1 }}>
           <Button onClick={() => setSelectedApp(null)} sx={{ color: '#64748B' }}>Close</Button>
           {selectedApp?.status === 'Pending' && (
@@ -740,6 +1001,64 @@ export default function LMOPending() {
             </>
           )}
         </DialogActions>
+      </Dialog>
+
+      {/* ── PHOTO / DOCUMENT LIGHTBOX PREVIEW MODAL ── */}
+      <Dialog
+        open={!!previewDoc}
+        onClose={() => setPreviewDoc(null)}
+        maxWidth="md"
+        fullWidth
+        PaperProps={{ sx: { borderRadius: 3, overflow: 'hidden' } }}
+      >
+        <DialogTitle sx={{ m: 0, p: 2, bgcolor: '#0F172A', color: '#FFFFFF', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>
+              {previewDoc?.file_name}
+            </Typography>
+            <Chip
+              label={previewDoc?.doc_type?.replace(/_/g, ' ')}
+              size="small"
+              sx={{ bgcolor: '#334155', color: '#F8FAFC', fontWeight: 700, fontSize: '0.7rem' }}
+            />
+          </Box>
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <Button
+              size="small"
+              variant="outlined"
+              component="a"
+              href={`${API_BASE}${previewDoc?.file_path}`}
+              target="_blank"
+              download
+              startIcon={<DownloadIcon />}
+              sx={{ color: '#FFFFFF', borderColor: '#475569', fontSize: '0.75rem', textTransform: 'none' }}
+            >
+              Open Full
+            </Button>
+            <IconButton onClick={() => setPreviewDoc(null)} sx={{ color: '#94A3B8', '&:hover': { color: '#FFFFFF' } }}>
+              <CloseIcon />
+            </IconButton>
+          </Box>
+        </DialogTitle>
+        <DialogContent sx={{ p: 2, bgcolor: '#020617', textAlign: 'center', minHeight: 400, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          {previewDoc?.mime_type?.startsWith('image/') || /\.(jpg|jpeg|png|webp)$/i.test(previewDoc?.file_name || '') ? (
+            <img
+              src={`${API_BASE}${previewDoc?.file_path}`}
+              alt={previewDoc?.file_name}
+              style={{ maxWidth: '100%', maxHeight: '72vh', objectFit: 'contain', borderRadius: 4 }}
+            />
+          ) : (
+            <Box sx={{ p: 4, color: '#94A3B8' }}>
+              <InsertDriveFileIcon sx={{ fontSize: 80, mb: 1 }} />
+              <Typography variant="body1" sx={{ color: '#FFFFFF', fontWeight: 700 }}>
+                {previewDoc?.file_name}
+              </Typography>
+              <Typography variant="body2" sx={{ mt: 1 }}>
+                PDF or non-image document. Click &quot;Open Full&quot; above to view or download.
+              </Typography>
+            </Box>
+          )}
+        </DialogContent>
       </Dialog>
     </Box>
   );

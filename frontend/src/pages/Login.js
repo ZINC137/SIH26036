@@ -616,7 +616,6 @@ export default function Login({ onLogin }) {
               </Typography>
             </Box>
 
-
             {/* Verification Status Alerts from URL */}
             {verifiedParam === 'true' && (
               <Alert severity="success" sx={{ mb: 2.5, borderRadius: '12px', fontWeight: 600 }}>

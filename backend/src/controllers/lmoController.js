@@ -1,7 +1,6 @@
 const argon2 = require('argon2');
 const crypto = require('crypto');
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../db');
 const { recordAuditLog } = require('./adminController');
 const { validateAuthorityAssignment, calculateValidityDates } = require('../services/ruleEngineService');
 
@@ -200,7 +199,10 @@ const getLmoApplications = async (req, res) => {
     const apps = await prisma.application.findMany({
       where,
       orderBy: { submitted_at: 'desc' },
-      include: { user: { include: { profile: true } } },
+      include: {
+        user: { include: { profile: true } },
+        documents: true,
+      },
     });
 
     let filtered = apps;
@@ -245,6 +247,7 @@ const getLmoApplications = async (req, res) => {
       inspectionResult: a.inspection_result,
       securitySealNo: a.security_seal_no,
       stampedBy: a.stamped_by,
+      documents: a.documents || [],
       raw: a,
     }));
 
@@ -293,6 +296,12 @@ const assignFieldOfficer = async (req, res) => {
     const app = await prisma.application.findUnique({ where: { id } });
     if (!app) {
       return res.status(404).json({ error: 'Application not found.' });
+    }
+
+    if (['Approved', 'Rejected'].includes(app.status)) {
+      return res.status(400).json({
+        error: `Cannot reassign application in "${app.status}" status. Once final verification outcome is recorded, new verification requires fresh application.`,
+      });
     }
 
     // 5A. Allocation to Government Approved Test Centre (GATC)
@@ -482,101 +491,108 @@ const reviewApplication = async (req, res) => {
       const validityData = await calculateValidityDates(categoryCode, certificate_issued_at, app.application_type);
       const certificate_valid_until = validityData.validUntil;
 
-      // 1. Maintain Centralized Instrument Repository (Requirement 6, 10)
-      let instrumentRecord = null;
-      if (app.instrument_id) {
-        instrumentRecord = await prisma.instrument.update({
-          where: { id: app.instrument_id },
+      // 1. Atomically maintain Instrument, Record Verification, Update Application, and Dispatch Notifications
+      const { updated, instrumentRecord } = await prisma.$transaction(async (tx) => {
+        let instRec = null;
+        if (app.instrument_id) {
+          instRec = await tx.instrument.update({
+            where: { id: app.instrument_id },
+            data: {
+              current_status: 'VERIFIED',
+              last_verification_date: certificate_issued_at,
+              validity_expiry_date: certificate_valid_until,
+              current_certificate_no: certificate_no,
+              current_security_seal_no: app.security_seal_no,
+              reverification_count: { increment: 1 },
+            },
+          });
+        } else {
+          const instCount = await tx.instrument.count();
+          const instSuffix = crypto.randomBytes(2).toString('hex').toUpperCase();
+          const instrument_id = `INST-${year}-${String(instCount + 1).padStart(4, '0')}-${instSuffix}`;
+          instRec = await tx.instrument.create({
+            data: {
+              instrument_id,
+              user_id: app.user_id,
+              instrument_type: app.instrument_type,
+              make: app.make,
+              model: app.model,
+              serial_no: app.serial_no,
+              capacity: app.capacity,
+              unit: app.unit,
+              accuracy_class: app.accuracy_class,
+              location_address: `${app.address}, ${app.city}, ${app.state} - ${app.pincode}`,
+              business_name: app.business_name,
+              current_status: 'VERIFIED',
+              last_verification_date: certificate_issued_at,
+              validity_expiry_date: certificate_valid_until,
+              current_certificate_no: certificate_no,
+              current_security_seal_no: app.security_seal_no,
+            },
+          });
+        }
+
+        // 2. Persist Immutable Verification Event in Central Repository (Requirement 4, 10)
+        await tx.verificationRecord.create({
           data: {
-            current_status: 'VERIFIED',
-            last_verification_date: certificate_issued_at,
-            validity_expiry_date: certificate_valid_until,
-            current_certificate_no: certificate_no,
-            current_security_seal_no: app.security_seal_no,
-            reverification_count: { increment: 1 },
+            application_id: app.id,
+            instrument_id: instRec?.id || null,
+            verification_type: app.application_type === 'RE_VERIFICATION' ? 'PERIODICAL_REVERIFICATION' : 'INITIAL',
+            verifier_type: app.assigned_gatc_id ? 'GATC' : 'FIELD_OFFICER',
+            verifier_id: app.assigned_gatc_id || app.assigned_fo_id,
+            verifier_name: app.stamped_by || app.assigned_fo_name || app.assigned_gatc_name || lmoName,
+            verifier_code: app.assigned_fo_code || app.assigned_gatc_code || lmoCode,
+            test_date: app.inspection_date || new Date(),
+            test_error_percentage: app.test_error_percentage ?? 0.015,
+            environmental_conditions: app.environmental_temp || '24°C, 48% RH',
+            working_standards_used: 'Legal Metrology Secondary Working Standards',
+            test_observations: app.inspection_notes || 'All statutory MPE tests satisfied.',
+            result: 'Pass',
+            security_seal_no: app.security_seal_no,
+            remarks: `Endorsed by LMO ${lmoName} with DSC [${lmoDscId}] under Sec 24 Legal Metrology Act.`,
+            certificate_no,
           },
         });
-      } else {
-        const instCount = await prisma.instrument.count();
-        const instrument_id = `INST-${year}-${String(instCount + 1).padStart(4, '0')}`;
-        instrumentRecord = await prisma.instrument.create({
+
+        // 3. Update Application Record
+        const updatedApp = await tx.application.update({
+          where: { id },
           data: {
-            instrument_id,
+            status: 'Approved',
+            certificate_no,
+            certificate_issued_at,
+            certificate_valid_until,
+            instrument_id: instRec?.id || app.instrument_id,
+            inspection_notes: notes
+              ? `LMO Review: ${notes}. ${app.inspection_notes || ''}`
+              : app.inspection_notes || 'Verified and approved under Section 24 of Legal Metrology Act.',
+            inspection_result: app.inspection_result || 'Pass',
+            assigned_lmo_id: req.user ? req.user.id : app.assigned_lmo_id,
+          },
+        });
+
+        // 4. Create Notification for Trader
+        await tx.notification.create({
+          data: {
             user_id: app.user_id,
-            instrument_type: app.instrument_type,
-            make: app.make,
-            model: app.model,
-            serial_no: app.serial_no,
-            capacity: app.capacity,
-            unit: app.unit,
-            accuracy_class: app.accuracy_class,
-            location_address: `${app.address}, ${app.city}, ${app.state} - ${app.pincode}`,
-            business_name: app.business_name,
-            current_status: 'VERIFIED',
-            last_verification_date: certificate_issued_at,
-            validity_expiry_date: certificate_valid_until,
-            current_certificate_no: certificate_no,
-            current_security_seal_no: app.security_seal_no,
+            type: 'CERTIFICATE_ISSUED',
+            title: `Statutory Form D Certificate Issued: ${certificate_no}`,
+            message: `Official Legal Metrology Certificate ${certificate_no} has been endorsed by LMO ${lmoName} for ${app.instrument_type} (${app.make} ${app.serial_no}). Valid until ${certificate_valid_until.toLocaleDateString('en-IN')}.`,
+            reference_id: certificate_no,
           },
         });
-      }
 
-      // 2. Persist Immutable Verification Event in Central Repository (Requirement 4, 10)
-      await prisma.verificationRecord.create({
-        data: {
-          application_id: app.id,
-          instrument_id: instrumentRecord?.id || null,
-          verification_type: app.application_type === 'RE_VERIFICATION' ? 'PERIODICAL_REVERIFICATION' : 'INITIAL',
-          verifier_type: app.assigned_gatc_id ? 'GATC' : 'FIELD_OFFICER',
-          verifier_id: app.assigned_gatc_id || app.assigned_fo_id,
-          verifier_name: app.stamped_by || app.assigned_fo_name || app.assigned_gatc_name || lmoName,
-          verifier_code: app.assigned_fo_code || app.assigned_gatc_code || lmoCode,
-          test_date: app.inspection_date || new Date(),
-          test_error_percentage: app.test_error_percentage ?? 0.015,
-          environmental_conditions: app.environmental_temp || '24°C, 48% RH',
-          working_standards_used: 'Legal Metrology Secondary Working Standards',
-          test_observations: app.inspection_notes || 'All statutory MPE tests satisfied.',
-          result: 'Pass',
-          security_seal_no: app.security_seal_no,
-          remarks: `Endorsed by LMO ${lmoName} with DSC [${lmoDscId}] under Sec 24 Legal Metrology Act.`,
-          certificate_no,
-        },
+        await tx.auditLog.create({
+          data: {
+            action: 'CERTIFICATE_ISSUED_BY_LMO',
+            actor: req.user ? req.user.email : 'lmo@gov.in',
+            target: app.app_number,
+            details: `LMO ${lmoName} (${lmoCode}) endorsed inspection report for ${app.app_number} at ${app.business_name}. Signed with DSC [${lmoDscId}]. Issued Legal Metrology Stamping Certificate ${certificate_no} valid until ${certificate_valid_until.toISOString().split('T')[0]}.`,
+          },
+        });
+
+        return { updated: updatedApp, instrumentRecord: instRec };
       });
-
-      // 3. Update Application Record
-      const updated = await prisma.application.update({
-        where: { id },
-        data: {
-          status: 'Approved',
-          certificate_no,
-          certificate_issued_at,
-          certificate_valid_until,
-          instrument_id: instrumentRecord?.id || app.instrument_id,
-          inspection_notes: notes
-            ? `LMO Review: ${notes}. ${app.inspection_notes || ''}`
-            : app.inspection_notes || 'Verified and approved under Section 24 of Legal Metrology Act.',
-          inspection_result: app.inspection_result || 'Pass',
-          assigned_lmo_id: req.user ? req.user.id : app.assigned_lmo_id,
-        },
-      });
-
-      // 4. Create Notification for Trader
-      await prisma.notification.create({
-        data: {
-          user_id: app.user_id,
-          type: 'CERTIFICATE_ISSUED',
-          title: `Statutory Form D Certificate Issued: ${certificate_no}`,
-          message: `Official Legal Metrology Certificate ${certificate_no} has been endorsed by LMO ${lmoName} for ${app.instrument_type} (${app.make} ${app.serial_no}). Valid until ${certificate_valid_until.toLocaleDateString('en-IN')}.`,
-          reference_id: certificate_no,
-        },
-      });
-
-      await recordAuditLog(
-        'CERTIFICATE_ISSUED_BY_LMO',
-        req.user ? req.user.email : 'lmo@gov.in',
-        app.app_number,
-        `LMO ${lmoName} (${lmoCode}) endorsed inspection report for ${app.app_number} at ${app.business_name}. Signed with DSC [${lmoDscId}]. Issued Legal Metrology Stamping Certificate ${certificate_no} valid until ${certificate_valid_until.toISOString().split('T')[0]}.`
-      );
 
       return res.status(200).json({
         message: `Certificate issued successfully. ${certificate_no} signed by LMO ${lmoName} and valid for 1 year.`,
@@ -617,7 +633,7 @@ const reviewApplication = async (req, res) => {
       });
 
     } else if (action === 'reject') {
-      if (!['Pending', 'Inspection Reported', 'Correction Required'].includes(app.status)) {
+      if (!['Pending', 'Inspection Reported', 'Correction Required', 'Rejected'].includes(app.status)) {
         return res.status(400).json({ error: `Cannot reject application in "${app.status}" status.` });
       }
 
@@ -673,6 +689,7 @@ const getLmoCertificates = async (req, res) => {
         user: {
           select: { email: true, profile: true },
         },
+        documents: true,
       },
     });
 
@@ -716,6 +733,7 @@ const getLmoCertificates = async (req, res) => {
         submittedAt: new Date(a.submitted_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
         feeAmount: a.fee_amount,
         paymentStatus: a.payment_status,
+        documents: a.documents || [],
         raw: a,
       };
     });

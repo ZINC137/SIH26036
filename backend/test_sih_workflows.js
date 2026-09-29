@@ -104,7 +104,7 @@ async function runTests() {
     // 2. Citizen / Trader Registration & Login
     console.log('\n--- TEST 2: Citizen / Trader Authentication & Session ---');
     const userClient = createClient(BASE_URL);
-    const userEmail = 'guptapriyanshu710@gmail.com';
+    const userEmail = 'priya@example.com';
     const userLogin = await userClient.post('/api/auth/login', {
       email: userEmail,
       password: 'UserPassword123!',
@@ -141,7 +141,7 @@ async function runTests() {
       make: 'Avery Weigh-Tronix',
       model: 'E-1010-PRO',
       serial_no: serialNumber,
-      capacity: '300',
+      capacity: '100',
       unit: 'kg',
       business_name: 'Metro Retail Mart',
       gst_no: '07AAAAA0000A1Z5',
