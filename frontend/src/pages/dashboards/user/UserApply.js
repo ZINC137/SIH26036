@@ -3,7 +3,7 @@ import {
   Box, Paper, Typography, Grid, TextField, MenuItem, Button,
   Stepper, Step, StepLabel, Divider, Alert, Chip, Select,
   FormControl, InputLabel, CircularProgress, Card, Radio,
-  RadioGroup, FormControlLabel,
+  RadioGroup, FormControlLabel, InputAdornment,
 } from "@mui/material";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import BuildIcon from "@mui/icons-material/Build";
@@ -14,6 +14,20 @@ import CloseIcon from "@mui/icons-material/Close";
 import AutorenewIcon from "@mui/icons-material/Autorenew";
 import VerifiedUserIcon from "@mui/icons-material/VerifiedUser";
 import GavelIcon from "@mui/icons-material/Gavel";
+import StorefrontIcon from "@mui/icons-material/Storefront";
+import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
+import LocationOnOutlinedIcon from "@mui/icons-material/LocationOnOutlined";
+import HomeWorkOutlinedIcon from "@mui/icons-material/HomeWorkOutlined";
+import PlaceOutlinedIcon from "@mui/icons-material/PlaceOutlined";
+import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
+import PersonOutlinedIcon from "@mui/icons-material/PersonOutlined";
+import PhoneOutlinedIcon from "@mui/icons-material/PhoneOutlined";
+import EmailOutlinedIcon from "@mui/icons-material/EmailOutlined";
+import LocalShippingOutlinedIcon from "@mui/icons-material/LocalShippingOutlined";
+import ScienceOutlinedIcon from "@mui/icons-material/ScienceOutlined";
+import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import CheckCircleOutlinedIcon from "@mui/icons-material/CheckCircleOutlined";
 import { useNavigate } from "react-router-dom";
 import { authFetch } from "../../../config/api";
 
@@ -37,33 +51,95 @@ const UNITS = ["kg", "g", "L", "mL", "bar", "m³/h"];
 
 const steps = ["Instrument & Verification Type", "Business & Premises Info", "Review & Submit"];
 
-// Consistent styling applied to every field (TextField & FormControl alike)
+// Modern refined styling applied to every field (TextField & FormControl alike)
 const fieldSx = {
   "& .MuiOutlinedInput-root": {
-    borderRadius: 2,
-    minHeight: 56,
-    "&:hover fieldset": { borderColor: COLOR },
-    "&.Mui-focused fieldset": { borderColor: COLOR },
+    borderRadius: "10px",
+    backgroundColor: "#FFFFFF",
+    transition: "all 0.2s ease-in-out",
+    "&:hover": {
+      backgroundColor: "#F8FAFC",
+      "& fieldset": { borderColor: "#CBD5E1" },
+    },
+    "&.Mui-focused": {
+      backgroundColor: "#FFFFFF",
+      boxShadow: "0 0 0 3px rgba(230, 81, 0, 0.12)",
+      "& fieldset": { borderColor: COLOR, borderWidth: "1.5px" },
+    },
   },
-  "& .MuiInputLabel-root.Mui-focused": { color: COLOR },
+  "& .MuiInputLabel-root": {
+    color: "#64748B",
+    fontSize: "0.92rem",
+    fontWeight: 500,
+    "&.Mui-focused": { color: COLOR, fontWeight: 700 },
+  },
+  "& .MuiFormHelperText-root": {
+    fontSize: "0.75rem",
+    fontWeight: 500,
+    color: "#64748B",
+    mt: 0.5,
+  },
 };
 
 // Section header component used in each step
-function StepHeader({ icon, title, subtitle }) {
+function StepHeader({ icon, title, subtitle, badge }) {
   return (
-    <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 3 }}>
-      <Box sx={{
-        width: 44, height: 44, borderRadius: 2,
-        bgcolor: "#FFF3E0",
-        display: "flex", alignItems: "center", justifyContent: "center",
-        flexShrink: 0,
-      }}>
-        {React.cloneElement(icon, { sx: { color: COLOR, fontSize: 22 } })}
+    <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 2, mb: 3 }}>
+      <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+        <Box sx={{
+          width: 48, height: 48, borderRadius: 2.5,
+          bgcolor: "#FFF7ED",
+          border: "1px solid #FFEDD5",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          flexShrink: 0,
+          boxShadow: "0 2px 8px rgba(230, 81, 0, 0.08)",
+        }}>
+          {React.cloneElement(icon, { sx: { color: COLOR, fontSize: 24 } })}
+        </Box>
+        <Box>
+          <Typography variant="h6" sx={{ fontWeight: 800, color: "#0F172A", lineHeight: 1.25, letterSpacing: "-0.01em" }}>
+            {title}
+          </Typography>
+          <Typography variant="body2" sx={{ color: "#64748B", mt: 0.3, fontWeight: 500 }}>
+            {subtitle}
+          </Typography>
+        </Box>
       </Box>
-      <Box>
-        <Typography variant="h6" sx={{ fontWeight: 700, color: "#1A1A2E", lineHeight: 1.2 }}>{title}</Typography>
-        <Typography variant="body2" sx={{ color: "#9E9E9E", mt: 0.2 }}>{subtitle}</Typography>
+      {badge && (
+        <Chip
+          label={badge}
+          size="small"
+          sx={{ bgcolor: "#F1F5F9", color: "#475569", fontWeight: 700, fontSize: "0.75rem", border: "1px solid #E2E8F0" }}
+        />
+      )}
+    </Box>
+  );
+}
+
+// Sub-section header component for organized cards
+function SectionTitle({ icon, title, subtitle, badge }) {
+  return (
+    <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 2, pb: 1, borderBottom: "1px solid #F1F5F9" }}>
+      <Box sx={{ display: "flex", alignItems: "center", gap: 1.2 }}>
+        {icon && React.cloneElement(icon, { sx: { color: COLOR, fontSize: 20 } })}
+        <Box>
+          <Typography variant="subtitle2" sx={{ fontWeight: 800, color: "#1E293B", letterSpacing: "0.01em" }}>
+            {title}
+          </Typography>
+          {subtitle && (
+            <Typography variant="caption" sx={{ color: "#64748B", display: "block" }}>
+              {subtitle}
+            </Typography>
+          )}
+        </Box>
       </Box>
+      {badge && (
+        <Chip
+          label={badge}
+          size="small"
+          sx={{ bgcolor: "#ECFDF5", color: "#065F46", fontWeight: 700, fontSize: "0.7rem", border: "1px solid #A7F3D0" }}
+        />
+      )}
     </Box>
   );
 }
@@ -382,26 +458,61 @@ export default function UserApply() {
 
   // ── Main form ────────────────────────────────────────────────────
   return (
-    <Box sx={{ p: { xs: 2, md: 4 }, maxWidth: 880, mx: "auto" }}>
+    <Box sx={{ p: { xs: 2, md: 4 }, maxWidth: 940, mx: "auto" }}>
 
       {/* Page header */}
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="overline" sx={{ color: COLOR, fontWeight: 700, letterSpacing: 1.5 }}>USER PORTAL</Typography>
-        <Typography variant="h4" sx={{ fontWeight: 900, color: "#1A1A2E", lineHeight: 1.2 }}>New Verification Application</Typography>
-        <Typography variant="body2" sx={{ color: "#757575", mt: 0.5 }}>
-          Apply for instrument verification under the Legal Metrology Act, 2009
+      <Box sx={{ mb: 3.5 }}>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 0.8 }}>
+          <Chip
+            label="CITIZEN & TRADER PORTAL"
+            size="small"
+            sx={{ bgcolor: "#FFF7ED", color: COLOR, fontWeight: 800, fontSize: "0.7rem", border: "1px solid #FFEDD5" }}
+          />
+          <Chip
+            label="SECTION 24 VERIFICATION"
+            size="small"
+            sx={{ bgcolor: "#F0FDF4", color: "#166534", fontWeight: 800, fontSize: "0.7rem", border: "1px solid #BBF7D0" }}
+          />
+        </Box>
+        <Typography variant="h4" sx={{ fontWeight: 900, color: "#0F172A", lineHeight: 1.2, letterSpacing: "-0.02em" }}>
+          New Verification Application
+        </Typography>
+        <Typography variant="body2" sx={{ color: "#64748B", mt: 0.5, fontWeight: 500 }}>
+          Statutory electronic application for stamping & verification of weights and measures (Legal Metrology Act, 2009)
         </Typography>
       </Box>
 
       {/* Stepper */}
-      <Paper elevation={0} sx={{ p: 2.5, borderRadius: 3, border: "1px solid #E0E0E0", mb: 3 }}>
+      <Paper
+        elevation={0}
+        sx={{
+          p: { xs: 2, sm: 2.5 },
+          borderRadius: 3.5,
+          border: "1px solid #E2E8F0",
+          bgcolor: "#FFFFFF",
+          boxShadow: "0 2px 10px rgba(0,0,0,0.02)",
+          mb: 3.5,
+        }}
+      >
         <Stepper activeStep={activeStep} alternativeLabel>
           {steps.map((label, i) => (
             <Step key={label}>
               <StepLabel
-                StepIconProps={{ sx: { "&.Mui-active": { color: COLOR }, "&.Mui-completed": { color: COLOR } } }}
+                StepIconProps={{
+                  sx: {
+                    "&.Mui-active": { color: COLOR },
+                    "&.Mui-completed": { color: "#10B981" },
+                  },
+                }}
               >
-                <Typography variant="caption" sx={{ fontWeight: activeStep === i ? 700 : 500, color: activeStep === i ? COLOR : "#757575" }}>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    fontWeight: activeStep === i ? 800 : 600,
+                    color: activeStep === i ? COLOR : activeStep > i ? "#10B981" : "#94A3B8",
+                    fontSize: "0.82rem",
+                  }}
+                >
                   {label}
                 </Typography>
               </StepLabel>
@@ -411,11 +522,22 @@ export default function UserApply() {
       </Paper>
 
       {error && (
-        <Alert severity="error" sx={{ mb: 3, borderRadius: 2 }} onClose={() => setError("")}>{error}</Alert>
+        <Alert severity="error" sx={{ mb: 3.5, borderRadius: 2.5, fontWeight: 600 }} onClose={() => setError("")}>
+          {error}
+        </Alert>
       )}
 
       {/* Form card */}
-      <Paper elevation={0} sx={{ p: { xs: 3, md: 4 }, borderRadius: 3, border: "1px solid #E0E0E0" }}>
+      <Paper
+        elevation={0}
+        sx={{
+          p: { xs: 3, md: 4.5 },
+          borderRadius: 4,
+          border: "1px solid #E2E8F0",
+          bgcolor: "#FFFFFF",
+          boxShadow: "0 4px 24px rgba(0,0,0,0.03)",
+        }}
+      >
 
         {/* ────────── STEP 0 : Instrument & Verification Type ────────── */}
         {activeStep === 0 && (
@@ -811,79 +933,308 @@ export default function UserApply() {
         {/* ────────── STEP 1 : Business & Premises Info ────────── */}
         {activeStep === 1 && (
           <Box>
-            <StepHeader icon={<BusinessIcon />} title="Business & Premises Information" subtitle="Details of premises and preferred verification logistics" />
-            <Divider sx={{ mb: profileLoaded ? 2 : 4 }} />
+            <StepHeader
+              icon={<BusinessIcon />}
+              title="Business & Premises Information"
+              subtitle="Establishment identification, verification logistics, and authorized representative details"
+              badge="Step 2 of 3"
+            />
+            <Divider sx={{ mb: 3 }} />
 
             {profileLoaded && (
-              <Alert severity="info" sx={{ mb: 3, borderRadius: 2 }}>
-                ✨ Contact and address fields have been pre-filled from your profile — edit as needed.
-              </Alert>
+              <Box sx={{
+                mb: 3.5, p: 2, borderRadius: 2.5,
+                bgcolor: "#F0FDF4", border: "1px solid #BBF7D0",
+                display: "flex", alignItems: "center", gap: 1.5,
+              }}>
+                <CheckCircleOutlinedIcon sx={{ color: "#16A34A", fontSize: 22, flexShrink: 0 }} />
+                <Box>
+                  <Typography variant="subtitle2" sx={{ color: "#166534", fontWeight: 800 }}>
+                    Profile Pre-Fill Active
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: "#15803D", fontWeight: 500 }}>
+                    Contact and address details have been automatically retrieved from your registered trader profile. You may modify them for this application if needed.
+                  </Typography>
+                </Box>
+              </Box>
             )}
 
-            <Grid container spacing={3}>
-              <Grid item xs={12} sm={8}>
-                <TextField fullWidth label="Business / Shop Name *" value={form.businessName} onChange={set("businessName")} sx={fieldSx} />
-              </Grid>
-              <Grid item xs={12} sm={4}>
-                <TextField fullWidth label="GST Number" value={form.gstNo} onChange={set("gstNo")} sx={fieldSx} helperText="Optional" />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField fullWidth label="Address of Premises *" value={form.address} onChange={set("address")} multiline rows={2} sx={fieldSx} />
-              </Grid>
-              <Grid item xs={12} sm={5}>
-                <TextField fullWidth label="City *" value={form.city} onChange={set("city")} sx={fieldSx} />
-              </Grid>
-              <Grid item xs={12} sm={4}>
-                <TextField fullWidth label="State *" value={form.state} onChange={set("state")} sx={fieldSx} />
-              </Grid>
-              <Grid item xs={12} sm={3}>
-                <TextField fullWidth label="Pincode *" value={form.pincode} onChange={set("pincode")} sx={fieldSx} inputProps={{ maxLength: 6 }} />
-              </Grid>
-            </Grid>
+            {/* 1. Business & Establishment Info */}
+            <Paper elevation={0} sx={{ p: { xs: 2.5, sm: 3 }, mb: 3.5, borderRadius: 3, border: "1px solid #E2E8F0", bgcolor: "#FAFAFC" }}>
+              <SectionTitle
+                icon={<StorefrontIcon />}
+                title="Business Identification & Premises"
+                subtitle="Address where the weights and measures are deployed and commercial trading takes place"
+                badge="Premises Location"
+              />
 
-            <Divider sx={{ my: 3 }}>
-              <Typography variant="caption" sx={{ color: "#9E9E9E", fontWeight: 700, letterSpacing: 1 }}>VERIFICATION PREFERENCES</Typography>
-            </Divider>
-
-            <Grid container spacing={3} sx={{ mb: 2 }}>
-              <Grid item xs={12} sm={6}>
-                <FormControl fullWidth sx={fieldSx}>
-                  <InputLabel>Inspection Mode</InputLabel>
-                  <Select value={inspectionMode} label="Inspection Mode" onChange={(e) => setInspectionMode(e.target.value)}>
-                    <MenuItem value="ON_SITE">On-Site Verification at Business Premises</MenuItem>
-                    <MenuItem value="AT_CENTRE">At Legal Metrology Centre / GATC Lab</MenuItem>
-                  </Select>
-                </FormControl>
+              <Grid container spacing={2.5}>
+                <Grid item xs={12} sm={8}>
+                  <TextField
+                    fullWidth
+                    label="Business / Commercial Establishment Name *"
+                    value={form.businessName}
+                    onChange={set("businessName")}
+                    placeholder="e.g. Metro Commercial Traders Pvt Ltd"
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <StorefrontIcon sx={{ color: "#94A3B8", fontSize: 20 }} />
+                        </InputAdornment>
+                      ),
+                    }}
+                    sx={fieldSx}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={4}>
+                  <TextField
+                    fullWidth
+                    label="GST Number"
+                    value={form.gstNo}
+                    onChange={set("gstNo")}
+                    placeholder="15-digit GSTIN (optional)"
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <ReceiptLongIcon sx={{ color: "#94A3B8", fontSize: 20 }} />
+                        </InputAdornment>
+                      ),
+                    }}
+                    sx={fieldSx}
+                    helperText="Optional for unregistered traders"
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="Premises Street Address *"
+                    value={form.address}
+                    onChange={set("address")}
+                    multiline
+                    rows={2}
+                    placeholder="Shop/Plot number, Market name, Street, Landmark"
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start" sx={{ alignSelf: "flex-start", mt: 1 }}>
+                          <LocationOnOutlinedIcon sx={{ color: "#94A3B8", fontSize: 20 }} />
+                        </InputAdornment>
+                      ),
+                    }}
+                    sx={fieldSx}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={5}>
+                  <TextField
+                    fullWidth
+                    label="City / District *"
+                    value={form.city}
+                    onChange={set("city")}
+                    placeholder="e.g. North Delhi"
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <HomeWorkOutlinedIcon sx={{ color: "#94A3B8", fontSize: 20 }} />
+                        </InputAdornment>
+                      ),
+                    }}
+                    sx={fieldSx}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={4}>
+                  <TextField
+                    fullWidth
+                    label="State / UT *"
+                    value={form.state}
+                    onChange={set("state")}
+                    placeholder="e.g. Delhi"
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <PlaceOutlinedIcon sx={{ color: "#94A3B8", fontSize: 20 }} />
+                        </InputAdornment>
+                      ),
+                    }}
+                    sx={fieldSx}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={3}>
+                  <TextField
+                    fullWidth
+                    label="Pincode *"
+                    value={form.pincode}
+                    onChange={set("pincode")}
+                    placeholder="e.g. 110054"
+                    inputProps={{ maxLength: 6 }}
+                    sx={fieldSx}
+                    helperText="6-digit PIN code"
+                  />
+                </Grid>
               </Grid>
-              <Grid item xs={12} sm={6}>
+            </Paper>
+
+            {/* 2. Verification Logistics & Preferred Date */}
+            <Paper elevation={0} sx={{ p: { xs: 2.5, sm: 3 }, mb: 3.5, borderRadius: 3, border: "1px solid #E2E8F0", bgcolor: "#FAFAFC" }}>
+              <SectionTitle
+                icon={<CalendarMonthIcon />}
+                title="Verification Logistics & Preferred Schedule"
+                subtitle="Select how inspection should be performed and your preferred date"
+                badge="Statutory Schedule"
+              />
+
+              <Typography variant="caption" sx={{ fontWeight: 800, color: "#475569", textTransform: "uppercase", letterSpacing: 0.5, display: "block", mb: 1.5 }}>
+                Inspection Mode:
+              </Typography>
+
+              <Grid container spacing={2} sx={{ mb: 3 }}>
+                <Grid item xs={12} sm={6}>
+                  <Card
+                    variant="outlined"
+                    onClick={() => setInspectionMode("ON_SITE")}
+                    sx={{
+                      p: 2, cursor: "pointer", borderRadius: 2.5,
+                      borderColor: inspectionMode === "ON_SITE" ? COLOR : "#E2E8F0",
+                      bgcolor: inspectionMode === "ON_SITE" ? "#FFF7ED" : "#FFFFFF",
+                      borderWidth: inspectionMode === "ON_SITE" ? 2 : 1,
+                      transition: "all 0.2s ease",
+                      "&:hover": { borderColor: COLOR },
+                    }}
+                  >
+                    <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1.5 }}>
+                      <LocalShippingOutlinedIcon sx={{ color: inspectionMode === "ON_SITE" ? COLOR : "#94A3B8", fontSize: 24, mt: 0.2 }} />
+                      <Box>
+                        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                          <Typography variant="subtitle2" sx={{ fontWeight: 800, color: "#0F172A" }}>
+                            On-Site Verification
+                          </Typography>
+                          {inspectionMode === "ON_SITE" && (
+                            <Chip label="Selected" size="small" sx={{ height: 20, bgcolor: COLOR, color: "#FFFFFF", fontWeight: 800, fontSize: "0.65rem" }} />
+                          )}
+                        </Box>
+                        <Typography variant="caption" sx={{ color: "#64748B", display: "block", mt: 0.3 }}>
+                          Officer visits your commercial premises to test and seal instruments in position.
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </Card>
+                </Grid>
+
+                <Grid item xs={12} sm={6}>
+                  <Card
+                    variant="outlined"
+                    onClick={() => setInspectionMode("AT_CENTRE")}
+                    sx={{
+                      p: 2, cursor: "pointer", borderRadius: 2.5,
+                      borderColor: inspectionMode === "AT_CENTRE" ? COLOR : "#E2E8F0",
+                      bgcolor: inspectionMode === "AT_CENTRE" ? "#FFF7ED" : "#FFFFFF",
+                      borderWidth: inspectionMode === "AT_CENTRE" ? 2 : 1,
+                      transition: "all 0.2s ease",
+                      "&:hover": { borderColor: COLOR },
+                    }}
+                  >
+                    <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1.5 }}>
+                      <ScienceOutlinedIcon sx={{ color: inspectionMode === "AT_CENTRE" ? COLOR : "#94A3B8", fontSize: 24, mt: 0.2 }} />
+                      <Box>
+                        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                          <Typography variant="subtitle2" sx={{ fontWeight: 800, color: "#0F172A" }}>
+                            At Lab / Testing Centre
+                          </Typography>
+                          {inspectionMode === "AT_CENTRE" && (
+                            <Chip label="Selected" size="small" sx={{ height: 20, bgcolor: COLOR, color: "#FFFFFF", fontWeight: 800, fontSize: "0.65rem" }} />
+                          )}
+                        </Box>
+                        <Typography variant="caption" sx={{ color: "#64748B", display: "block", mt: 0.3 }}>
+                          Applicant brings equipment to accredited GATC laboratory or Legal Metrology centre.
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </Card>
+                </Grid>
+              </Grid>
+
+              {/* Preferred Inspection Date with clean explicit label avoiding any overlap */}
+              <Box sx={{ p: 2.2, bgcolor: "#FFFFFF", borderRadius: 2.5, border: "1px solid #E2E8F0" }}>
+                <Typography variant="caption" sx={{ fontWeight: 700, color: "#334155", display: "flex", alignItems: "center", gap: 1, mb: 1, textTransform: "uppercase", letterSpacing: 0.5 }}>
+                  <CalendarMonthIcon sx={{ fontSize: 16, color: COLOR }} />
+                  Preferred Inspection Date (Subject to Official Roster Availability)
+                </Typography>
                 <TextField
                   fullWidth
-                  label="Preferred Inspection Date"
                   type="date"
                   value={preferredDate}
                   onChange={(e) => setPreferredDate(e.target.value)}
-                  InputLabelProps={{ shrink: true }}
+                  inputProps={{ min: new Date().toISOString().split("T")[0] }}
                   sx={fieldSx}
-                  helperText="Subject to officer & testing centre scheduling"
+                  helperText="Select a tentative date. The department will allocate the exact inspection slot."
                 />
-              </Grid>
-            </Grid>
+              </Box>
+            </Paper>
 
-            <Divider sx={{ my: 3 }}>
-              <Typography variant="caption" sx={{ color: "#9E9E9E", fontWeight: 700, letterSpacing: 1 }}>CONTACT PERSON</Typography>
-            </Divider>
+            {/* 3. Authorized Contact Person */}
+            <Paper elevation={0} sx={{ p: { xs: 2.5, sm: 3 }, borderRadius: 3, border: "1px solid #E2E8F0", bgcolor: "#FAFAFC" }}>
+              <SectionTitle
+                icon={<PersonOutlinedIcon />}
+                title="Authorized Contact Representative"
+                subtitle="Official representative who will attend the verification inspection"
+                badge="Direct Communication"
+              />
 
-            <Grid container spacing={3}>
-              <Grid item xs={12} sm={4}>
-                <TextField fullWidth label="Contact Name *" value={form.contactName} onChange={set("contactName")} sx={fieldSx} />
+              <Grid container spacing={2.5}>
+                <Grid item xs={12} sm={4}>
+                  <TextField
+                    fullWidth
+                    label="Contact Person Name *"
+                    value={form.contactName}
+                    onChange={set("contactName")}
+                    placeholder="Full legal name"
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <PersonOutlinedIcon sx={{ color: "#94A3B8", fontSize: 20 }} />
+                        </InputAdornment>
+                      ),
+                    }}
+                    sx={fieldSx}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={4}>
+                  <TextField
+                    fullWidth
+                    label="Mobile Phone Number *"
+                    value={form.contactPhone}
+                    onChange={set("contactPhone")}
+                    placeholder="10-digit mobile"
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <PhoneOutlinedIcon sx={{ color: "#94A3B8", fontSize: 20 }} />
+                        </InputAdornment>
+                      ),
+                    }}
+                    sx={fieldSx}
+                    helperText="For inspection SMS alerts"
+                  />
+                </Grid>
+                <Grid item xs={12} sm={4}>
+                  <TextField
+                    fullWidth
+                    label="Official Email Address *"
+                    value={form.contactEmail}
+                    onChange={set("contactEmail")}
+                    type="email"
+                    placeholder="name@company.com"
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <EmailOutlinedIcon sx={{ color: "#94A3B8", fontSize: 20 }} />
+                        </InputAdornment>
+                      ),
+                    }}
+                    sx={fieldSx}
+                    helperText="For statutory digital certificates"
+                  />
+                </Grid>
               </Grid>
-              <Grid item xs={12} sm={4}>
-                <TextField fullWidth label="Phone Number *" value={form.contactPhone} onChange={set("contactPhone")} sx={fieldSx} />
-              </Grid>
-              <Grid item xs={12} sm={4}>
-                <TextField fullWidth label="Email Address *" value={form.contactEmail} onChange={set("contactEmail")} type="email" sx={fieldSx} />
-              </Grid>
-            </Grid>
+            </Paper>
           </Box>
         )}
 
@@ -977,26 +1328,71 @@ export default function UserApply() {
           </Box>
         )}
 
-        {/* Navigation */}
-        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mt: 5, pt: 3, borderTop: "1px solid #F0F0F0" }}>
+        {/* Navigation Bar */}
+        <Box sx={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          flexWrap: "wrap",
+          gap: 2,
+          mt: 5, pt: 3.5,
+          borderTop: "1px solid #E2E8F0",
+        }}>
           <Button
             onClick={() => activeStep === 0 ? navigate("/dashboard/user") : setActiveStep((s) => s - 1)}
-            sx={{ color: "#757575", fontWeight: 600, borderRadius: 2, px: 3, py: 1 }}
+            startIcon={<ArrowBackIcon />}
+            sx={{
+              color: "#64748B",
+              fontWeight: 700,
+              borderRadius: 2.5,
+              px: 3, py: 1.2,
+              border: "1px solid #E2E8F0",
+              bgcolor: "#FFFFFF",
+              "&:hover": { bgcolor: "#F1F5F9", borderColor: "#CBD5E1", color: "#334155" },
+            }}
           >
-            {activeStep === 0 ? "Cancel" : "← Back"}
+            {activeStep === 0 ? "Cancel Application" : "Back to Previous Step"}
           </Button>
 
+          <Box sx={{ display: { xs: "none", sm: "block" } }}>
+            <Typography variant="caption" sx={{ color: "#94A3B8", fontWeight: 600 }}>
+              Step {activeStep + 1} of {steps.length}: {steps[activeStep]}
+            </Typography>
+          </Box>
+
           {activeStep < steps.length - 1 ? (
-            <Button variant="contained"
-              sx={{ background: GRADIENT, borderRadius: 2, fontWeight: 700, px: 5, py: 1.2 }}
-              onClick={handleNextStep}>
-              Next Step →
+            <Button
+              variant="contained"
+              endIcon={<ArrowForwardIcon />}
+              sx={{
+                background: GRADIENT,
+                borderRadius: 2.5,
+                fontWeight: 800,
+                px: 4, py: 1.3,
+                boxShadow: "0 4px 14px rgba(230, 81, 0, 0.3)",
+                "&:hover": { boxShadow: "0 6px 20px rgba(230, 81, 0, 0.45)" },
+              }}
+              onClick={handleNextStep}
+            >
+              Continue to {steps[activeStep + 1]}
             </Button>
           ) : (
-            <Button variant="contained"
-              sx={{ background: GRADIENT, borderRadius: 2, fontWeight: 700, px: 5, py: 1.2, minWidth: 200 }}
-              onClick={handleSubmit} disabled={submitting}>
-              {submitting ? <CircularProgress size={22} color="inherit" /> : "Submit Application"}
+            <Button
+              variant="contained"
+              endIcon={<CheckCircleIcon />}
+              sx={{
+                background: "linear-gradient(135deg, #10B981, #059669)",
+                borderRadius: 2.5,
+                fontWeight: 800,
+                px: 4, py: 1.3,
+                minWidth: 220,
+                boxShadow: "0 4px 14px rgba(16, 185, 129, 0.3)",
+                "&:hover": { boxShadow: "0 6px 20px rgba(16, 185, 129, 0.45)" },
+              }}
+              onClick={handleSubmit}
+              disabled={submitting}
+            >
+              {submitting ? <CircularProgress size={22} color="inherit" /> : "Submit Statutory Application"}
             </Button>
           )}
         </Box>
