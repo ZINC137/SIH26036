@@ -3,7 +3,7 @@ import {
   Box, Paper, Typography, Grid, Table, TableBody, TableCell, TableHead, TableRow,
   Chip, Button, Avatar, IconButton, Tooltip, TextField, InputAdornment,
   Select, MenuItem, FormControl, InputLabel, Dialog, DialogTitle, DialogContent, DialogActions,
-  Tabs, Tab, Alert, Card, Divider,
+  Tabs, Tab, Alert, Card, Divider, CircularProgress,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import EditIcon from '@mui/icons-material/Edit';
@@ -18,6 +18,7 @@ import GavelIcon from '@mui/icons-material/Gavel';
 import HistoryIcon from '@mui/icons-material/History';
 import PeopleIcon from '@mui/icons-material/People';
 import RefreshIcon from '@mui/icons-material/Refresh';
+import DeleteSweepIcon from '@mui/icons-material/DeleteSweep';
 import { authFetch } from '../../../config/api';
 
 const COLOR = '#B71C1C';
@@ -74,6 +75,34 @@ export default function AdminUsers() {
   // Role Edit Dialog State
   const [editUser, setEditUser] = useState(null);
   const [newRole, setNewRole] = useState('');
+
+  // Database Reset Modal State
+  const [openResetModal, setOpenResetModal] = useState(false);
+  const [resetting, setResetting] = useState(false);
+
+  const handleResetDatabase = async () => {
+    setResetting(true);
+    try {
+      const res = await authFetch('/api/admin/system/reset-database', {
+        method: 'POST',
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setFeedback({
+          type: 'success',
+          message: data.message || 'Database successfully cleared and reset to pristine default state.',
+        });
+        setOpenResetModal(false);
+        refreshData();
+      } else {
+        setFeedback({ type: 'error', message: data.error || 'Failed to reset database.' });
+      }
+    } catch (err) {
+      setFeedback({ type: 'error', message: 'Network error connecting to backend.' });
+    } finally {
+      setResetting(false);
+    }
+  };
 
   // Fetch data on load and on tab change
   const refreshData = async () => {
@@ -289,6 +318,16 @@ export default function AdminUsers() {
             sx={{ borderRadius: 2, borderColor: '#CFD8DC', color: '#37474F', fontWeight: 700 }}
           >
             {loading ? 'Refreshing...' : 'Refresh Data'}
+          </Button>
+
+          <Button
+            variant="outlined"
+            color="error"
+            startIcon={<DeleteSweepIcon />}
+            onClick={() => setOpenResetModal(true)}
+            sx={{ borderRadius: 2, fontWeight: 700, borderColor: '#FFCDD2', color: '#C62828', '&:hover': { borderColor: '#E53935', bgcolor: '#FFEBEE' } }}
+          >
+            Clear Test Data
           </Button>
 
           <Button
@@ -1152,6 +1191,52 @@ export default function AdminUsers() {
             }}
           >
             Save Role
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* ── MODAL 4: CLEAR DATABASE & RESET TO DEFAULT ── */}
+      <Dialog open={openResetModal} onClose={() => !resetting && setOpenResetModal(false)} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ fontWeight: 800, color: '#D32F2F', display: 'flex', alignItems: 'center', gap: 1 }}>
+          <DeleteSweepIcon /> Clear Database &amp; Reset to Defaults
+        </DialogTitle>
+        <DialogContent dividers>
+          <Typography variant="body2" sx={{ color: '#334155', mb: 2 }}>
+            Are you sure you want to clear test data from the system database?
+          </Typography>
+          <Box sx={{ p: 2, bgcolor: '#FEF2F2', borderRadius: 2, border: '1px solid #FECACA', mb: 2 }}>
+            <Typography variant="caption" sx={{ fontWeight: 700, color: '#991B1B', display: 'block', mb: 0.5 }}>
+              What will be cleared:
+            </Typography>
+            <Typography variant="caption" sx={{ color: '#B91C1C', display: 'block', lineHeight: 1.6 }}>
+              • All test applications and submitted verification records<br />
+              • All temporary instruments and test measurements<br />
+              • All non-default user accounts and temporary uploads
+            </Typography>
+          </Box>
+          <Box sx={{ p: 2, bgcolor: '#F0FDF4', borderRadius: 2, border: '1px solid #BBF7D0' }}>
+            <Typography variant="caption" sx={{ fontWeight: 700, color: '#166534', display: 'block', mb: 0.5 }}>
+              What will be preserved:
+            </Typography>
+            <Typography variant="caption" sx={{ color: '#15803D', display: 'block', lineHeight: 1.6 }}>
+              • Default portal accounts (admin@example.com, priya@example.com, lmo1@gov.in, etc.)<br />
+              • Statutory Legal Metrology rules, categories, and test matrices
+            </Typography>
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button onClick={() => setOpenResetModal(false)} disabled={resetting} sx={{ color: '#64748B' }}>
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            color="error"
+            onClick={handleResetDatabase}
+            disabled={resetting}
+            startIcon={resetting ? <CircularProgress size={16} color="inherit" /> : <DeleteSweepIcon />}
+            sx={{ fontWeight: 700, px: 2.5 }}
+          >
+            {resetting ? 'Clearing Database...' : 'Confirm Clear Database'}
           </Button>
         </DialogActions>
       </Dialog>

@@ -636,6 +636,23 @@ const getAllVerifications = async (req, res) => {
   }
 };
 
+// Reset system database to pristine default seed state (Admin only)
+const resetDatabaseToDefault = async (req, res) => {
+  try {
+    const adminEmail = req.user?.email || 'admin@example.com';
+    const { resetToDefault } = require('../../scripts/reset-to-default');
+    await resetToDefault();
+    await recordAuditLog('DATABASE_RESET_TO_DEFAULT', adminEmail, 'SYSTEM_DATABASE', 'Admin requested complete database reset to default seed state.');
+    return res.status(200).json({
+      success: true,
+      message: 'Database has been successfully cleared and reset to pristine default state.',
+    });
+  } catch (error) {
+    console.error('Reset database error:', error);
+    return res.status(500).json({ error: 'Failed to reset database to default state.' });
+  }
+};
+
 module.exports = {
   appointLMO,
   listLMOs,
@@ -648,5 +665,6 @@ module.exports = {
   updateUserStatus,
   getAdminAnalytics,
   getAllVerifications,
+  resetDatabaseToDefault,
   recordAuditLog,
 };
