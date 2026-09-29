@@ -28,7 +28,6 @@ import {
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import PendingActionsIcon from '@mui/icons-material/PendingActions';
 import AssignmentIcon from '@mui/icons-material/Assignment';
-import VerifiedUserIcon from '@mui/icons-material/VerifiedUser';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 

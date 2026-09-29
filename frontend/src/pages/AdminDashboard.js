@@ -25,9 +25,7 @@ import {
 } from '@mui/material';
 import PeopleIcon from '@mui/icons-material/People';
 import AssignmentIcon from '@mui/icons-material/Assignment';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
-import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import StorageIcon from '@mui/icons-material/Storage';
 import SecurityIcon from '@mui/icons-material/Security';
 import BarChartIcon from '@mui/icons-material/BarChart';
