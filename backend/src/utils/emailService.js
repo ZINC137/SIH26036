@@ -17,7 +17,8 @@ const createTransporter = () => {
  * @param {string} token - The verification token
  */
 const sendVerificationEmail = async (toEmail, token) => {
-  const verificationUrl = `${process.env.BACKEND_URL || 'http://localhost:5000'}/api/auth/verify?token=${token}`;
+  const backendUrl = process.env.BACKEND_URL || `http://localhost:${process.env.PORT || 5001}`;
+  const verificationUrl = `${backendUrl}/api/auth/verify?token=${token}`;
 
   const transporter = createTransporter();
 

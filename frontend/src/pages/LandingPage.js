@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   Box,
   Typography,
@@ -13,8 +13,18 @@ import {
   Divider,
   TextField,
   InputAdornment,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Alert,
+  CircularProgress,
+  Paper,
+  Grid,
+  Tooltip,
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
+import jsQR from 'jsqr';
 
 // Icons
 import StorefrontRoundedIcon from '@mui/icons-material/StorefrontRounded';
@@ -37,6 +47,18 @@ import GavelRoundedIcon from '@mui/icons-material/GavelRounded';
 import PublicRoundedIcon from '@mui/icons-material/PublicRounded';
 import ShieldRoundedIcon from '@mui/icons-material/ShieldRounded';
 import ScienceRoundedIcon from '@mui/icons-material/ScienceRounded';
+import CameraAltRoundedIcon from '@mui/icons-material/CameraAltRounded';
+import CloudUploadRoundedIcon from '@mui/icons-material/CloudUploadRounded';
+import VerifiedRoundedIcon from '@mui/icons-material/VerifiedRounded';
+import ErrorOutlineRoundedIcon from '@mui/icons-material/ErrorOutlineRounded';
+import PrintRoundedIcon from '@mui/icons-material/PrintRounded';
+import ContentCopyRoundedIcon from '@mui/icons-material/ContentCopyRounded';
+import CheckRoundedIcon from '@mui/icons-material/CheckRounded';
+import PrecisionManufacturingRoundedIcon from '@mui/icons-material/PrecisionManufacturingRounded';
+import BusinessRoundedIcon from '@mui/icons-material/BusinessRounded';
+import LockRoundedIcon from '@mui/icons-material/LockRounded';
+import TaskAltRoundedIcon from '@mui/icons-material/TaskAltRounded';
+import RestartAltRoundedIcon from '@mui/icons-material/RestartAltRounded';
 
 const portals = [
   {
@@ -360,15 +382,195 @@ export default function LandingPage() {
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchCert, setSearchCert] = useState('');
+  const [verifying, setVerifying] = useState(false);
   const [verifyNotice, setVerifyNotice] = useState('');
+  const [verifyResult, setVerifyResult] = useState(null);
+  const [verifyError, setVerifyError] = useState('');
+  const [scannerOpen, setScannerOpen] = useState(false);
+  const [cameraError, setCameraError] = useState('');
+  const [copiedCert, setCopiedCert] = useState(false);
 
-  const handleVerify = (e) => {
-    e.preventDefault();
-    if (!searchCert.trim()) {
-      setVerifyNotice('Please enter a valid Verification / Certificate ID (e.g., LM-2026-DL-9842)');
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
+  const fileInputRef = useRef(null);
+  const animFrameRef = useRef(null);
+  const streamRef = useRef(null);
+
+  const stopCamera = useCallback(() => {
+    if (animFrameRef.current) {
+      cancelAnimationFrame(animFrameRef.current);
+      animFrameRef.current = null;
+    }
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+  }, []);
+
+  const validateCertificateQuery = useCallback(async (queryText) => {
+    if (!queryText || !queryText.trim()) {
+      setVerifyError('Please enter a valid Certificate ID, Serial Number, or scan a QR code.');
       return;
     }
-    setVerifyNotice(`Validating Certificate "${searchCert.trim().toUpperCase()}": Digitally Verified & Authentic (Issued under Legal Metrology Act, 2009).`);
+    setVerifying(true);
+    setVerifyError('');
+    setVerifyNotice('');
+    try {
+      const res = await fetch('/api/auth/validate-certificate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: queryText.trim() }),
+      });
+      const data = await res.json();
+      if (res.ok && data.valid && data.certificate) {
+        setVerifyResult(data.certificate);
+        setSearchCert(data.certificate.certificateNo || queryText.trim());
+      } else {
+        setVerifyError(data.error || `No statutory certificate found matching "${queryText.trim().slice(0, 45)}". Please verify your entry.`);
+      }
+    } catch (err) {
+      console.error('Validation request failed:', err);
+      setVerifyError('Unable to connect to the National Legal Metrology Registry. Please verify your connection and try again.');
+    } finally {
+      setVerifying(false);
+    }
+  }, []);
+
+  const scanVideoFrame = useCallback(() => {
+    if (!videoRef.current) return;
+    const video = videoRef.current;
+    if (video.readyState === video.HAVE_ENOUGH_DATA) {
+      const canvas = canvasRef.current || document.createElement('canvas');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      if (ctx) {
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const code = jsQR(imageData.data, imageData.width, imageData.height, {
+          inversionAttempts: 'attemptBoth',
+        });
+        if (code && code.data && code.data.trim()) {
+          setScannerOpen(false);
+          stopCamera();
+          validateCertificateQuery(code.data.trim());
+          return;
+        }
+      }
+    }
+    animFrameRef.current = requestAnimationFrame(scanVideoFrame);
+  }, [stopCamera, validateCertificateQuery]);
+
+  const startCamera = useCallback(async () => {
+    setCameraError('');
+    try {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error('Live camera streaming is not supported on this browser. Please use the image upload option.');
+      }
+      let stream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: 'environment' } },
+        });
+      } catch (e) {
+        // Fallback to any camera
+        stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      }
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.setAttribute('playsinline', 'true');
+        videoRef.current.play().catch(() => {});
+        animFrameRef.current = requestAnimationFrame(scanVideoFrame);
+      }
+    } catch (err) {
+      console.warn('Camera stream error:', err);
+      setCameraError('Camera access was denied or is unavailable. Please grant camera permission or use the "Upload QR Image" option.');
+    }
+  }, [scanVideoFrame]);
+
+  useEffect(() => {
+    if (scannerOpen) {
+      startCamera();
+    } else {
+      stopCamera();
+    }
+    return () => {
+      stopCamera();
+    };
+  }, [scannerOpen, startCamera, stopCamera]);
+
+  const handleFileUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setVerifyError('');
+    setVerifying(true);
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        try {
+          const canvas = document.createElement('canvas');
+          canvas.width = img.width;
+          canvas.height = img.height;
+          const ctx = canvas.getContext('2d', { willReadFrequently: true });
+          ctx.drawImage(img, 0, 0, img.width, img.height);
+          const imageData = ctx.getImageData(0, 0, img.width, img.height);
+          const code = jsQR(imageData.data, imageData.width, imageData.height, {
+            inversionAttempts: 'attemptBoth',
+          });
+          if (code && code.data && code.data.trim()) {
+            validateCertificateQuery(code.data.trim());
+          } else {
+            setVerifying(false);
+            setVerifyError('No QR code detected in the uploaded image. Please ensure the QR code on the certificate is sharp, well-lit, and in frame, or type the Certificate ID manually.');
+          }
+        } catch (err) {
+          console.error('File scan error:', err);
+          setVerifying(false);
+          setVerifyError('Could not process the uploaded image. Please try another image file or enter the Certificate ID.');
+        }
+      };
+      img.onerror = () => {
+        setVerifying(false);
+        setVerifyError('Failed to load image file. Please try again.');
+      };
+      img.src = event.target.result;
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
+  const handleVerify = (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    if (!searchCert.trim()) {
+      setVerifyError('Please enter a valid Certificate ID (e.g. CERT-DL-2026-12BC) or scan a QR code.');
+      return;
+    }
+    validateCertificateQuery(searchCert.trim());
+  };
+
+  const handleCopyCertificateNo = (certNo) => {
+    if (!certNo) return;
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(certNo);
+    }
+    setCopiedCert(true);
+    setTimeout(() => setCopiedCert(false), 2000);
+  };
+
+  const formatDate = (val) => {
+    if (!val) return 'N/A';
+    try {
+      const d = new Date(val);
+      return isNaN(d.getTime()) ? String(val) : d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+    } catch {
+      return String(val);
+    }
   };
 
   const navLinks = [
@@ -1043,21 +1245,101 @@ export default function LandingPage() {
               }}
             />
             <Typography variant="h4" sx={{ fontWeight: 800, color: '#0F172A', fontSize: { xs: '1.4rem', sm: '1.75rem' }, mb: 1 }}>
-              Verify Stamping Certificate Authenticity
+              Verify Stamping Certificate & Instrument Details
             </Typography>
-            <Typography variant="body2" sx={{ color: '#475569', lineHeight: 1.6, fontSize: '0.92rem' }}>
-              Citizens, commercial buyers, and enforcement officers can instantly authenticate any Legal Metrology certificate using the unique serial number or QR hash code.
+            <Typography variant="body2" sx={{ color: '#475569', lineHeight: 1.6, fontSize: '0.92rem', mb: 2.5 }}>
+              Scan the official QR code on any Legal Metrology certificate or weighing/measuring instrument to authenticate statutory stamping, validity dates, accuracy class, security seal, and full technical specifications.
             </Typography>
+
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <CheckCircleRoundedIcon sx={{ color: '#16A34A', fontSize: '1.1rem' }} />
+                <Typography variant="caption" sx={{ color: '#334155', fontWeight: 600 }}>
+                  Real-time synchronization with National Legal Metrology Database
+                </Typography>
+              </Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <CheckCircleRoundedIcon sx={{ color: '#16A34A', fontSize: '1.1rem' }} />
+                <Typography variant="caption" sx={{ color: '#334155', fontWeight: 600 }}>
+                  Statutory verification of lead seal, inspector credentials & MPE tolerance
+                </Typography>
+              </Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <CheckCircleRoundedIcon sx={{ color: '#16A34A', fontSize: '1.1rem' }} />
+                <Typography variant="caption" sx={{ color: '#334155', fontWeight: 600 }}>
+                  Instant digital signature audit under Legal Metrology Act, 2009
+                </Typography>
+              </Box>
+            </Box>
           </Box>
 
-          <Box component="form" onSubmit={handleVerify} sx={{ width: { xs: '100%', md: '440px' } }}>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+          {/* Right Verification Controls */}
+          <Box sx={{ width: { xs: '100%', md: '480px' } }}>
+            {/* Hidden canvas and file input */}
+            <canvas ref={canvasRef} style={{ display: 'none' }} />
+            <input
+              type="file"
+              ref={fileInputRef}
+              accept="image/*"
+              style={{ display: 'none' }}
+              onChange={handleFileUpload}
+            />
+
+            {/* Quick Scan Action Buttons */}
+            <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1.5, mb: 2 }}>
+              <Button
+                variant="contained"
+                onClick={() => setScannerOpen(true)}
+                startIcon={<CameraAltRoundedIcon />}
+                sx={{
+                  bgcolor: '#0284C7',
+                  color: '#FFFFFF',
+                  py: 1.3,
+                  borderRadius: '12px',
+                  fontWeight: 700,
+                  fontSize: '0.88rem',
+                  textTransform: 'none',
+                  boxShadow: '0 4px 14px rgba(2, 132, 199, 0.25)',
+                  '&:hover': { bgcolor: '#0369A1' },
+                }}
+              >
+                Scan with Camera
+              </Button>
+
+              <Button
+                variant="outlined"
+                onClick={() => fileInputRef.current?.click()}
+                startIcon={<CloudUploadRoundedIcon />}
+                sx={{
+                  color: '#0284C7',
+                  borderColor: '#BAE6FD',
+                  bgcolor: '#F0F9FF',
+                  py: 1.3,
+                  borderRadius: '12px',
+                  fontWeight: 700,
+                  fontSize: '0.88rem',
+                  textTransform: 'none',
+                  '&:hover': {
+                    borderColor: '#0284C7',
+                    bgcolor: '#E0F2FE',
+                  },
+                }}
+              >
+                Upload QR Image
+              </Button>
+            </Box>
+
+            <Divider sx={{ my: 2, fontSize: '0.72rem', color: '#64748B', fontWeight: 700, letterSpacing: '0.05em' }}>
+              OR SEARCH BY CERTIFICATE / SERIAL NO.
+            </Divider>
+
+            <Box component="form" onSubmit={handleVerify} sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
               <TextField
                 fullWidth
                 size="medium"
                 value={searchCert}
                 onChange={(e) => setSearchCert(e.target.value)}
-                placeholder="e.g. LM-2026-DL-8492"
+                placeholder="e.g. CERT-DL-2026-12BC or cefc"
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
@@ -1073,41 +1355,670 @@ export default function LandingPage() {
                   },
                 }}
               />
-              <Button
-                type="submit"
-                variant="contained"
-                sx={{
-                  bgcolor: '#0284C7',
-                  color: '#FFFFFF',
-                  py: 1.4,
-                  borderRadius: '12px',
-                  fontWeight: 700,
-                  fontSize: '0.92rem',
-                  textTransform: 'none',
-                  '&:hover': { bgcolor: '#0369A1' },
-                }}
-              >
-                Validate Certificate
-              </Button>
-            </Box>
-            {verifyNotice && (
-              <Box
-                sx={{
-                  mt: 2,
-                  p: 1.5,
-                  borderRadius: '10px',
-                  bgcolor: '#F0FDF4',
-                  border: '1px solid #BBF7D0',
-                  color: '#15803D',
-                  fontSize: '0.82rem',
-                  fontWeight: 600,
-                }}
-              >
-                {verifyNotice}
+
+              <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
+                <Button
+                  type="submit"
+                  variant="contained"
+                  disabled={verifying}
+                  sx={{
+                    flex: 1,
+                    bgcolor: '#0F172A',
+                    color: '#FFFFFF',
+                    py: 1.3,
+                    borderRadius: '12px',
+                    fontWeight: 700,
+                    fontSize: '0.92rem',
+                    textTransform: 'none',
+                    '&:hover': { bgcolor: '#1E293B' },
+                  }}
+                >
+                  {verifying ? (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <CircularProgress size={18} color="inherit" />
+                      <span>Validating with Registry...</span>
+                    </Box>
+                  ) : (
+                    'Validate Certificate'
+                  )}
+                </Button>
               </Box>
+
+              {/* Quick Demo Test Chip */}
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5, flexWrap: 'wrap' }}>
+                <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 600 }}>
+                  Test with Active Certificate:
+                </Typography>
+                <Chip
+                  label="CERT-DL-2026-12BC"
+                  size="small"
+                  onClick={() => {
+                    setSearchCert('CERT-DL-2026-12BC');
+                    validateCertificateQuery('CERT-DL-2026-12BC');
+                  }}
+                  clickable
+                  sx={{
+                    fontWeight: 700,
+                    fontSize: '0.75rem',
+                    bgcolor: '#E0F2FE',
+                    color: '#0369A1',
+                    border: '1px solid #7DD3FC',
+                    cursor: 'pointer',
+                    '&:hover': { bgcolor: '#BAE6FD' },
+                  }}
+                />
+              </Box>
+            </Box>
+
+            {/* Error Message */}
+            {verifyError && (
+              <Alert
+                severity="error"
+                sx={{ mt: 2, borderRadius: '12px', fontSize: '0.85rem' }}
+                onClose={() => setVerifyError('')}
+              >
+                {verifyError}
+              </Alert>
+            )}
+
+            {/* Notice */}
+            {verifyNotice && !verifyError && (
+              <Alert severity="success" sx={{ mt: 2, borderRadius: '12px', fontSize: '0.85rem' }}>
+                {verifyNotice}
+              </Alert>
             )}
           </Box>
         </Box>
+
+        {/* ── LIVE CAMERA QR SCANNER DIALOG ── */}
+        <Dialog
+          open={scannerOpen}
+          onClose={() => setScannerOpen(false)}
+          maxWidth="sm"
+          fullWidth
+          PaperProps={{
+            sx: {
+              bgcolor: '#0B1120',
+              color: '#F8FAFC',
+              borderRadius: '20px',
+              border: '1px solid rgba(255,255,255,0.1)',
+              overflow: 'hidden',
+            },
+          }}
+        >
+          <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', pb: 1, borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+              <QrCodeScannerRoundedIcon sx={{ color: '#38BDF8' }} />
+              <Typography variant="h6" sx={{ fontWeight: 800, fontSize: '1.1rem', color: '#FFFFFF' }}>
+                Scan Certificate QR Code
+              </Typography>
+            </Box>
+            <IconButton onClick={() => setScannerOpen(false)} sx={{ color: '#94A3B8', '&:hover': { color: '#FFFFFF' } }}>
+              <CloseRoundedIcon />
+            </IconButton>
+          </DialogTitle>
+
+          <DialogContent sx={{ p: 3, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            {cameraError ? (
+              <Alert
+                severity="warning"
+                sx={{ width: '100%', mb: 2, borderRadius: '12px' }}
+                action={
+                  <Button
+                    color="inherit"
+                    size="small"
+                    onClick={() => {
+                      setScannerOpen(false);
+                      fileInputRef.current?.click();
+                    }}
+                  >
+                    Upload Image
+                  </Button>
+                }
+              >
+                {cameraError}
+              </Alert>
+            ) : (
+              <Typography variant="body2" sx={{ color: '#94A3B8', textAlign: 'center', mb: 2, fontSize: '0.85rem' }}>
+                Hold the certificate steady and position the QR code within the highlighted viewfinder frame.
+              </Typography>
+            )}
+
+            {/* Video Viewfinder Container */}
+            <Box
+              sx={{
+                position: 'relative',
+                width: '100%',
+                maxWidth: 360,
+                height: 320,
+                borderRadius: '16px',
+                overflow: 'hidden',
+                bgcolor: '#020617',
+                border: '2px solid rgba(56, 189, 248, 0.4)',
+                boxShadow: '0 0 30px rgba(56, 189, 248, 0.2)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <video
+                ref={videoRef}
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover',
+                }}
+              />
+
+              {/* Viewfinder Target Box Overlay */}
+              <Box
+                sx={{
+                  position: 'absolute',
+                  width: 220,
+                  height: 220,
+                  borderRadius: '14px',
+                  border: '2px dashed rgba(34, 197, 94, 0.85)',
+                  boxShadow: '0 0 0 9999px rgba(11, 17, 32, 0.65)',
+                  pointerEvents: 'none',
+                  zIndex: 2,
+                }}
+              />
+
+              {/* Animated Laser Scanning Line */}
+              <Box
+                sx={{
+                  position: 'absolute',
+                  width: 220,
+                  height: '3px',
+                  bgcolor: '#22C55E',
+                  boxShadow: '0 0 12px 3px rgba(34, 197, 94, 0.9)',
+                  pointerEvents: 'none',
+                  zIndex: 3,
+                  animation: 'scanLaser 2.4s ease-in-out infinite',
+                  '@keyframes scanLaser': {
+                    '0%': { transform: 'translateY(-100px)', opacity: 0.7 },
+                    '50%': { transform: 'translateY(100px)', opacity: 1 },
+                    '100%': { transform: 'translateY(-100px)', opacity: 0.7 },
+                  },
+                }}
+              />
+            </Box>
+          </DialogContent>
+
+          <DialogActions sx={{ p: 2.5, borderTop: '1px solid rgba(255,255,255,0.08)', justifyContent: 'space-between' }}>
+            <Button
+              onClick={() => {
+                setScannerOpen(false);
+                fileInputRef.current?.click();
+              }}
+              startIcon={<CloudUploadRoundedIcon />}
+              sx={{ color: '#38BDF8', textTransform: 'none', fontWeight: 600 }}
+            >
+              Upload QR Image File
+            </Button>
+            <Button
+              onClick={() => setScannerOpen(false)}
+              variant="outlined"
+              sx={{ color: '#94A3B8', borderColor: 'rgba(255,255,255,0.2)', textTransform: 'none' }}
+            >
+              Cancel
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* ── OFFICIAL VERIFIED CERTIFICATE DOSSIER DIALOG ── */}
+        <Dialog
+          open={Boolean(verifyResult)}
+          onClose={() => setVerifyResult(null)}
+          maxWidth="md"
+          fullWidth
+          PaperProps={{
+            sx: {
+              borderRadius: '24px',
+              overflow: 'hidden',
+              boxShadow: '0 25px 50px -12px rgba(15, 23, 42, 0.25)',
+              border: '1px solid #E2E8F0',
+            },
+          }}
+        >
+          {verifyResult && (
+            <>
+              {/* Official Tricolor Ribbon */}
+              <Box sx={{ display: 'flex', height: 6, width: '100%' }}>
+                <Box sx={{ flex: 1, bgcolor: '#FF9933' }} />
+                <Box sx={{ flex: 1, bgcolor: '#FFFFFF' }} />
+                <Box sx={{ flex: 1, bgcolor: '#138808' }} />
+              </Box>
+
+              {/* Official Header */}
+              <Box
+                sx={{
+                  bgcolor: '#0B1528',
+                  color: '#FFFFFF',
+                  px: { xs: 2.5, sm: 4 },
+                  py: 3,
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  justifyContent: 'space-between',
+                  gap: 2,
+                }}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <Box
+                    sx={{
+                      width: 48,
+                      height: 48,
+                      borderRadius: '12px',
+                      bgcolor: 'rgba(255, 255, 255, 0.1)',
+                      border: '1px solid rgba(255, 255, 255, 0.15)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <AccountBalanceRoundedIcon sx={{ fontSize: '1.8rem', color: '#F8FAFC' }} />
+                  </Box>
+                  <Box>
+                    <Typography variant="overline" sx={{ color: '#93C5FD', fontWeight: 800, letterSpacing: '0.08em', fontSize: '0.68rem', display: 'block' }}>
+                      GOVERNMENT OF INDIA • DIRECTORATE OF LEGAL METROLOGY
+                    </Typography>
+                    <Typography variant="h5" sx={{ fontWeight: 800, color: '#FFFFFF', fontSize: { xs: '1.2rem', sm: '1.4rem' } }}>
+                      Statutory Verification Audit Dossier
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: '#CBD5E1', fontSize: '0.75rem' }}>
+                      Issued under Section 24, Legal Metrology Act, 2009 & Legal Metrology (General) Rules, 2011
+                    </Typography>
+                  </Box>
+                </Box>
+                <IconButton onClick={() => setVerifyResult(null)} sx={{ color: '#94A3B8', '&:hover': { color: '#FFFFFF' } }}>
+                  <CloseRoundedIcon />
+                </IconButton>
+              </Box>
+
+              <DialogContent sx={{ p: { xs: 2.5, sm: 4 }, bgcolor: '#F8FAFC' }}>
+                {/* Verified Status Banner */}
+                <Box
+                  sx={{
+                    mb: 3,
+                    p: 2.5,
+                    borderRadius: '16px',
+                    bgcolor: verifyResult.isValid ? '#F0FDF4' : '#FEF2F2',
+                    border: `1.5px solid ${verifyResult.isValid ? '#86EFAC' : '#FCA5A5'}`,
+                    display: 'flex',
+                    flexDirection: { xs: 'column', sm: 'row' },
+                    alignItems: { xs: 'flex-start', sm: 'center' },
+                    justifyContent: 'space-between',
+                    gap: 2,
+                  }}
+                >
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <Box
+                      sx={{
+                        width: 44,
+                        height: 44,
+                        borderRadius: '50%',
+                        bgcolor: verifyResult.isValid ? '#DCFCE7' : '#FEE2E2',
+                        color: verifyResult.isValid ? '#16A34A' : '#DC2626',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0,
+                      }}
+                    >
+                      {verifyResult.isValid ? <VerifiedRoundedIcon sx={{ fontSize: '1.8rem' }} /> : <ErrorOutlineRoundedIcon sx={{ fontSize: '1.8rem' }} />}
+                    </Box>
+                    <Box>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                        <Typography variant="subtitle1" sx={{ fontWeight: 800, color: verifyResult.isValid ? '#166534' : '#991B1B' }}>
+                          {verifyResult.status || (verifyResult.isValid ? 'STATUTORILY AUTHENTIC & VALID' : 'EXPIRED')}
+                        </Typography>
+                        <Chip
+                          label={verifyResult.isValid ? 'ACTIVE' : 'EXPIRED'}
+                          size="small"
+                          sx={{
+                            fontWeight: 800,
+                            fontSize: '0.68rem',
+                            bgcolor: verifyResult.isValid ? '#16A34A' : '#DC2626',
+                            color: '#FFFFFF',
+                          }}
+                        />
+                      </Box>
+                      <Typography variant="body2" sx={{ color: '#475569', fontSize: '0.85rem' }}>
+                        Valid Until: <strong>{formatDate(verifyResult.validUntil)}</strong> {verifyResult.daysRemaining ? `(${verifyResult.daysRemaining} days remaining)` : ''}
+                      </Typography>
+                    </Box>
+                  </Box>
+
+                  {/* Certificate ID Pill with Copy */}
+                  <Box
+                    sx={{
+                      px: 2,
+                      py: 1,
+                      bgcolor: '#FFFFFF',
+                      borderRadius: '10px',
+                      border: '1px solid #CBD5E1',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 1,
+                    }}
+                  >
+                    <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 700 }}>
+                      CERT NO:
+                    </Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 800, color: '#0F172A', fontFamily: 'monospace' }}>
+                      {verifyResult.certificateNo}
+                    </Typography>
+                    <Tooltip title={copiedCert ? 'Copied!' : 'Copy Certificate Number'}>
+                      <IconButton
+                        size="small"
+                        onClick={() => handleCopyCertificateNo(verifyResult.certificateNo)}
+                        sx={{ color: copiedCert ? '#16A34A' : '#64748B', p: 0.5 }}
+                      >
+                        {copiedCert ? <CheckRoundedIcon fontSize="small" /> : <ContentCopyRoundedIcon fontSize="small" />}
+                      </IconButton>
+                    </Tooltip>
+                  </Box>
+                </Box>
+
+                {/* 2x2 Detailed Audit Cards */}
+                <Grid container spacing={2.5}>
+                  {/* Card 1: Instrument Technical Specifications */}
+                  <Grid item xs={12} md={6}>
+                    <Paper
+                      elevation={0}
+                      sx={{
+                        p: 2.5,
+                        borderRadius: '16px',
+                        border: '1px solid #E2E8F0',
+                        bgcolor: '#FFFFFF',
+                        height: '100%',
+                      }}
+                    >
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.2, mb: 2, pb: 1, borderBottom: '1px solid #F1F5F9' }}>
+                        <PrecisionManufacturingRoundedIcon sx={{ color: '#0284C7', fontSize: '1.3rem' }} />
+                        <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#0F172A', letterSpacing: '0.02em' }}>
+                          Instrument Technical Specifications
+                        </Typography>
+                      </Box>
+                      <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1.5, fontSize: '0.85rem' }}>
+                        <Box>
+                          <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 600, display: 'block' }}>
+                            Instrument Type
+                          </Typography>
+                          <Typography variant="body2" sx={{ fontWeight: 700, color: '#0F172A' }}>
+                            {verifyResult.instrument?.type || 'Standard Weighing Instrument'}
+                          </Typography>
+                        </Box>
+                        <Box>
+                          <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 600, display: 'block' }}>
+                            Serial Number
+                          </Typography>
+                          <Typography variant="body2" sx={{ fontWeight: 800, color: '#0F172A', fontFamily: 'monospace' }}>
+                            {verifyResult.instrument?.serialNo || 'N/A'}
+                          </Typography>
+                        </Box>
+                        <Box>
+                          <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 600, display: 'block' }}>
+                            Make & Model
+                          </Typography>
+                          <Typography variant="body2" sx={{ fontWeight: 700, color: '#334155' }}>
+                            {verifyResult.instrument?.make || 'Standard'} / {verifyResult.instrument?.model || 'Commercial'}
+                          </Typography>
+                        </Box>
+                        <Box>
+                          <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 600, display: 'block' }}>
+                            Maximum Capacity
+                          </Typography>
+                          <Typography variant="body2" sx={{ fontWeight: 700, color: '#334155' }}>
+                            {verifyResult.instrument?.capacity || 'N/A'}
+                          </Typography>
+                        </Box>
+                        <Box sx={{ gridColumn: 'span 2' }}>
+                          <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 600, display: 'block' }}>
+                            Accuracy Classification
+                          </Typography>
+                          <Chip
+                            label={verifyResult.instrument?.accuracyClass || 'Class III (Medium Accuracy)'}
+                            size="small"
+                            sx={{ fontWeight: 700, fontSize: '0.72rem', bgcolor: '#F1F5F9', color: '#1E293B', mt: 0.5 }}
+                          />
+                        </Box>
+                      </Box>
+                    </Paper>
+                  </Grid>
+
+                  {/* Card 2: Legal Metrology Stamping & Seal */}
+                  <Grid item xs={12} md={6}>
+                    <Paper
+                      elevation={0}
+                      sx={{
+                        p: 2.5,
+                        borderRadius: '16px',
+                        border: '1px solid #E2E8F0',
+                        bgcolor: '#FFFFFF',
+                        height: '100%',
+                      }}
+                    >
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.2, mb: 2, pb: 1, borderBottom: '1px solid #F1F5F9' }}>
+                        <LockRoundedIcon sx={{ color: '#16A34A', fontSize: '1.3rem' }} />
+                        <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#0F172A', letterSpacing: '0.02em' }}>
+                          Statutory Stamping & Inspection
+                        </Typography>
+                      </Box>
+                      <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1.5, fontSize: '0.85rem' }}>
+                        <Box>
+                          <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 600, display: 'block' }}>
+                            Security Lead Seal No.
+                          </Typography>
+                          <Typography variant="body2" sx={{ fontWeight: 800, color: '#166534', fontFamily: 'monospace' }}>
+                            {verifyResult.securitySealNo || 'SEAL-AUTHENTIC'}
+                          </Typography>
+                        </Box>
+                        <Box>
+                          <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 600, display: 'block' }}>
+                            Statutory Inspection Result
+                          </Typography>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.3 }}>
+                            <TaskAltRoundedIcon sx={{ color: '#16A34A', fontSize: '1rem' }} />
+                            <Typography variant="body2" sx={{ fontWeight: 800, color: '#16A34A' }}>
+                              {verifyResult.verificationMetrics?.inspectionResult || 'PASS (Compliant)'}
+                            </Typography>
+                          </Box>
+                        </Box>
+                        <Box sx={{ gridColumn: 'span 2' }}>
+                          <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 600, display: 'block' }}>
+                            Authorized Stamping Officer
+                          </Typography>
+                          <Typography variant="body2" sx={{ fontWeight: 700, color: '#0F172A' }}>
+                            {verifyResult.stampedBy || 'State Metrology Inspector'}
+                          </Typography>
+                        </Box>
+                        <Box>
+                          <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 600, display: 'block' }}>
+                            Verification Date
+                          </Typography>
+                          <Typography variant="body2" sx={{ fontWeight: 700, color: '#334155' }}>
+                            {formatDate(verifyResult.issueDate)}
+                          </Typography>
+                        </Box>
+                        <Box>
+                          <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 600, display: 'block' }}>
+                            Permissible Error MPE
+                          </Typography>
+                          <Typography variant="body2" sx={{ fontWeight: 700, color: '#334155' }}>
+                            {verifyResult.verificationMetrics?.testErrorPercentage || 'Within +/- 0.05%'}
+                          </Typography>
+                        </Box>
+                      </Box>
+                    </Paper>
+                  </Grid>
+
+                  {/* Card 3: Establishment & Trader Profile */}
+                  <Grid item xs={12} md={6}>
+                    <Paper
+                      elevation={0}
+                      sx={{
+                        p: 2.5,
+                        borderRadius: '16px',
+                        border: '1px solid #E2E8F0',
+                        bgcolor: '#FFFFFF',
+                        height: '100%',
+                      }}
+                    >
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.2, mb: 2, pb: 1, borderBottom: '1px solid #F1F5F9' }}>
+                        <BusinessRoundedIcon sx={{ color: '#D97706', fontSize: '1.3rem' }} />
+                        <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#0F172A', letterSpacing: '0.02em' }}>
+                          Registered Commercial Establishment
+                        </Typography>
+                      </Box>
+                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, fontSize: '0.85rem' }}>
+                        <Box>
+                          <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 600, display: 'block' }}>
+                            Trade Name / Enterprise
+                          </Typography>
+                          <Typography variant="body2" sx={{ fontWeight: 800, color: '#0F172A' }}>
+                            {verifyResult.establishment?.businessName || 'Registered Commercial Trader'}
+                          </Typography>
+                        </Box>
+                        <Box>
+                          <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 600, display: 'block' }}>
+                            Commercial Premise Address
+                          </Typography>
+                          <Typography variant="body2" sx={{ fontWeight: 600, color: '#475569' }}>
+                            {verifyResult.establishment?.address || 'Registered Business Address'}
+                          </Typography>
+                        </Box>
+                        <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1.5 }}>
+                          <Box>
+                            <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 600, display: 'block' }}>
+                              Authorized Signatory
+                            </Typography>
+                            <Typography variant="body2" sx={{ fontWeight: 700, color: '#0F172A' }}>
+                              {verifyResult.establishment?.contactPerson || 'Authorized Trader'}
+                            </Typography>
+                          </Box>
+                          <Box>
+                            <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 600, display: 'block' }}>
+                              Trade Category
+                            </Typography>
+                            <Typography variant="body2" sx={{ fontWeight: 700, color: '#0F172A' }}>
+                              {verifyResult.establishment?.tradeType || 'Commercial Trade'}
+                            </Typography>
+                          </Box>
+                        </Box>
+                      </Box>
+                    </Paper>
+                  </Grid>
+
+                  {/* Card 4: Cryptographic & Integrity Proof */}
+                  <Grid item xs={12} md={6}>
+                    <Paper
+                      elevation={0}
+                      sx={{
+                        p: 2.5,
+                        borderRadius: '16px',
+                        border: '1px solid #E2E8F0',
+                        bgcolor: '#FFFFFF',
+                        height: '100%',
+                      }}
+                    >
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.2, mb: 2, pb: 1, borderBottom: '1px solid #F1F5F9' }}>
+                        <ShieldRoundedIcon sx={{ color: '#4F46E5', fontSize: '1.3rem' }} />
+                        <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#0F172A', letterSpacing: '0.02em' }}>
+                          Cryptographic Digital Signature Audit
+                        </Typography>
+                      </Box>
+                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, fontSize: '0.85rem' }}>
+                        <Box>
+                          <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 600, display: 'block' }}>
+                            Issuing Authority
+                          </Typography>
+                          <Typography variant="body2" sx={{ fontWeight: 700, color: '#0F172A' }}>
+                            {verifyResult.digitalSignature?.issuerAuthority || 'State Directorate of Legal Metrology, Government of NCT of Delhi'}
+                          </Typography>
+                        </Box>
+                        <Box>
+                          <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 600, display: 'block' }}>
+                            Digital Signature Hash
+                          </Typography>
+                          <Typography
+                            variant="caption"
+                            sx={{
+                              fontWeight: 700,
+                              color: '#475569',
+                              fontFamily: 'monospace',
+                              bgcolor: '#F8FAFC',
+                              p: 1,
+                              borderRadius: '8px',
+                              border: '1px solid #E2E8F0',
+                              display: 'block',
+                              wordBreak: 'break-all',
+                            }}
+                          >
+                            {verifyResult.digitalSignature?.signatureHash || 'ECDSA-SHA256-VERIFIED'}
+                          </Typography>
+                        </Box>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, pt: 0.5 }}>
+                          <CheckCircleRoundedIcon sx={{ color: '#16A34A', fontSize: '1.1rem' }} />
+                          <Typography variant="caption" sx={{ color: '#15803D', fontWeight: 700 }}>
+                            Digitally sealed & verified against Legal Metrology Registry
+                          </Typography>
+                        </Box>
+                      </Box>
+                    </Paper>
+                  </Grid>
+                </Grid>
+              </DialogContent>
+
+              {/* Dialog Actions */}
+              <DialogActions sx={{ p: 2.5, bgcolor: '#FFFFFF', borderTop: '1px solid #E2E8F0', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1.5 }}>
+                <Box sx={{ display: 'flex', gap: 1.5 }}>
+                  <Button
+                    variant="outlined"
+                    startIcon={<PrintRoundedIcon />}
+                    onClick={() => window.print()}
+                    sx={{
+                      borderRadius: '12px',
+                      textTransform: 'none',
+                      fontWeight: 700,
+                      color: '#0F172A',
+                      borderColor: '#CBD5E1',
+                      '&:hover': { bgcolor: '#F8FAFC' },
+                    }}
+                  >
+                    Print Verification Dossier
+                  </Button>
+                  <Button
+                    variant="text"
+                    startIcon={<RestartAltRoundedIcon />}
+                    onClick={() => {
+                      setVerifyResult(null);
+                      setSearchCert('');
+                    }}
+                    sx={{ borderRadius: '12px', textTransform: 'none', fontWeight: 600, color: '#64748B' }}
+                  >
+                    Verify Another Certificate
+                  </Button>
+                </Box>
+                <Button
+                  variant="contained"
+                  onClick={() => setVerifyResult(null)}
+                  sx={{
+                    bgcolor: '#0F172A',
+                    color: '#FFFFFF',
+                    borderRadius: '12px',
+                    px: 3,
+                    fontWeight: 700,
+                    textTransform: 'none',
+                    '&:hover': { bgcolor: '#1E293B' },
+                  }}
+                >
+                  Close Dossier
+                </Button>
+              </DialogActions>
+            </>
+          )}
+        </Dialog>
       </Box>
 
       {/* ── 7. KEY CAPABILITIES & FEATURES ── */}
