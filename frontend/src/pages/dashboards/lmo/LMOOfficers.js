@@ -15,6 +15,7 @@ import HourglassEmptyIcon from '@mui/icons-material/HourglassEmpty';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import RefreshIcon from '@mui/icons-material/Refresh';
+import API_BASE from '../../../config/api';
 
 const COLOR = '#1B5E20';
 const GRADIENT = 'linear-gradient(135deg, #2E7D32, #1B5E20)';
@@ -70,7 +71,7 @@ export default function LMOOfficers() {
   const fetchPendingApps = async () => {
     setLoadingApps(true);
     try {
-      const res = await fetch('http://localhost:5000/api/lmo/applications', { credentials: 'include' });
+      const res = await fetch(`${API_BASE}/api/lmo/applications`, { credentials: 'include' });
       if (res.ok) {
         const data = await res.json();
         const pending = (data.applications || []).filter((a) => a.status === 'Pending');
@@ -125,7 +126,7 @@ export default function LMOOfficers() {
 
     setAssignForm((prev) => ({ ...prev, submitting: true }));
     try {
-      const res = await fetch(`http://localhost:5000/api/lmo/applications/${assignForm.appId}/assign`, {
+      const res = await fetch(`${API_BASE}/api/lmo/applications/${assignForm.appId}/assign`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

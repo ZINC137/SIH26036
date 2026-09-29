@@ -11,7 +11,8 @@
     "dev": "nodemon src/server.js",
     "seed:demo-portals": "node scripts/seed-demo-portals.js",
     "seed:rules": "node src/rules/seedRules.js",
-    "test": "npm run seed:rules && node test_rules_engine.js",
+    "test": "npm run seed:rules && node test_rules_engine.js && node test_qr_environment.js",
+    "test:qr": "node test_qr_environment.js",
     "test:e2e": "node test_e2e_qa_engine.js",
     "test:security": "node test_security_audit.js && node test_security_audit_comprehensive.js"
   },

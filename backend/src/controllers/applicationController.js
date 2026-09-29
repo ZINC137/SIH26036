@@ -696,12 +696,24 @@ const validateCertificate = async (req, res) => {
       }
     } catch {}
 
-    // If query is a URL
+    // If query is a URL (including hash routing like /#verify?certId=...)
     try {
-      if (query.includes('://') || query.includes('?')) {
-        const urlObj = new URL(query.startsWith('http') ? query : `http://dummy.com/${query}`);
-        const certParam = urlObj.searchParams.get('cert') || urlObj.searchParams.get('id') || urlObj.searchParams.get('code');
-        if (certParam) searchTerms.unshift(certParam.trim());
+      if (query.includes('://') || query.includes('?') || query.includes('#')) {
+        const cleanQuery = query.startsWith('http') ? query : `http://dummy.com/${query}`;
+        if (cleanQuery.includes('#')) {
+          const hashPart = cleanQuery.split('#')[1] || '';
+          if (hashPart.includes('?')) {
+            const hashSearch = new URLSearchParams(hashPart.split('?')[1]);
+            const certFromHash = hashSearch.get('certId') || hashSearch.get('cert') || hashSearch.get('id') || hashSearch.get('code') || hashSearch.get('certificateNo');
+            if (certFromHash) searchTerms.unshift(certFromHash.trim());
+          }
+        }
+        const baseAndSearch = cleanQuery.split('#')[0];
+        if (baseAndSearch.includes('?')) {
+          const urlObj = new URL(baseAndSearch);
+          const certParam = urlObj.searchParams.get('certId') || urlObj.searchParams.get('cert') || urlObj.searchParams.get('id') || urlObj.searchParams.get('code') || urlObj.searchParams.get('certificateNo');
+          if (certParam) searchTerms.unshift(certParam.trim());
+        }
       }
     } catch {}
 
