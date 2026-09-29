@@ -1,9 +1,4 @@
-let QRCode;
-try {
-  QRCode = require('qrcode');
-} catch (e) {
-  QRCode = require('../frontend/node_modules/qrcode');
-}
+const QRCode = require('qrcode');
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
