@@ -15,6 +15,7 @@ import {
   CircularProgress,
 } from '@mui/material';
 import SaveIcon from '@mui/icons-material/Save';
+import { authFetch } from '../config/api';
 
 export default function Settings() {
   const [profile, setProfile] = useState({
@@ -43,9 +44,7 @@ export default function Settings() {
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const res = await fetch('/api/auth/me', {
-          credentials: 'include',
-        });
+        const res = await authFetch('/api/auth/me');
         if (res.ok) {
           const data = await res.json();
           const p = data.user?.profile || {};
@@ -88,10 +87,9 @@ export default function Settings() {
     setError('');
     setSaving(true);
     try {
-      const res = await fetch('/api/auth/profile', {
+      const res = await authFetch('/api/auth/profile', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify({
           full_name: profile.fullName,
           phone: profile.phone,

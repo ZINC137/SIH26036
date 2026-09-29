@@ -4,6 +4,7 @@ import {
   Divider, Switch, FormControlLabel, Alert, CircularProgress,
 } from '@mui/material';
 import SaveIcon from '@mui/icons-material/Save';
+import { authFetch } from '../../../config/api';
 
 const ROLE_META = {
   user:          { label: 'Public User',   color: '#E65100', gradient: 'linear-gradient(135deg, #FF6D00, #E65100)' },
@@ -39,9 +40,7 @@ export default function PortalSettings({ userRole = 'user', userEmail = '' }) {
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const res = await fetch('/api/auth/me', {
-          credentials: 'include',
-        });
+        const res = await authFetch('/api/auth/me');
         if (res.ok) {
           const data = await res.json();
           const p = data.user?.profile || {};
@@ -79,10 +78,9 @@ export default function PortalSettings({ userRole = 'user', userEmail = '' }) {
     setError('');
     setSaving(true);
     try {
-      const res = await fetch('/api/auth/profile', {
+      const res = await authFetch('/api/auth/profile', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify({
           full_name:    profile.fullName,
           phone:        profile.phone,

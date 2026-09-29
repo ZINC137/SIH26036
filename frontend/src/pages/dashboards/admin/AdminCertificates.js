@@ -14,6 +14,7 @@ import FactCheckIcon from '@mui/icons-material/FactCheck';
 import CancelIcon from '@mui/icons-material/Cancel';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CertificateQrCode from '../../../components/CertificateQrCode';
+import { authFetch } from '../../../config/api';
 
 const COLOR = '#B91C1C';
 
@@ -38,7 +39,7 @@ export default function AdminCertificates() {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch('/api/admin/verifications', { credentials: 'include' });
+      const res = await authFetch('/api/admin/verifications');
       const data = await res.json();
       if (res.ok && data.verifications) {
         setVerifications(data.verifications);

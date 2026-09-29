@@ -10,6 +10,7 @@ import ShieldIcon from '@mui/icons-material/Shield';
 import AddCircleIcon from '@mui/icons-material/AddCircle';
 import { useNavigate } from 'react-router-dom';
 import CertificateQrCode from '../../../components/CertificateQrCode';
+import { authFetch } from '../../../config/api';
 
 const COLOR = '#E65100';
 const GRADIENT = 'linear-gradient(135deg, #FF6D00, #E65100)';
@@ -22,7 +23,7 @@ export default function UserCertificates() {
   const [selectedCert, setSelectedCert] = useState(null);
 
   useEffect(() => {
-    fetch('/api/auth/certificates', { credentials: 'include' })
+    authFetch('/api/auth/certificates')
       .then((res) => res.json())
       .then((data) => {
         if (data.certificates) {

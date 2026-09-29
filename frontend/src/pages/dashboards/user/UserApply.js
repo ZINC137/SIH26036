@@ -15,6 +15,7 @@ import AutorenewIcon from "@mui/icons-material/Autorenew";
 import VerifiedUserIcon from "@mui/icons-material/VerifiedUser";
 import GavelIcon from "@mui/icons-material/Gavel";
 import { useNavigate } from "react-router-dom";
+import { authFetch } from "../../../config/api";
 
 const COLOR = "#E65100";
 const GRADIENT = "linear-gradient(135deg, #FF6D00, #E65100)";
@@ -107,7 +108,7 @@ export default function UserApply() {
   };
 
   useEffect(() => {
-    fetch("/api/auth/me", { credentials: "include" })
+    authFetch("/api/auth/me")
       .then((r) => r.json())
       .then((data) => {
         const p = data.user?.profile || {};
@@ -127,7 +128,7 @@ export default function UserApply() {
       .catch(() => {});
 
     // 2. Fetch existing instruments for re-verification linking
-    fetch("/api/auth/instruments", { credentials: "include" })
+    authFetch("/api/auth/instruments")
       .then((r) => r.json())
       .then((data) => {
         if (data.instruments) {
@@ -137,7 +138,7 @@ export default function UserApply() {
       .catch(() => {});
 
     // 3. Fetch Legal Metrology Instrument Categories
-    fetch("/api/rules/categories")
+    authFetch("/api/rules/categories")
       .then((r) => r.json())
       .then((data) => {
         if (data.categories && data.categories.length > 0) {
@@ -157,7 +158,7 @@ export default function UserApply() {
     }));
     setLoadingRule(true);
     try {
-      const res = await fetch(`/api/rules/applicable?categoryCode=${catCode}&stateCode=${form.state || 'Delhi'}`);
+      const res = await authFetch(`/api/rules/applicable?categoryCode=${catCode}&stateCode=${form.state || 'Delhi'}`);
       const data = await res.json();
       if (data.category) {
         setActiveRule(data);
@@ -202,9 +203,8 @@ export default function UserApply() {
       formData.append("file", file);
       formData.append("doc_type", docType);
 
-      const res = await fetch("/api/upload", {
+      const res = await authFetch("/api/upload", {
         method: "POST",
-        credentials: "include",
         body: formData,
       });
 
@@ -227,31 +227,98 @@ export default function UserApply() {
     setUploadedDocuments((prev) => prev.filter((d) => d.id !== docId));
   };
 
+  const validateStep0 = () => {
+    const instType = form.instrumentType || selectedCategoryCode;
+    if (!instType) {
+      setError("Please select a Legal Metrology Instrument Category.");
+      return false;
+    }
+    if (!form.make || !form.make.trim()) {
+      setError("Please enter the Make / Brand of the instrument.");
+      return false;
+    }
+    if (!form.serialNo || !form.serialNo.trim()) {
+      setError("Please enter the Serial Number.");
+      return false;
+    }
+    if (!form.capacity || !form.capacity.toString().trim()) {
+      setError("Please enter the Capacity of the instrument.");
+      return false;
+    }
+    return true;
+  };
+
+  const validateStep1 = () => {
+    if (!form.businessName || !form.businessName.trim()) {
+      setError("Please enter the Business / Shop Name.");
+      return false;
+    }
+    if (!form.address || !form.address.trim()) {
+      setError("Please enter the Premises Address.");
+      return false;
+    }
+    if (!form.city || !form.city.trim()) {
+      setError("Please enter the City.");
+      return false;
+    }
+    if (!form.state || !form.state.trim()) {
+      setError("Please enter the State.");
+      return false;
+    }
+    if (!form.pincode || !form.pincode.trim()) {
+      setError("Please enter the Pincode.");
+      return false;
+    }
+    if (!form.contactName || !form.contactName.trim()) {
+      setError("Please enter the Contact Person Name.");
+      return false;
+    }
+    if (!form.contactPhone || !form.contactPhone.trim()) {
+      setError("Please enter the Contact Phone Number.");
+      return false;
+    }
+    if (!form.contactEmail || !form.contactEmail.trim()) {
+      setError("Please enter the Contact Email Address.");
+      return false;
+    }
+    return true;
+  };
+
+  const handleNextStep = () => {
+    setError("");
+    if (activeStep === 0 && !validateStep0()) return;
+    if (activeStep === 1 && !validateStep1()) return;
+    setActiveStep((s) => s + 1);
+  };
+
   const handleSubmit = async () => {
     setError("");
+    if (!validateStep0() || !validateStep1()) return;
+
     setSubmitting(true);
     try {
-      const res = await fetch("/api/auth/applications", {
+      const resolvedInstType = form.instrumentType || (categories.find((c) => c.code === selectedCategoryCode)?.name) || selectedCategoryCode || "Weighing Scale";
+
+      const res = await authFetch("/api/auth/applications", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "include",
         body: JSON.stringify({
           application_type: applicationType,
           instrument_id: selectedInstrumentId || undefined,
           previous_certificate_no: previousCertificateNo || undefined,
           inspection_mode: inspectionMode,
           preferred_date: preferredDate || undefined,
-          instrument_type: form.instrumentType,
+          instrument_type: resolvedInstType,
           selected_category_code: selectedCategoryCode || undefined,
           preferred_verification_route: preferredRoute,
           category_fields_data: Object.keys(dynamicFields).length > 0 ? JSON.stringify(dynamicFields) : undefined,
           make: form.make,
-          model: form.model,
+          model: form.model || undefined,
           serial_no: form.serialNo,
           capacity: form.capacity,
-          unit: form.unit,
+          unit: form.unit || "kg",
           business_name: form.businessName,
-          gst_no: form.gstNo,
+          gst_no: form.gstNo || undefined,
           address: form.address,
           city: form.city,
           state: form.state,
@@ -263,7 +330,7 @@ export default function UserApply() {
         }),
       });
       const data = await res.json();
-      if (res.ok) {
+      if (res.ok && data.application) {
         setAppNumber(data.application.app_number);
         setSubmitted(true);
       } else {
@@ -911,7 +978,7 @@ export default function UserApply() {
           {activeStep < steps.length - 1 ? (
             <Button variant="contained"
               sx={{ background: GRADIENT, borderRadius: 2, fontWeight: 700, px: 5, py: 1.2 }}
-              onClick={() => setActiveStep((s) => s + 1)}>
+              onClick={handleNextStep}>
               Next Step →
             </Button>
           ) : (

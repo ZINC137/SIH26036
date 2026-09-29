@@ -25,6 +25,7 @@ import HowToRegRoundedIcon from '@mui/icons-material/HowToRegRounded';
 import RefreshRoundedIcon from '@mui/icons-material/RefreshRounded';
 import AssignmentIndIcon from '@mui/icons-material/AssignmentInd';
 import { useNavigate } from 'react-router-dom';
+import { authFetch } from '../../config/api';
 
 const COLOR = '#15803D';
 const GRADIENT = 'linear-gradient(135deg, #16A34A 0%, #15803D 100%)';
@@ -63,9 +64,9 @@ export default function LMODashboard({ userEmail }) {
     setLoading(true);
     try {
       const [statsRes, appsRes, officersRes] = await Promise.all([
-        fetch('/api/lmo/stats', { credentials: 'include' }),
-        fetch('/api/lmo/applications', { credentials: 'include' }),
-        fetch('/api/lmo/officers', { credentials: 'include' }),
+        authFetch('/api/lmo/stats'),
+        authFetch('/api/lmo/applications'),
+        authFetch('/api/lmo/officers'),
       ]);
 
       const statsData = await statsRes.json();
@@ -88,10 +89,9 @@ export default function LMODashboard({ userEmail }) {
 
   const handleAction = async (id, action) => {
     try {
-      const res = await fetch(`/api/lmo/applications/${id}/review`, {
+      const res = await authFetch(`/api/lmo/applications/${id}/review`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify({
           action,
           notes: action === 'approve'

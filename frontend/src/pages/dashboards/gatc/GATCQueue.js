@@ -11,6 +11,7 @@ import RefreshRoundedIcon from '@mui/icons-material/RefreshRounded';
 import CloseIcon from '@mui/icons-material/Close';
 import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
 import UploadFileRoundedIcon from '@mui/icons-material/UploadFileRounded';
+import { authFetch } from '../../../config/api';
 
 const COLOR = '#0D9488';
 const GRADIENT = 'linear-gradient(135deg, #14B8A6 0%, #0D9488 100%)';
@@ -41,7 +42,7 @@ export default function GATCQueue({ userEmail }) {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch('/api/gatc/tasks', { credentials: 'include' });
+      const res = await authFetch('/api/gatc/tasks');
       const data = await res.json();
       if (data.tasks) {
         setTasks(data.tasks);
@@ -81,10 +82,9 @@ export default function GATCQueue({ userEmail }) {
 
     setInspectModal((prev) => ({ ...prev, submitting: true }));
     try {
-      const res = await fetch(`/api/gatc/applications/${inspectModal.task.id}/inspect`, {
+      const res = await authFetch(`/api/gatc/applications/${inspectModal.task.id}/inspect`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify({
           test_error_percentage: inspectModal.testError,
           environmental_temp: inspectModal.envTemp,
@@ -103,9 +103,8 @@ export default function GATCQueue({ userEmail }) {
           formData.append('file', inspectModal.file);
           formData.append('doc_type', 'GATC_TEST_REPORT');
           formData.append('application_id', inspectModal.task.id);
-          await fetch('/api/upload', {
+          await authFetch('/api/upload', {
             method: 'POST',
-            credentials: 'include',
             body: formData,
           });
         }

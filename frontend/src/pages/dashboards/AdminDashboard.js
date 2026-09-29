@@ -26,6 +26,7 @@ import WarningAmberRoundedIcon from '@mui/icons-material/WarningAmberRounded';
 import RefreshRoundedIcon from '@mui/icons-material/RefreshRounded';
 import GavelRoundedIcon from '@mui/icons-material/GavelRounded';
 import KeyRoundedIcon from '@mui/icons-material/KeyRounded';
+import { authFetch } from '../../config/api';
 
 const COLOR = '#B91C1C';
 const GRADIENT = 'linear-gradient(135deg, #EF4444 0%, #B91C1C 100%)';
@@ -64,9 +65,9 @@ export default function AdminDashboard({ userEmail }) {
     setLoading(true);
     try {
       const [analyticsRes, usersRes, verifsRes] = await Promise.all([
-        fetch('/api/admin/analytics', { credentials: 'include' }),
-        fetch('/api/admin/users', { credentials: 'include' }),
-        fetch('/api/admin/verifications', { credentials: 'include' }),
+        authFetch('/api/admin/analytics'),
+        authFetch('/api/admin/users'),
+        authFetch('/api/admin/verifications'),
       ]);
 
       const analyticsData = await analyticsRes.json();

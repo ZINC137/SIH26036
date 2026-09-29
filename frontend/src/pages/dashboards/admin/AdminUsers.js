@@ -18,7 +18,7 @@ import GavelIcon from '@mui/icons-material/Gavel';
 import HistoryIcon from '@mui/icons-material/History';
 import PeopleIcon from '@mui/icons-material/People';
 import RefreshIcon from '@mui/icons-material/Refresh';
-
+import { authFetch } from '../../../config/api';
 
 const COLOR = '#B71C1C';
 const GRADIENT = 'linear-gradient(135deg, #C62828 0%, #B71C1C 100%)';
@@ -80,21 +80,21 @@ export default function AdminUsers() {
     setLoading(true);
     try {
       // 1. Fetch system users
-      const usersRes = await fetch('/api/admin/users', { credentials: 'include' });
+      const usersRes = await authFetch('/api/admin/users');
       if (usersRes.ok) {
         const data = await usersRes.json();
         if (data.users) setUsers(data.users);
       }
 
       // 2. Fetch pending officers
-      const officersRes = await fetch('/api/admin/officers/pending-approvals', { credentials: 'include' });
+      const officersRes = await authFetch('/api/admin/officers/pending-approvals');
       if (officersRes.ok) {
         const offData = await officersRes.json();
         setPendingOfficers(offData.officers || []);
       }
 
       // 3. Fetch audit logs
-      const logsRes = await fetch('/api/admin/audit-logs', { credentials: 'include' });
+      const logsRes = await authFetch('/api/admin/audit-logs');
       if (logsRes.ok) {
         const logData = await logsRes.json();
         setAuditLogs(logData.logs || []);
@@ -133,10 +133,9 @@ export default function AdminUsers() {
     };
 
     try {
-      const res = await fetch('/api/admin/lmo/appoint', {
+      const res = await authFetch('/api/admin/lmo/appoint', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify(payload),
       });
       const data = await res.json();
@@ -182,10 +181,9 @@ export default function AdminUsers() {
   // Clear or Reject Field Inspector
   const handleClearanceAction = async (officerId, action) => {
     try {
-      const res = await fetch('/api/admin/officers/clear', {
+      const res = await authFetch('/api/admin/officers/clear', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify({ officerId, action }),
       });
       const data = await res.json();
@@ -228,10 +226,9 @@ export default function AdminUsers() {
   const toggleSuspend = async (user) => {
     const nextStatus = user.status === 'SUSPENDED' ? 'ACTIVE' : 'SUSPENDED';
     try {
-      await fetch('/api/admin/users/status', {
+      await authFetch('/api/admin/users/status', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify({ userId: user.id, status: nextStatus }),
       });
       refreshData();
@@ -1142,10 +1139,9 @@ export default function AdminUsers() {
             sx={{ background: GRADIENT, fontWeight: 700 }}
             onClick={async () => {
               try {
-                await fetch('/api/admin/users/status', {
+                await authFetch('/api/admin/users/status', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
-                  credentials: 'include',
                   body: JSON.stringify({ userId: editUser.id, role: newRole }),
                 });
                 refreshData();

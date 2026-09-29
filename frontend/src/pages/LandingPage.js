@@ -25,6 +25,7 @@ import {
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import jsQR from 'jsqr';
+import { authFetch } from '../config/api';
 
 // Icons
 import StorefrontRoundedIcon from '@mui/icons-material/StorefrontRounded';
@@ -440,7 +441,7 @@ export default function LandingPage() {
     setVerifyError('');
     setVerifyNotice('');
     try {
-      const res = await fetch('/api/auth/validate-certificate', {
+      const res = await authFetch('/api/auth/validate-certificate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ query: cleanQuery }),

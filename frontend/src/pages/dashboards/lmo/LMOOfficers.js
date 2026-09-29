@@ -15,7 +15,7 @@ import HourglassEmptyIcon from '@mui/icons-material/HourglassEmpty';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import RefreshIcon from '@mui/icons-material/Refresh';
-import API_BASE from '../../../config/api';
+import { authFetch } from '../../../config/api';
 
 const COLOR = '#1B5E20';
 const GRADIENT = 'linear-gradient(135deg, #2E7D32, #1B5E20)';
@@ -56,7 +56,7 @@ export default function LMOOfficers() {
   const fetchOfficers = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/lmo/officers', { credentials: 'include' });
+      const res = await authFetch('/api/lmo/officers');
       if (res.ok) {
         const data = await res.json();
         setOfficers(data.officers || []);
@@ -71,7 +71,7 @@ export default function LMOOfficers() {
   const fetchPendingApps = async () => {
     setLoadingApps(true);
     try {
-      const res = await fetch(`${API_BASE}/api/lmo/applications`, { credentials: 'include' });
+      const res = await authFetch('/api/lmo/applications');
       if (res.ok) {
         const data = await res.json();
         const pending = (data.applications || []).filter((a) => a.status === 'Pending');
@@ -126,10 +126,9 @@ export default function LMOOfficers() {
 
     setAssignForm((prev) => ({ ...prev, submitting: true }));
     try {
-      const res = await fetch(`${API_BASE}/api/lmo/applications/${assignForm.appId}/assign`, {
+      const res = await authFetch(`/api/lmo/applications/${assignForm.appId}/assign`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify({
           assigneeType: 'FIELD_OFFICER',
           foUserId: selected.dbId,
@@ -177,10 +176,9 @@ export default function LMOOfficers() {
     };
 
     try {
-      const res = await fetch('/api/lmo/officer/nominate', {
+      const res = await authFetch('/api/lmo/officer/nominate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify(payload),
       });
       const data = await res.json();

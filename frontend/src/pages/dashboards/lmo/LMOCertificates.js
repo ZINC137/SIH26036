@@ -14,6 +14,7 @@ import FactCheckIcon from '@mui/icons-material/FactCheck';
 import CancelIcon from '@mui/icons-material/Cancel';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CertificateQrCode from '../../../components/CertificateQrCode';
+import { authFetch } from '../../../config/api';
 
 const COLOR = '#15803D';
 
@@ -36,7 +37,7 @@ export default function LMOCertificates() {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch('/api/lmo/certificates', { credentials: 'include' });
+      const res = await authFetch('/api/lmo/certificates');
       const data = await res.json();
       if (res.ok && data.certificates) {
         setCertificates(data.certificates);

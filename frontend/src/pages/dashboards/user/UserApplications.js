@@ -12,6 +12,7 @@ import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import HourglassTopIcon from "@mui/icons-material/HourglassTop";
 import VerifiedIcon from "@mui/icons-material/Verified";
 import { useNavigate } from "react-router-dom";
+import { authFetch } from "../../../config/api";
 
 const COLOR = "#E65100";
 const GRADIENT = "linear-gradient(135deg, #FF6D00, #E65100)";
@@ -40,7 +41,7 @@ export default function UserApplications() {
   const [selectedApp, setSelectedApp] = useState(null);
 
   const fetchApps = () => {
-    fetch("/api/auth/applications", { credentials: "include" })
+    authFetch("/api/auth/applications")
       .then((r) => r.json())
       .then((d) => {
         if (d.applications) setApplications(d.applications);

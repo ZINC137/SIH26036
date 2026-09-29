@@ -28,6 +28,7 @@ import NotificationsActiveRoundedIcon from '@mui/icons-material/NotificationsAct
 import AutorenewRoundedIcon from '@mui/icons-material/AutorenewRounded';
 import CloseRoundedIcon from '@mui/icons-material/CloseRounded';
 import { useNavigate } from 'react-router-dom';
+import { authFetch } from '../../config/api';
 
 const COLOR = '#D97706';
 const GRADIENT = 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)';
@@ -110,7 +111,7 @@ export default function UserDashboard({ userEmail }) {
   const [loadingInstruments, setLoadingInstruments] = useState(true);
 
   const fetchDashboardData = () => {
-    fetch('/api/auth/me', { credentials: 'include' })
+    authFetch('/api/auth/me')
       .then(async (response) => {
         const data = await response.json();
         if (!response.ok) {
@@ -121,7 +122,7 @@ export default function UserDashboard({ userEmail }) {
       .catch((error) => setProfileError(error.message || 'Could not load your profile.'))
       .finally(() => setLoadingProfile(false));
 
-    fetch('/api/auth/dashboard-stats', { credentials: 'include' })
+    authFetch('/api/auth/dashboard-stats')
       .then((r) => r.json())
       .then((d) => {
         if (d.stats) setStats(d.stats);
@@ -129,7 +130,7 @@ export default function UserDashboard({ userEmail }) {
       .catch(() => {})
       .finally(() => setLoadingStats(false));
 
-    fetch('/api/auth/applications', { credentials: 'include' })
+    authFetch('/api/auth/applications')
       .then((r) => r.json())
       .then((d) => {
         if (d.applications) setApplications(d.applications.slice(0, 5));
@@ -137,14 +138,14 @@ export default function UserDashboard({ userEmail }) {
       .catch(() => {})
       .finally(() => setLoadingApps(false));
 
-    fetch('/api/auth/notifications', { credentials: 'include' })
+    authFetch('/api/auth/notifications')
       .then((r) => r.json())
       .then((d) => {
         if (d.notifications) setNotifications(d.notifications);
       })
       .catch(() => {});
 
-    fetch('/api/auth/instruments', { credentials: 'include' })
+    authFetch('/api/auth/instruments')
       .then((r) => r.json())
       .then((d) => {
         if (d.instruments) setInstruments(d.instruments);
@@ -160,13 +161,11 @@ export default function UserDashboard({ userEmail }) {
   const handleDismissNotification = async (notifId) => {
     setNotifications((prev) => prev.filter((n) => n.id !== notifId));
     try {
-      await fetch(`/api/auth/notifications/${notifId}`, {
+      await authFetch(`/api/auth/notifications/${notifId}`, {
         method: 'DELETE',
-        credentials: 'include',
       });
-      await fetch(`/api/auth/notifications/${notifId}/read`, {
+      await authFetch(`/api/auth/notifications/${notifId}/read`, {
         method: 'PUT',
-        credentials: 'include',
       });
     } catch (err) {
       console.error('Failed to dismiss notification:', err);

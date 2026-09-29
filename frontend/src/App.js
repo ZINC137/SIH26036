@@ -38,7 +38,7 @@ import AdminRules from './pages/dashboards/admin/AdminRules';
 import GATCDashboard from './pages/dashboards/GATCDashboard';
 import GATCQueue from './pages/dashboards/gatc/GATCQueue';
 import GATCHistory from './pages/dashboards/gatc/GATCHistory';
-import API_BASE from './config/api';
+import { authFetch, setAuthToken } from './config/api';
 
 // ── Shared sub-pages ─────────────────────────────────────────────────────────
 import PortalSettings from './pages/dashboards/shared/PortalSettings';
@@ -149,7 +149,7 @@ function App() {
 
   // Check backend session on mount
   React.useEffect(() => {
-    fetch(`${API_BASE}/api/auth/me`, { credentials: 'include' })
+    authFetch('/api/auth/me')
       .then((res) => {
         if (res.ok) return res.json();
         throw new Error('Unauthenticated');
@@ -169,17 +169,19 @@ function App() {
       });
   }, []);
 
-  const handleLogin = (role, email) => {
+  const handleLogin = (role, email, token) => {
     setIsLoggedIn(true);
     setUserRole(role);
     setUserEmail(email);
+    if (token) setAuthToken(token);
     localStorage.setItem('isLoggedIn', 'true');
     localStorage.setItem('userRole', role);
     localStorage.setItem('userEmail', email);
   };
 
   const handleLogout = () => {
-    fetch(`${API_BASE}/api/auth/logout`, { method: 'POST', credentials: 'include' }).catch(() => {});
+    authFetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
+    setAuthToken(null);
     setIsLoggedIn(false);
     setUserRole(null);
     setUserEmail('');

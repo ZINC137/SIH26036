@@ -35,7 +35,7 @@ import FlashOnRoundedIcon from '@mui/icons-material/FlashOnRounded';
 import KeyRoundedIcon from '@mui/icons-material/KeyRounded';
 import CheckCircleRoundedIcon from '@mui/icons-material/CheckCircleRounded';
 import FingerprintRoundedIcon from '@mui/icons-material/FingerprintRounded';
-import API_BASE from '../config/api';
+import API_BASE, { setAuthToken } from '../config/api';
 
 const PORTAL_CONFIG = {
   user: {
@@ -232,7 +232,10 @@ export default function Login({ onLogin }) {
           return;
         }
 
-        onLogin(data.user?.role || roleFromUrl, data.user?.email || email);
+        if (data.token) {
+          setAuthToken(data.token);
+        }
+        onLogin(data.user?.role || roleFromUrl, data.user?.email || email, data.token);
         const targetDashboard =
           data.user?.role === 'lmo'
             ? '/dashboard/lmo'

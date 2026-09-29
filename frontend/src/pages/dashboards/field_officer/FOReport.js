@@ -10,7 +10,7 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined';
 import PhotoCameraIcon from '@mui/icons-material/PhotoCamera';
 import InsertDriveFileIcon from '@mui/icons-material/InsertDriveFile';
 import { useNavigate } from 'react-router-dom';
-import API_BASE from '../../../config/api';
+import API_BASE, { authFetch } from '../../../config/api';
 
 const COLOR = '#7E22CE';
 const GRADIENT = 'linear-gradient(135deg, #A855F7, #7E22CE)';
@@ -44,7 +44,7 @@ export default function FOReport() {
   });
 
   useEffect(() => {
-    fetch(`${API_BASE}/api/field-officer/tasks`, { credentials: 'include' })
+    authFetch('/api/field-officer/tasks')
       .then((res) => res.json())
       .then((data) => {
         if (data.tasks && data.tasks.length > 0) {
@@ -73,9 +73,8 @@ export default function FOReport() {
       formData.append('doc_type', docType || 'INSPECTION_PHOTO');
       formData.append('application_id', selectedTaskId);
 
-      const res = await fetch(`${API_BASE}/api/upload`, {
+      const res = await authFetch('/api/upload', {
         method: 'POST',
-        credentials: 'include',
         body: formData,
       });
       const data = await res.json();
@@ -94,9 +93,8 @@ export default function FOReport() {
 
   const removePhoto = async (id) => {
     try {
-      const res = await fetch(`${API_BASE}/api/upload/${id}/application/${selectedTaskId}`, {
+      const res = await authFetch(`/api/upload/${id}/application/${selectedTaskId}`, {
         method: 'DELETE',
-        credentials: 'include',
       });
       const data = await res.json();
       if (!res.ok) {
@@ -118,10 +116,9 @@ export default function FOReport() {
     setSubmitting(true);
     setError('');
     try {
-      const res = await fetch(`${API_BASE}/api/field-officer/applications/${selectedTaskId}/inspect`, {
+      const res = await authFetch(`/api/field-officer/applications/${selectedTaskId}/inspect`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify({
           test_error_percentage: form.testError,
           environmental_temp: form.envTemp,

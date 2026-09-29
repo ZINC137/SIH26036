@@ -17,7 +17,7 @@ import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import DownloadIcon from '@mui/icons-material/Download';
 import CloseIcon from '@mui/icons-material/Close';
 import InsertDriveFileIcon from '@mui/icons-material/InsertDriveFile';
-import API_BASE from '../../../config/api';
+import API_BASE, { authFetch } from '../../../config/api';
 
 const COLOR = '#15803D';
 
@@ -72,9 +72,9 @@ export default function LMOPending() {
     setError('');
     try {
       const [appsRes, officersRes, gatcRes] = await Promise.all([
-        fetch('/api/lmo/applications', { credentials: 'include' }),
-        fetch('/api/lmo/officers', { credentials: 'include' }),
-        fetch('/api/lmo/gatc-centres', { credentials: 'include' }),
+        authFetch('/api/lmo/applications'),
+        authFetch('/api/lmo/officers'),
+        authFetch('/api/lmo/gatc-centres'),
       ]);
 
       const appsData = await appsRes.json();
@@ -142,7 +142,7 @@ export default function LMOPending() {
       const pref = app.raw?.preferred_verification_route || 'NO_PREFERENCE';
       const capacity = app.raw?.capacity || app.capacity || '';
       const unit = app.raw?.unit || app.unit || '';
-      const res = await fetch(`/api/rules/eligibility?categoryCode=${encodeURIComponent(catCode)}&state=${encodeURIComponent(state)}&district=${encodeURIComponent(district)}&preferredRoute=${encodeURIComponent(pref)}&capacity=${encodeURIComponent(capacity)}&unit=${encodeURIComponent(unit)}`);
+      const res = await authFetch(`/api/rules/eligibility?categoryCode=${encodeURIComponent(catCode)}&state=${encodeURIComponent(state)}&district=${encodeURIComponent(district)}&preferredRoute=${encodeURIComponent(pref)}&capacity=${encodeURIComponent(capacity)}&unit=${encodeURIComponent(unit)}`);
       const data = await res.json();
       const eligibility = data.eligibility || data;
       setAppEligibility(eligibility);
@@ -170,10 +170,9 @@ export default function LMOPending() {
 
     setAssignModal((prev) => ({ ...prev, submitting: true }));
     try {
-      const res = await fetch(`/api/lmo/applications/${assignModal.app.id}/assign`, {
+      const res = await authFetch(`/api/lmo/applications/${assignModal.app.id}/assign`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify({
           assigneeType: assignModal.assigneeType,
           foUserId: assignModal.assigneeType === 'FIELD_OFFICER' ? assignModal.foUserId : null,
@@ -202,10 +201,9 @@ export default function LMOPending() {
 
   const handleDirectAction = async (appId, action, notes) => {
     try {
-      const res = await fetch(`/api/lmo/applications/${appId}/review`, {
+      const res = await authFetch(`/api/lmo/applications/${appId}/review`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify({
           action,
           notes: notes || (action === 'approve'

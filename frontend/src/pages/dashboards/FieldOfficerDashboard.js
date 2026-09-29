@@ -30,7 +30,7 @@ import RefreshRoundedIcon from '@mui/icons-material/RefreshRounded';
 import VerifiedRoundedIcon from '@mui/icons-material/VerifiedRounded';
 import SecurityRoundedIcon from '@mui/icons-material/SecurityRounded';
 import { useNavigate } from 'react-router-dom';
-import API_BASE from '../../config/api';
+import { authFetch } from '../../config/api';
 
 const COLOR = '#7E22CE';
 const GRADIENT = 'linear-gradient(135deg, #A855F7 0%, #7E22CE 100%)';
@@ -67,8 +67,8 @@ export default function FieldOfficerDashboard({ userEmail }) {
     setError('');
     try {
       const [tasksRes, statsRes] = await Promise.all([
-        fetch(`${API_BASE}/api/field-officer/tasks`, { credentials: 'include' }),
-        fetch(`${API_BASE}/api/field-officer/stats`, { credentials: 'include' }),
+        authFetch('/api/field-officer/tasks'),
+        authFetch('/api/field-officer/stats'),
       ]);
 
       const tasksData = await tasksRes.json();
@@ -113,9 +113,8 @@ export default function FieldOfficerDashboard({ userEmail }) {
         formData.append('file', inspectModal.file);
         formData.append('doc_type', 'SEAL_PHOTO');
         formData.append('application_id', inspectModal.task.id);
-        const upRes = await fetch(`${API_BASE}/api/upload`, {
+        const upRes = await authFetch('/api/upload', {
           method: 'POST',
-          credentials: 'include',
           body: formData,
         });
         const upData = await upRes.json();
@@ -125,10 +124,9 @@ export default function FieldOfficerDashboard({ userEmail }) {
         docId = upData.document.id;
       }
 
-      const res = await fetch(`${API_BASE}/api/field-officer/applications/${inspectModal.task.id}/inspect`, {
+      const res = await authFetch(`/api/field-officer/applications/${inspectModal.task.id}/inspect`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify({
           test_error_percentage: inspectModal.testError,
           environmental_temp: inspectModal.envTemp,

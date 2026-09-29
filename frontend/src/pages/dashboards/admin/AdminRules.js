@@ -11,6 +11,7 @@ import AddCircleIcon from '@mui/icons-material/AddCircle';
 import HistoryEduIcon from '@mui/icons-material/HistoryEdu';
 import ScienceIcon from '@mui/icons-material/Science';
 import RefreshIcon from '@mui/icons-material/Refresh';
+import { authFetch } from '../../../config/api';
 
 const COLOR = '#B91C1C';
 
@@ -42,8 +43,8 @@ export default function AdminRules() {
     setError('');
     try {
       const [catsRes, rulesRes] = await Promise.all([
-        fetch('/api/rules/categories'),
-        fetch('/api/rules/admin/rulesets', { credentials: 'include' }),
+        authFetch('/api/rules/categories'),
+        authFetch('/api/rules/admin/rulesets'),
       ]);
 
       const catsData = await catsRes.json();
@@ -82,10 +83,9 @@ export default function AdminRules() {
     setSuccess('');
 
     try {
-      const res = await fetch(`/api/rules/admin/rulesets/${versionModal.ruleSet.id}/version`, {
+      const res = await authFetch(`/api/rules/admin/rulesets/${versionModal.ruleSet.id}/version`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify({
           sourceDocument: versionModal.sourceDocument,
           sourceReference: versionModal.sourceReference,
