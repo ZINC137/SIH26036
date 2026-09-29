@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
@@ -355,119 +356,119 @@ export default function LMOOfficers() {
           </Grid>
         ) : (
           officers.map((o) => {
-          const isPending = o.status === 'Pending Admin Clearance' || o.status === 'PENDING_VERIFICATION';
-          const isActivation = o.status === 'Activation Pending' || o.status === 'PENDING_ACTIVATION';
+            const isPending = o.status === 'Pending Admin Clearance' || o.status === 'PENDING_VERIFICATION';
+            const isActivation = o.status === 'Activation Pending' || o.status === 'PENDING_ACTIVATION';
 
-          return (
-            <Grid item xs={12} md={6} lg={4} key={o.id || o.email}>
-              <Paper
-                elevation={0}
-                sx={{
-                  p: 3,
-                  borderRadius: 3,
-                  border: `1.5px solid ${isPending ? '#FFE082' : isActivation ? '#90CAF9' : '#C8E6C9'}`,
-                  height: '100%',
-                  bgcolor: '#FFFFFF',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'space-between',
-                  boxShadow: '0 4px 16px -2px rgba(15, 23, 42, 0.04)',
-                }}
-              >
-                <Box>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-                    <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
-                      <Avatar sx={{ width: 48, height: 48, background: GRADIENT, fontWeight: 800 }}>
-                        {o.name?.charAt(0) || 'F'}
-                      </Avatar>
-                      <Box>
-                        <Typography variant="body1" sx={{ fontWeight: 800, color: '#1A1A2E' }}>
-                          {o.name}
-                        </Typography>
-                        <Typography variant="caption" sx={{ color: '#757575', fontWeight: 600 }}>
-                          {o.id}
-                        </Typography>
+            return (
+              <Grid item xs={12} md={6} lg={4} key={o.id || o.email}>
+                <Paper
+                  elevation={0}
+                  sx={{
+                    p: 3,
+                    borderRadius: 3,
+                    border: `1.5px solid ${isPending ? '#FFE082' : isActivation ? '#90CAF9' : '#C8E6C9'}`,
+                    height: '100%',
+                    bgcolor: '#FFFFFF',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    boxShadow: '0 4px 16px -2px rgba(15, 23, 42, 0.04)',
+                  }}
+                >
+                  <Box>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+                      <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
+                        <Avatar sx={{ width: 48, height: 48, background: GRADIENT, fontWeight: 800 }}>
+                          {o.name?.charAt(0) || 'F'}
+                        </Avatar>
+                        <Box>
+                          <Typography variant="body1" sx={{ fontWeight: 800, color: '#1A1A2E' }}>
+                            {o.name}
+                          </Typography>
+                          <Typography variant="caption" sx={{ color: '#757575', fontWeight: 600 }}>
+                            {o.id}
+                          </Typography>
+                        </Box>
                       </Box>
+                      {getStatusChip(o.status)}
                     </Box>
-                    {getStatusChip(o.status)}
-                  </Box>
 
-                  {/* Geofenced Circle */}
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 2, bgcolor: '#F8FAFC', p: 1, borderRadius: 1.5 }}>
-                    <LocationOnIcon sx={{ fontSize: 16, color: '#15803D' }} />
-                    <Typography variant="caption" sx={{ fontWeight: 700, color: '#334155' }}>
-                      {o.zone || 'Delhi North Circle'}
-                    </Typography>
-                  </Box>
-
-                  {/* Status Notes */}
-                  {isPending ? (
-                    <Typography variant="caption" sx={{ color: '#B45309', display: 'block', mb: 2, fontStyle: 'italic' }}>
-                      Awaiting Central Admin Dossier Clearance
-                    </Typography>
-                  ) : isActivation ? (
-                    <Typography variant="caption" sx={{ color: '#1D4ED8', display: 'block', mb: 2, fontStyle: 'italic' }}>
-                      Activation token issued. Awaiting first-time password setup
-                    </Typography>
-                  ) : null}
-
-                  {/* Progress / Monthly verification bar */}
-                  <Box sx={{ mb: 2 }}>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-                      <Typography variant="caption" sx={{ color: '#757575', fontWeight: 600 }}>Monthly Verification Quota</Typography>
-                      <Typography variant="caption" sx={{ fontWeight: 700, color: COLOR }}>
-                        {o.monthly || 0}/{o.target || 20}
+                    {/* Geofenced Circle */}
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 2, bgcolor: '#F8FAFC', p: 1, borderRadius: 1.5 }}>
+                      <LocationOnIcon sx={{ fontSize: 16, color: '#15803D' }} />
+                      <Typography variant="caption" sx={{ fontWeight: 700, color: '#334155' }}>
+                        {o.zone || 'Delhi North Circle'}
                       </Typography>
                     </Box>
-                    <LinearProgress
-                      variant="determinate"
-                      value={((o.monthly || 0) / (o.target || 20)) * 100}
-                      sx={{ height: 6, borderRadius: 3, bgcolor: '#E8F5E9', '& .MuiLinearProgress-bar': { background: GRADIENT } }}
-                    />
+
+                    {/* Status Notes */}
+                    {isPending ? (
+                      <Typography variant="caption" sx={{ color: '#B45309', display: 'block', mb: 2, fontStyle: 'italic' }}>
+                        Awaiting Central Admin Dossier Clearance
+                      </Typography>
+                    ) : isActivation ? (
+                      <Typography variant="caption" sx={{ color: '#1D4ED8', display: 'block', mb: 2, fontStyle: 'italic' }}>
+                        Activation token issued. Awaiting first-time password setup
+                      </Typography>
+                    ) : null}
+
+                    {/* Progress / Monthly verification bar */}
+                    <Box sx={{ mb: 2 }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                        <Typography variant="caption" sx={{ color: '#757575', fontWeight: 600 }}>Monthly Verification Quota</Typography>
+                        <Typography variant="caption" sx={{ fontWeight: 700, color: COLOR }}>
+                          {o.monthly || 0}/{o.target || 20}
+                        </Typography>
+                      </Box>
+                      <LinearProgress
+                        variant="determinate"
+                        value={((o.monthly || 0) / (o.target || 20)) * 100}
+                        sx={{ height: 6, borderRadius: 3, bgcolor: '#E8F5E9', '& .MuiLinearProgress-bar': { background: GRADIENT } }}
+                      />
+                    </Box>
+
+                    <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+                      <Box sx={{ textAlign: 'center', flex: 1, p: 1, bgcolor: '#F9FBE7', borderRadius: 2 }}>
+                        <Typography variant="h6" sx={{ fontWeight: 800, color: COLOR }}>{o.assigned || 0}</Typography>
+                        <Typography variant="caption" sx={{ color: '#757575' }}>Active Today</Typography>
+                      </Box>
+                      <Box sx={{ textAlign: 'center', flex: 1, p: 1, bgcolor: '#F9FBE7', borderRadius: 2 }}>
+                        <Typography variant="h6" sx={{ fontWeight: 800, color: '#1565C0' }}>{o.completed || 0}</Typography>
+                        <Typography variant="caption" sx={{ color: '#757575' }}>Calibrated</Typography>
+                      </Box>
+                    </Box>
                   </Box>
 
-                  <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-                    <Box sx={{ textAlign: 'center', flex: 1, p: 1, bgcolor: '#F9FBE7', borderRadius: 2 }}>
-                      <Typography variant="h6" sx={{ fontWeight: 800, color: COLOR }}>{o.assigned || 0}</Typography>
-                      <Typography variant="caption" sx={{ color: '#757575' }}>Active Today</Typography>
-                    </Box>
-                    <Box sx={{ textAlign: 'center', flex: 1, p: 1, bgcolor: '#F9FBE7', borderRadius: 2 }}>
-                      <Typography variant="h6" sx={{ fontWeight: 800, color: '#1565C0' }}>{o.completed || 0}</Typography>
-                      <Typography variant="caption" sx={{ color: '#757575' }}>Calibrated</Typography>
-                    </Box>
+                  {/* Card Action footer */}
+                  <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', pt: 1, borderTop: '1px solid #F1F5F9' }}>
+                    {o.phone && (
+                      <Tooltip title={o.phone}>
+                        <IconButton size="small" sx={{ bgcolor: '#E8F5E9', color: COLOR }}>
+                          <CallIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    )}
+                    {o.email && (
+                      <Tooltip title={o.email}>
+                        <IconButton size="small" sx={{ bgcolor: '#E3F2FD', color: '#1565C0' }}>
+                          <EmailIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    )}
+                    <Button
+                      size="small"
+                      startIcon={<AssignmentIcon />}
+                      disabled={isPending || isActivation}
+                      onClick={() => handleOpenAssign(o)}
+                      sx={{ ml: 'auto', color: COLOR, fontWeight: 700, fontSize: '0.78rem' }}
+                    >
+                      Assign Task
+                    </Button>
                   </Box>
-                </Box>
-
-                {/* Card Action footer */}
-                <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', pt: 1, borderTop: '1px solid #F1F5F9' }}>
-                  {o.phone && (
-                    <Tooltip title={o.phone}>
-                      <IconButton size="small" sx={{ bgcolor: '#E8F5E9', color: COLOR }}>
-                        <CallIcon fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
-                  )}
-                  {o.email && (
-                    <Tooltip title={o.email}>
-                      <IconButton size="small" sx={{ bgcolor: '#E3F2FD', color: '#1565C0' }}>
-                        <EmailIcon fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
-                  )}
-                  <Button
-                    size="small"
-                    startIcon={<AssignmentIcon />}
-                    disabled={isPending || isActivation}
-                    onClick={() => handleOpenAssign(o)}
-                    sx={{ ml: 'auto', color: COLOR, fontWeight: 700, fontSize: '0.78rem' }}
-                  >
-                    Assign Task
-                  </Button>
-                </Box>
-              </Paper>
-            </Grid>
-          );
-        }))}
+                </Paper>
+              </Grid>
+            );
+          }))}
       </Grid>
 
       {/* ── MODAL: NOMINATE FIELD INSPECTOR ── */}
