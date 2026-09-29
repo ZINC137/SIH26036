@@ -301,21 +301,23 @@ async function runRuleEngineTests() {
     console.log('[INFO] Restored RS_NAWI_CLASS_III_150KG_V1 to ACTIVE state after immutability test');
 
     // ------------------------------------------------------------------------
-    // SCENARIO 10: Future Rule NOT Active Before Effective Date
+    // SCENARIO 10: Future Rule NOT Active Before Effective Date (G.S.R. 809(E))
     // ------------------------------------------------------------------------
-    console.log('\n--- SCENARIO 10: Future Rule Not Active Before Effective Date ---');
-    // Energy Meter 5th Amendment (version 2) is scheduled for 2026-11-01
+    console.log('\n--- SCENARIO 10: Future Rule Not Active Before Effective Date (G.S.R. 809(E)) ---');
+    const gazettePubDate = new Date('2026-09-18T00:00:00.000Z');
+    const expectedCommencement = new Date(gazettePubDate.getTime() + (180 * 24 * 60 * 60 * 1000)); // Exactly 2027-03-17T00:00:00.000Z
+    
+    // Test current date (before 17 March 2027)
     const emSchemaCurrent = await getCategorySchema('ENERGY_METER', 'Delhi', 'INITIAL_VERIFICATION');
     assert(
       emSchemaCurrent.activeRuleSet.version === 1,
-      'Active rule set before commencement date is Version 1 (Fifth Amendment not commenced)'
+      'Active rule set before 180-day commencement date (17 March 2027) is Version 1'
     );
 
     // ------------------------------------------------------------------------
-    // SCENARIO 11: Future Rule Automatically Becomes Active After Effective Date
+    // SCENARIO 11: Future Rule Becomes Active On/After Effective Date (17 March 2027)
     // ------------------------------------------------------------------------
-    console.log('\n--- SCENARIO 11: Future Rule Automatically Active After Effective Date ---');
-    const futureDate = new Date(Date.now() + 190 * 24 * 60 * 60 * 1000);
+    console.log('\n--- SCENARIO 11: Future Rule Becomes Active On/After Effective Date (17 March 2027) ---');
     const futureRule = await prisma.ruleSet.findFirst({
       where: {
         code: 'RS_ENERGY_METER',
@@ -323,8 +325,15 @@ async function runRuleEngineTests() {
       },
     });
     assert(futureRule !== null, 'Future RuleSet RS_ENERGY_METER (version 2) exists in database');
-    assert(futureRule.status === 'SCHEDULED', 'Future RuleSet status is SCHEDULED');
-    assert(new Date(futureRule.effective_from) <= futureDate, 'Effective date is reached after 180-day statutory commencement');
+    assert(futureRule.status === 'SCHEDULED', 'Future RuleSet status is SCHEDULED before effective date');
+    assert(
+      futureRule.effective_from.toISOString().split('T')[0] === '2027-03-17',
+      `Effective date (${futureRule.effective_from.toISOString().split('T')[0]}) exactly matches 180 days from Gazette publication (2027-03-17)`
+    );
+    assert(
+      futureRule.source_notification.includes('G.S.R. 809(E)'),
+      'Source notification correctly references G.S.R. 809(E)'
+    );
 
     // ------------------------------------------------------------------------
     // SCENARIO 12: State-Specific Additional Rule

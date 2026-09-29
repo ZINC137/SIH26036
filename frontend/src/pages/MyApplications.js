@@ -3,7 +3,6 @@ import {
   Box,
   Container,
   Card,
-  CardContent,
   Typography,
   TextField,
   Button,
@@ -23,7 +22,6 @@ import {
   LinearProgress,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 
 const mockApplications = [
   {

@@ -66,7 +66,8 @@ async function runSecurityTests() {
   console.log('SIH26036 SECURITY & ACCESS CONTROL VALIDATION SUITE');
   console.log('====================================================\n');
 
-  const BASE_URL = 'http://localhost:5000';
+  require('dotenv').config();
+  const BASE_URL = process.env.BACKEND_URL || `http://localhost:${process.env.PORT || 5001}`;
   let passed = 0;
   let failed = 0;
 
