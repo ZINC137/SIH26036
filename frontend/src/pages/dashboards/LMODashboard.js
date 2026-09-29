@@ -468,7 +468,7 @@ export default function LMODashboard({ userEmail }) {
                           <Button
                             size="small"
                             variant="outlined"
-                            onClick={() => navigate('/dashboard/lmo/pending')}
+                            onClick={() => navigate(`/dashboard/lmo/pending?assignAppId=${app.id}`)}
                             sx={{ fontSize: '0.72rem', fontWeight: 700, color: '#7E22CE', borderColor: '#D8B4FE' }}
                           >
                             Assign FO
@@ -587,18 +587,42 @@ export default function LMODashboard({ userEmail }) {
                       </Typography>
                     </Box>
                   </Box>
-                  <Chip
-                    label={o.status}
-                    size="small"
-                    sx={{
-                      bgcolor: o.status === 'Active' ? '#F0FDF4' : '#FFFBEB',
-                      color: o.status === 'Active' ? '#15803D' : '#B45309',
-                      fontWeight: 800,
-                      fontSize: '0.65rem',
-                      height: 20,
-                    }}
-                  />
+                  <Box sx={{ display: 'flex', gap: 0.75, alignItems: 'center' }}>
+                    <Chip
+                      label={`${o.assigned || 0} active`}
+                      size="small"
+                      sx={{
+                        bgcolor: (o.assigned || 0) === 0 ? '#DCFCE7' : '#FEF3C7',
+                        color: (o.assigned || 0) === 0 ? '#15803D' : '#B45309',
+                        fontWeight: 700,
+                        fontSize: '0.62rem',
+                        height: 20,
+                      }}
+                    />
+                    <Chip
+                      label={o.status}
+                      size="small"
+                      sx={{
+                        bgcolor: o.status === 'Active' ? '#F0FDF4' : '#FFFBEB',
+                        color: o.status === 'Active' ? '#15803D' : '#B45309',
+                        fontWeight: 800,
+                        fontSize: '0.65rem',
+                        height: 20,
+                      }}
+                    />
+                  </Box>
                 </Box>
+                {o.status === 'Active' && (
+                  <Box sx={{ display: 'flex', justifyContent: 'flex-end', pt: 0.5, borderTop: '1px dashed #E2E8F0' }}>
+                    <Button
+                      size="small"
+                      onClick={() => navigate(`/dashboard/lmo/officers?assignOfficerId=${o.dbId}`)}
+                      sx={{ fontSize: '0.7rem', fontWeight: 700, color: '#15803D', py: 0.2, textTransform: 'none' }}
+                    >
+                      Dispatch Task →
+                    </Button>
+                  </Box>
+                )}
               </Box>
             )))}
             <Button

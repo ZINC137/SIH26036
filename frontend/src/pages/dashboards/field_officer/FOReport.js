@@ -2,15 +2,20 @@ import React, { useState, useEffect } from 'react';
 import {
   Box, Paper, Typography, Grid, TextField, Button, Alert, Chip,
   FormControl, InputLabel, Select, MenuItem, Stepper, Step, StepLabel,
-  CircularProgress,
+  CircularProgress, IconButton,
 } from '@mui/material';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import CloudUploadIcon from '@mui/icons-material/CloudUpload';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined';
+import PhotoCameraIcon from '@mui/icons-material/PhotoCamera';
+import InsertDriveFileIcon from '@mui/icons-material/InsertDriveFile';
 import { useNavigate } from 'react-router-dom';
+import API_BASE from '../../../config/api';
 
 const COLOR = '#7E22CE';
 const GRADIENT = 'linear-gradient(135deg, #A855F7, #7E22CE)';
 
-const steps = ['Select Application', 'Measurement Readings', 'Findings & Seal Stamping', 'Submit'];
+const steps = ['Select Application', 'Measurement Readings', 'Findings & Seal Stamping', 'Inspection Photos & Evidence', 'Submit'];
 
 export default function FOReport() {
   const navigate = useNavigate();
@@ -24,6 +29,10 @@ export default function FOReport() {
   // Selected task
   const [selectedTaskId, setSelectedTaskId] = useState('');
 
+  // Attached evidence photos
+  const [uploadedPhotos, setUploadedPhotos] = useState([]);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+
   // Inspection form fields
   const [form, setForm] = useState({
     testError: '0.02',
@@ -35,7 +44,7 @@ export default function FOReport() {
   });
 
   useEffect(() => {
-    fetch('http://localhost:5000/api/field-officer/tasks', { credentials: 'include' })
+    fetch(`${API_BASE}/api/field-officer/tasks`, { credentials: 'include' })
       .then((res) => res.json())
       .then((data) => {
         if (data.tasks && data.tasks.length > 0) {
@@ -49,6 +58,44 @@ export default function FOReport() {
 
   const selectedTask = tasks.find((t) => t.id === selectedTaskId) || null;
 
+  const handlePhotoUpload = async (e, docType) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!selectedTaskId) {
+      setError('Please select an assigned application first.');
+      return;
+    }
+    setUploadingPhoto(true);
+    setError('');
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('doc_type', docType || 'INSPECTION_PHOTO');
+      formData.append('application_id', selectedTaskId);
+
+      const res = await fetch(`${API_BASE}/api/upload`, {
+        method: 'POST',
+        credentials: 'include',
+        body: formData,
+      });
+      const data = await res.json();
+      if (res.ok && data.document) {
+        setUploadedPhotos((prev) => [...prev, data.document]);
+      } else {
+        setError(data.error || 'Failed to upload photo.');
+      }
+    } catch {
+      setError('Failed to upload file to server.');
+    } finally {
+      setUploadingPhoto(false);
+      e.target.value = '';
+    }
+  };
+
+  const removePhoto = (id) => {
+    setUploadedPhotos((prev) => prev.filter((p) => p.id !== id));
+  };
+
   const handleSubmit = async () => {
     if (!selectedTaskId) {
       setError('Please select an application to submit report for.');
@@ -58,7 +105,7 @@ export default function FOReport() {
     setSubmitting(true);
     setError('');
     try {
-      const res = await fetch(`http://localhost:5000/api/field-officer/applications/${selectedTaskId}/inspect`, {
+      const res = await fetch(`${API_BASE}/api/field-officer/applications/${selectedTaskId}/inspect`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -68,6 +115,7 @@ export default function FOReport() {
           security_seal_no: form.securitySealNo,
           inspection_result: form.result,
           inspection_notes: `${form.notes} ${form.recommendation ? 'Recommendation: ' + form.recommendation : ''}`,
+          document_ids: uploadedPhotos.map((p) => p.id),
         }),
       });
 
@@ -322,6 +370,148 @@ export default function FOReport() {
             {activeStep === 3 && (
               <Grid container spacing={3}>
                 <Grid item xs={12}>
+                  <Typography variant="h6" sx={{ fontWeight: 700, mb: 0.5 }}>
+                    📸 Inspection Photographs &amp; Statutory Evidence
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: '#64748B', mb: 2 }}>
+                    Upload physical evidence captured on-site. The gazetted LMO reviews these high-resolution images before approving and issuing the legal stamping certificate.
+                  </Typography>
+                </Grid>
+
+                {/* Upload action cards */}
+                {[
+                  {
+                    type: 'INSPECTION_PHOTO',
+                    title: 'Instrument On-Site Photo',
+                    desc: 'Full photo showing the instrument in place with model/serial markings.',
+                    icon: <PhotoCameraIcon sx={{ fontSize: 32, color: COLOR }} />,
+                  },
+                  {
+                    type: 'SEAL_PHOTO',
+                    title: 'Security Seal Affixed Photo',
+                    desc: 'Clear close-up photograph of the crimped lead/polycarbonate seal.',
+                    icon: <CheckCircleIcon sx={{ fontSize: 32, color: '#16A34A' }} />,
+                  },
+                  {
+                    type: 'TEST_OBSERVATION_SHEET',
+                    title: 'Test Observation Sheet / Report',
+                    desc: 'Field worksheet recording Schedule VII load points and test weights.',
+                    icon: <InsertDriveFileIcon sx={{ fontSize: 32, color: '#0284C7' }} />,
+                  },
+                ].map((card) => (
+                  <Grid item xs={12} sm={4} key={card.type}>
+                    <Paper
+                      variant="outlined"
+                      sx={{
+                        p: 2.5,
+                        borderRadius: 2.5,
+                        textAlign: 'center',
+                        height: '100%',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'space-between',
+                        border: '1.5px dashed #CBD5E1',
+                        bgcolor: '#FAFAFA',
+                        '&:hover': { bgcolor: '#F8FAFC', borderColor: COLOR },
+                      }}
+                    >
+                      <Box>
+                        <Box sx={{ mb: 1 }}>{card.icon}</Box>
+                        <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 0.5 }}>
+                          {card.title}
+                        </Typography>
+                        <Typography variant="caption" sx={{ color: '#64748B', display: 'block', mb: 2 }}>
+                          {card.desc}
+                        </Typography>
+                      </Box>
+                      <Button
+                        variant="outlined"
+                        component="label"
+                        size="small"
+                        disabled={uploadingPhoto}
+                        startIcon={<CloudUploadIcon />}
+                        sx={{ borderColor: COLOR, color: COLOR, fontWeight: 700, textTransform: 'none' }}
+                      >
+                        {uploadingPhoto ? 'Uploading...' : 'Choose / Capture Photo'}
+                        <input
+                          type="file"
+                          hidden
+                          accept="image/*,application/pdf"
+                          onChange={(e) => handlePhotoUpload(e, card.type)}
+                        />
+                      </Button>
+                    </Paper>
+                  </Grid>
+                ))}
+
+                {/* Uploaded Photos Gallery */}
+                <Grid item xs={12}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 1, mt: 1 }}>
+                    Uploaded Evidence Dossier ({uploadedPhotos.length} files attached)
+                  </Typography>
+                  {uploadedPhotos.length === 0 ? (
+                    <Alert severity="warning" sx={{ borderRadius: 2 }}>
+                      No photos attached yet. It is strongly advised to upload at least the <strong>Lead Seal Photo</strong> and <strong>Instrument Photo</strong> for statutory verification.
+                    </Alert>
+                  ) : (
+                    <Grid container spacing={2}>
+                      {uploadedPhotos.map((photo) => (
+                        <Grid item xs={12} sm={4} md={3} key={photo.id}>
+                          <Paper
+                            variant="outlined"
+                            sx={{
+                              p: 1.5,
+                              borderRadius: 2,
+                              position: 'relative',
+                              textAlign: 'center',
+                              bgcolor: '#FFFFFF',
+                            }}
+                          >
+                            <IconButton
+                              size="small"
+                              onClick={() => removePhoto(photo.id)}
+                              sx={{
+                                position: 'absolute',
+                                top: 4,
+                                right: 4,
+                                color: '#EF4444',
+                                bgcolor: 'rgba(255, 255, 255, 0.9)',
+                                '&:hover': { bgcolor: '#FEE2E2' },
+                              }}
+                            >
+                              <DeleteOutlineIcon fontSize="small" />
+                            </IconButton>
+                            {photo.mime_type?.startsWith('image/') ? (
+                              <img
+                                src={`${API_BASE}${photo.file_path}`}
+                                alt={photo.file_name}
+                                style={{ width: '100%', height: 110, objectFit: 'cover', borderRadius: 4 }}
+                              />
+                            ) : (
+                              <Box sx={{ height: 110, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <InsertDriveFileIcon sx={{ fontSize: 48, color: '#64748B' }} />
+                              </Box>
+                            )}
+                            <Chip
+                              label={photo.doc_type?.replace(/_/g, ' ')}
+                              size="small"
+                              sx={{ mt: 1, fontSize: '0.65rem', fontWeight: 700 }}
+                            />
+                            <Typography variant="caption" sx={{ display: 'block', mt: 0.5, color: '#64748B' }} noWrap>
+                              {photo.file_name}
+                            </Typography>
+                          </Paper>
+                        </Grid>
+                      ))}
+                    </Grid>
+                  )}
+                </Grid>
+              </Grid>
+            )}
+
+            {activeStep === 4 && (
+              <Grid container spacing={3}>
+                <Grid item xs={12}>
                   <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>Final Verification Summary</Typography>
                 </Grid>
                 <Grid item xs={12}>
@@ -345,6 +535,12 @@ export default function FOReport() {
                         <Typography variant="caption" sx={{ color: '#64748B', display: 'block' }}>SECURITY SEAL</Typography>
                         <Typography variant="body2" sx={{ fontWeight: 800, fontFamily: 'monospace' }}>
                           {form.securitySealNo}
+                        </Typography>
+                      </Grid>
+                      <Grid item xs={12}>
+                        <Typography variant="caption" sx={{ color: '#64748B', display: 'block' }}>STATUTORY EVIDENCE ATTACHED</Typography>
+                        <Typography variant="body2" sx={{ fontWeight: 700, color: uploadedPhotos.length > 0 ? '#16A34A' : '#D97706' }}>
+                          {uploadedPhotos.length > 0 ? `✅ ${uploadedPhotos.length} photograph(s) / document(s) attached for LMO scrutiny` : '⚠️ No photographs attached'}
                         </Typography>
                       </Grid>
                     </Grid>

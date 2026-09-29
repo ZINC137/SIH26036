@@ -49,3 +49,8 @@ Thumbs.db
 *.key
 *.pem
 private/
+
+# SQLite temporary journal files
+*.db-journal
+*.db-wal
+*.db-shm

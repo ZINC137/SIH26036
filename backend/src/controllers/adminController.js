@@ -1,7 +1,6 @@
 const argon2 = require('argon2');
 const crypto = require('crypto');
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../db');
 
 // Helper to log administrative audit trail
 const recordAuditLog = async (action, actor, target, details) => {
@@ -115,7 +114,7 @@ const appointLMO = async (req, res) => {
         assignedJurisdiction: result.lmoProfile.assignedJurisdiction,
         dscKeyId: result.lmoProfile.dscKeyId,
         status: result.user.status,
-        defaultPassword,
+        hasInitialCredentials: true,
       },
     });
   } catch (error) {
@@ -243,7 +242,7 @@ const appointGATC = async (req, res) => {
         centreName: result.gatcProfile.centre_name,
         gatcCode: result.gatcProfile.gatc_code,
         accreditationNo: result.gatcProfile.accreditation_no,
-        defaultPassword,
+        hasInitialCredentials: true,
       },
     });
   } catch (error) {
@@ -471,6 +470,31 @@ const getAllUsers = async (req, res) => {
 const updateUserStatus = async (req, res) => {
   try {
     const { userId, status, role } = req.body;
+
+    if (!userId) {
+      return res.status(400).json({ error: 'User ID is required.' });
+    }
+
+    const VALID_ROLES = ['admin', 'lmo', 'field_officer', 'gatc', 'user'];
+    const VALID_STATUSES = ['ACTIVE', 'PENDING_VERIFICATION', 'PENDING_ACTIVATION', 'SUSPENDED', 'REJECTED'];
+
+    if (role && !VALID_ROLES.includes(role)) {
+      return res.status(400).json({ error: `Invalid role specified. Permitted roles: ${VALID_ROLES.join(', ')}` });
+    }
+    if (status && !VALID_STATUSES.includes(status)) {
+      return res.status(400).json({ error: `Invalid status specified. Permitted statuses: ${VALID_STATUSES.join(', ')}` });
+    }
+
+    // Defense against self-lockout or accidental self-demotion
+    if (req.user && userId === req.user.id) {
+      if (role && role !== 'admin') {
+        return res.status(400).json({ error: 'Safety violation: Administrator cannot demote their own account.' });
+      }
+      if (status && status !== 'ACTIVE') {
+        return res.status(400).json({ error: 'Safety violation: Administrator cannot suspend their own active account.' });
+      }
+    }
+
     const updateData = {};
     if (status) updateData.status = status;
     if (role) updateData.role = role;

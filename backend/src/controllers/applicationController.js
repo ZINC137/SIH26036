@@ -1,7 +1,6 @@
-const { PrismaClient } = require("@prisma/client");
 const crypto = require("crypto");
+const prisma = require("../db");
 const { createRuleSnapshot } = require("../services/ruleEngineService");
-const prisma = new PrismaClient();
 
 // Calculate statutory verification fee based on Legal Metrology Rules Schedule XII
 const calculateFee = (instrument_type, application_type) => {

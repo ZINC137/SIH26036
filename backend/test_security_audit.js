@@ -91,7 +91,7 @@ async function runSecurityTests() {
     console.log('\n--- TEST 2: Citizen Search Privacy Scoping ---');
     const citizenClient = createClient(BASE_URL);
     const citizenLogin = await citizenClient.post('/api/auth/login', {
-      email: 'guptapriyanshu710@gmail.com',
+      email: 'priya@example.com',
       password: 'UserPassword123!',
       portalRole: 'user',
     });

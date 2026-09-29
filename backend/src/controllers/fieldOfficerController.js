@@ -1,28 +1,32 @@
 const crypto = require('crypto');
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../db');
 const { recordAuditLog } = require('./adminController');
 
 // 1. Get Assigned Inspection Tasks for Field Officer
 const getAssignedTasks = async (req, res) => {
   try {
     const foId = req.user?.id;
+    const userRole = req.user?.role;
 
-    // In a multi-inspector setup, fetch tasks assigned to this officer; if none assigned specifically, return active under-inspection tasks
+    // Strict multi-inspector isolation:
+    // Field Officers must ONLY see tasks specifically assigned to them.
     let where = { status: 'Under Inspection' };
-    if (foId) {
-      const specificCount = await prisma.application.count({
-        where: { status: 'Under Inspection', assigned_fo_id: foId },
-      });
-      if (specificCount > 0) {
-        where.assigned_fo_id = foId;
+    if (userRole === 'field_officer') {
+      if (!foId) {
+        return res.status(200).json({ tasks: [] });
       }
+      where.assigned_fo_id = foId;
+    } else if (req.query.foId) {
+      where.assigned_fo_id = req.query.foId;
     }
 
     const tasks = await prisma.application.findMany({
       where,
       orderBy: { submitted_at: 'desc' },
-      include: { user: { include: { profile: true } } },
+      include: {
+        user: { include: { profile: true } },
+        documents: true,
+      },
     });
 
     const formatted = tasks.map((t) => ({
@@ -48,6 +52,7 @@ const getAssignedTasks = async (req, res) => {
       assignedFoName: t.assigned_fo_name,
       assignedFoCode: t.assigned_fo_code,
       notes: t.inspection_notes,
+      documents: t.documents || [],
       raw: t,
     }));
 
@@ -62,19 +67,23 @@ const getAssignedTasks = async (req, res) => {
 const getOfficerStats = async (req, res) => {
   try {
     const foId = req.user?.id;
+    const isFo = req.user?.role === 'field_officer';
     const profile = foId ? await prisma.fieldOfficerProfile.findUnique({ where: { user_id: foId } }) : null;
+
+    // Field Officers only see counts for tasks specifically assigned to them
+    const foFilter = isFo ? { assigned_fo_id: foId || '__none__' } : (foId ? { assigned_fo_id: foId } : {});
 
     const [todayCount, completedMonth, totalCompleted] = await Promise.all([
       prisma.application.count({
         where: {
           status: 'Under Inspection',
-          ...(foId ? { assigned_fo_id: foId } : {}),
+          ...foFilter,
         },
       }),
       prisma.application.count({
         where: {
           status: 'Approved',
-          ...(foId ? { assigned_fo_id: foId } : {}),
+          ...foFilter,
           inspection_date: {
             gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
           },
@@ -83,7 +92,7 @@ const getOfficerStats = async (req, res) => {
       prisma.application.count({
         where: {
           status: 'Approved',
-          ...(foId ? { assigned_fo_id: foId } : {}),
+          ...foFilter,
         },
       }),
     ]);
@@ -121,6 +130,7 @@ const submitInspection = async (req, res) => {
       security_seal_no,
       inspection_notes,
       inspection_result, // 'Pass' | 'Fail' | 'Conditional'
+      document_ids,
     } = req.body;
 
     const app = await prisma.application.findUnique({ where: { id } });
@@ -140,9 +150,9 @@ const submitInspection = async (req, res) => {
     }
 
     // Enforce task assignment ownership for Field Officers
-    if (req.user?.role === 'field_officer' && app.assigned_fo_id && app.assigned_fo_id !== req.user.id) {
+    if (req.user?.role === 'field_officer' && app.assigned_fo_id !== req.user.id) {
       return res.status(403).json({
-        error: 'Access Denied: This inspection task is assigned to another Field Officer in the jurisdiction.',
+        error: 'Access Denied: This inspection task is assigned to another Field Officer or is unassigned.',
       });
     }
 
@@ -161,6 +171,14 @@ const submitInspection = async (req, res) => {
 
     const year = new Date().getFullYear();
     const seal_no = security_seal_no || `SEAL-DL-${year}-${crypto.randomBytes(2).toString('hex').toUpperCase()}`;
+
+    // Link uploaded inspection photos and worksheets to this application
+    if (Array.isArray(document_ids) && document_ids.length > 0) {
+      await prisma.document.updateMany({
+        where: { id: { in: document_ids } },
+        data: { application_id: id },
+      });
+    }
 
     if (inspection_result === 'Pass' || inspection_result === 'Conditional') {
       // FO submits report → status moves to "Inspection Reported" for LMO to review & sign
@@ -199,7 +217,27 @@ const submitInspection = async (req, res) => {
       });
 
     } else {
-      // Inspection result is Fail — FO can reject directly (instrument failed MPE tolerance)
+      // Inspection result is Fail — FO records rejection & permanent verification failure record
+      const verificationRecord = await prisma.verificationRecord.create({
+        data: {
+          application_id: app.id,
+          instrument_id: app.instrument_id || null,
+          verification_type: app.application_type === 'RE_VERIFICATION' ? 'PERIODICAL_REVERIFICATION' : 'INITIAL',
+          verifier_type: 'FIELD_OFFICER',
+          verifier_id: req.user?.id || app.assigned_fo_id,
+          verifier_name: officerName,
+          verifier_code: officerCode,
+          test_date: new Date(),
+          test_error_percentage: parseFloat(test_error_percentage) || 1.85,
+          environmental_conditions: environmental_temp || '26°C, 52% RH',
+          working_standards_used: 'Legal Metrology Secondary Working Standards',
+          test_observations: inspection_notes || 'Maximum permissible error exceeded under Schedule VII.',
+          result: 'Fail',
+          security_seal_no: seal_no,
+          remarks: inspection_notes || 'Failed MPE tolerances under Section 24 test.',
+        },
+      });
+
       const updated = await prisma.application.update({
         where: { id },
         data: {
@@ -227,6 +265,7 @@ const submitInspection = async (req, res) => {
       return res.status(200).json({
         message: 'Inspection submitted: Verification failed. Statutory rejection notice issued.',
         application: updated,
+        verificationRecord,
       });
     }
   } catch (error) {
@@ -252,23 +291,36 @@ const getInspectionHistory = async (req, res) => {
       }
     }
 
-    const orClauses = [];
-    if (foId) orClauses.push({ assigned_fo_id: foId });
-    if (officerName) orClauses.push({ stamped_by: { contains: officerName } });
-    if (officerCode) orClauses.push({ stamped_by: { contains: officerCode } });
-    if (req.user?.email) orClauses.push({ assigned_fo_name: { contains: req.user.email } });
+    const isFo = req.user?.role === 'field_officer';
+    let whereFilter;
 
-    // Show officer's verifications or all completed verifications if admin/auditor
-    const whereFilter = orClauses.length > 0
-      ? {
+    if (isFo) {
+      // Field officers MUST ONLY see their own inspection history
+      whereFilter = {
+        status: { in: ['Inspection Reported', 'Approved', 'Rejected'] },
+        assigned_fo_id: foId || '__none__',
+      };
+    } else {
+      // Admin / LMO supervision: can filter by foId if provided, or see all
+      const orClauses = [];
+      if (req.query.foId) orClauses.push({ assigned_fo_id: req.query.foId });
+      else if (foId) orClauses.push({ assigned_fo_id: foId });
+      if (officerName) orClauses.push({ stamped_by: { contains: officerName } });
+      if (officerCode) orClauses.push({ stamped_by: { contains: officerCode } });
+      if (req.user?.email) orClauses.push({ assigned_fo_name: { contains: req.user.email } });
+
+      whereFilter = orClauses.length > 0
+        ? {
           status: { in: ['Inspection Reported', 'Approved', 'Rejected'] },
           OR: orClauses,
         }
-      : { status: { in: ['Inspection Reported', 'Approved', 'Rejected'] } };
+        : { status: { in: ['Inspection Reported', 'Approved', 'Rejected'] } };
+    }
 
     const reports = await prisma.application.findMany({
       where: whereFilter,
       orderBy: { updated_at: 'desc' },
+      include: { documents: true },
     });
 
     const formatted = reports.map((r) => {
@@ -307,6 +359,7 @@ const getInspectionHistory = async (req, res) => {
         rejectionReason: r.rejection_reason,
         stampedBy: r.stamped_by || `${officerName} (${officerCode})`,
         fee: r.fee_amount,
+        documents: r.documents || [],
         raw: r,
       };
     });

@@ -1,7 +1,6 @@
 const path = require('path');
 const fs = require('fs');
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../db');
 
 // Upload document / photograph
 const uploadDocument = async (req, res) => {
@@ -54,9 +53,11 @@ const getApplicationDocuments = async (req, res) => {
     }
 
     const isOwner = req.user && application.user_id === req.user.id;
-    const isOfficer = req.user && ['admin', 'lmo', 'gatc', 'field_officer'].includes(req.user.role);
+    const isSupervisor = req.user && ['admin', 'lmo'].includes(req.user.role);
+    const isAssignedFo = req.user && req.user.role === 'field_officer' && application.assigned_fo_id === req.user.id;
+    const isAssignedGatc = req.user && req.user.role === 'gatc' && application.assigned_gatc_id === req.user.id;
 
-    if (!isOwner && !isOfficer) {
+    if (!isOwner && !isSupervisor && !isAssignedFo && !isAssignedGatc) {
       return res.status(403).json({ error: 'Forbidden: You do not have permission to view documents for this application.' });
     }
 
@@ -71,7 +72,7 @@ const getApplicationDocuments = async (req, res) => {
   }
 };
 
-// Stream / download document file (Protected: Document Uploader, Application Owner, or Authorized Officer)
+// Stream / download document file (Protected: Document Uploader, Application Owner, Supervisor, or Assigned Officer)
 const downloadDocument = async (req, res) => {
   try {
     const { id } = req.params;
@@ -84,11 +85,13 @@ const downloadDocument = async (req, res) => {
       return res.status(404).json({ error: 'Document not found.' });
     }
 
-    // Access control: Uploader, Application Owner, or Authorized Legal Metrology Officer
+    // Access control: Uploader, Application Owner, Admin/LMO Supervisor, or Assigned Field Inspector / GATC
     const isOwner = req.user && (doc.user_id === req.user.id || doc.application?.user_id === req.user.id);
-    const isOfficer = req.user && ['admin', 'lmo', 'gatc', 'field_officer'].includes(req.user.role);
+    const isSupervisor = req.user && ['admin', 'lmo'].includes(req.user.role);
+    const isAssignedFo = req.user && req.user.role === 'field_officer' && (doc.application?.assigned_fo_id === req.user.id || doc.user_id === req.user.id);
+    const isAssignedGatc = req.user && req.user.role === 'gatc' && (doc.application?.assigned_gatc_id === req.user.id || doc.user_id === req.user.id);
 
-    if (!isOwner && !isOfficer) {
+    if (!isOwner && !isSupervisor && !isAssignedFo && !isAssignedGatc) {
       return res.status(403).json({ error: 'Forbidden: You do not have permission to access this document.' });
     }
 

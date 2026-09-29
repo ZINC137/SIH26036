@@ -83,9 +83,61 @@ async function main() {
   });
   console.log('✓ LMO (lmo1@gov.in) provisioned');
 
-  // 3. Citizen User (guptapriyanshu710@gmail.com & priya@example.com)
+  // 2b. GATC (gatc1@gov.in)
+  const gatcUser = await prisma.user.upsert({
+    where: { email: 'gatc1@gov.in' },
+    update: { password_hash: gatcPwd, role: 'gatc', is_verified: true, status: 'ACTIVE' },
+    create: {
+      email: 'gatc1@gov.in',
+      password_hash: gatcPwd,
+      role: 'gatc',
+      status: 'ACTIVE',
+      is_verified: true,
+    },
+  });
+
+  await prisma.gatcProfile.upsert({
+    where: { user_id: gatcUser.id },
+    update: {
+      centre_name: 'National Metrological Calibration & Testing Centre',
+      gatc_code: 'GATC-DEL-01',
+      accreditation_no: 'NABL-GATC-2024-0091',
+      valid_until: new Date('2028-12-31'),
+      authorized_scopes: 'Weighbridges, Platform Balances, High Capacity Provers, Flow Meters',
+      authorized_categories: 'WATER_METER,GAS_METER,FLOW_METER,WEIGHBRIDGE',
+      authorized_state: 'Delhi',
+      authorized_districts: 'ALL',
+      state: 'Delhi',
+      district: 'North Delhi',
+      address: 'Plot 42, Okhla Industrial Area Phase III, New Delhi',
+      lab_head_name: 'Dr. Suresh Nair (Chief Metrologist)',
+      phone: '9871122334',
+      contact_email: 'gatc1@gov.in',
+      status: 'ACTIVE',
+    },
+    create: {
+      user_id: gatcUser.id,
+      centre_name: 'National Metrological Calibration & Testing Centre',
+      gatc_code: 'GATC-DEL-01',
+      accreditation_no: 'NABL-GATC-2024-0091',
+      valid_until: new Date('2028-12-31'),
+      authorized_scopes: 'Weighbridges, Platform Balances, High Capacity Provers, Flow Meters',
+      authorized_categories: 'WATER_METER,GAS_METER,FLOW_METER,WEIGHBRIDGE',
+      authorized_state: 'Delhi',
+      authorized_districts: 'ALL',
+      state: 'Delhi',
+      district: 'North Delhi',
+      address: 'Plot 42, Okhla Industrial Area Phase III, New Delhi',
+      lab_head_name: 'Dr. Suresh Nair (Chief Metrologist)',
+      phone: '9871122334',
+      contact_email: 'gatc1@gov.in',
+      status: 'ACTIVE',
+    },
+  });
+  console.log('✓ GATC (gatc1@gov.in) provisioned');
+
+  // 3. Citizen User (priya@example.com)
   const citizenUsers = [
-    { email: 'guptapriyanshu710@gmail.com', name: 'Priyanshu Gupta' },
     { email: 'priya@example.com', name: 'Priya Sharma' },
   ];
 
@@ -127,39 +179,81 @@ async function main() {
     console.log(`✓ Citizen (${c.email}) provisioned`);
   }
 
-  // 4. Field Officer (anjali@example.com)
-  const foUser = await prisma.user.upsert({
-    where: { email: 'anjali@example.com' },
-    update: { password_hash: foPwd, role: 'field_officer', is_verified: true, status: 'ACTIVE' },
-    create: {
+  // 4. Multiple Field Officers with distinct circles & credentials
+  const fieldOfficers = [
+    {
       email: 'anjali@example.com',
-      password_hash: foPwd,
-      role: 'field_officer',
-      status: 'ACTIVE',
-      is_verified: true,
-    },
-  });
-
-  await prisma.fieldOfficerProfile.upsert({
-    where: { user_id: foUser.id },
-    update: {
-      full_name: 'Anjali Verma (Inspector)',
+      name: 'Inspector Anjali Verma',
       employeeCode: 'FO-DEL-04',
-      circleZone: 'Zone 1 (Civil Lines & Sadar)',
+      circleZone: 'Zone 1 (Civil Lines & Sadar, North Delhi)',
       circlePincode: '110054',
-      designation: 'Field Verification Inspector',
-    },
-    create: {
-      user_id: foUser.id,
-      full_name: 'Anjali Verma (Inspector)',
-      employeeCode: 'FO-DEL-04',
-      circleZone: 'Zone 1 (Civil Lines & Sadar)',
-      circlePincode: '110054',
-      designation: 'Field Verification Inspector',
+      designation: 'Senior Field Verification Inspector',
       phone: '9822334455',
     },
-  });
-  console.log('✓ Field Officer (anjali@example.com) provisioned');
+    {
+      email: 'rajesh@example.com',
+      name: 'Inspector Rajesh Kumar',
+      employeeCode: 'FO-DEL-07',
+      circleZone: 'Zone 2 (Karol Bagh & Patel Nagar, Central Delhi)',
+      circlePincode: '110005',
+      designation: 'Field Verification Inspector',
+      phone: '9876543211',
+    },
+    {
+      email: 'vikram@example.com',
+      name: 'Inspector Vikram Singh',
+      employeeCode: 'FO-DEL-12',
+      circleZone: 'Zone 3 (Rohini & Outer Delhi, North-West Delhi)',
+      circlePincode: '110085',
+      designation: 'Field Verification Inspector',
+      phone: '9811223344',
+    },
+    {
+      email: 'fo@gmail.com',
+      name: 'Inspector Amit Sharma',
+      employeeCode: 'FO-DEL-01',
+      circleZone: 'Zone 4 (Chandni Chowk & Daryaganj, Old Delhi)',
+      circlePincode: '110006',
+      designation: 'Senior Enforcement Officer',
+      phone: '9833445566',
+    },
+  ];
+
+  for (const fo of fieldOfficers) {
+    const foUser = await prisma.user.upsert({
+      where: { email: fo.email },
+      update: { password_hash: foPwd, role: 'field_officer', is_verified: true, status: 'ACTIVE' },
+      create: {
+        email: fo.email,
+        password_hash: foPwd,
+        role: 'field_officer',
+        status: 'ACTIVE',
+        is_verified: true,
+      },
+    });
+
+    await prisma.fieldOfficerProfile.upsert({
+      where: { user_id: foUser.id },
+      update: {
+        full_name: fo.name,
+        employeeCode: fo.employeeCode,
+        circleZone: fo.circleZone,
+        circlePincode: fo.circlePincode,
+        designation: fo.designation,
+        phone: fo.phone,
+      },
+      create: {
+        user_id: foUser.id,
+        full_name: fo.name,
+        employeeCode: fo.employeeCode,
+        circleZone: fo.circleZone,
+        circlePincode: fo.circlePincode,
+        designation: fo.designation,
+        phone: fo.phone,
+      },
+    });
+    console.log(`✓ Field Officer (${fo.email} - ${fo.name}) provisioned`);
+  }
 
   console.log('\nAll core demo profiles synchronized successfully!');
 }

@@ -1,4 +1,3 @@
-const { PrismaClient } = require('@prisma/client');
 const {
   determineEligibleAuthorities,
   getCategorySchema,
@@ -7,7 +6,7 @@ const {
   createNewRuleVersion,
 } = require('../services/ruleEngineService');
 
-const prisma = new PrismaClient();
+const prisma = require('../db');
 
 // 1. GET /api/rules/categories - Public & Portal category list
 const getCategories = async (req, res) => {

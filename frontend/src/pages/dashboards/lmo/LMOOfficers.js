@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Box, Paper, Typography, Grid, Avatar, Chip, Button, LinearProgress,
   IconButton, Tooltip, Dialog, DialogTitle, DialogContent, DialogActions,
@@ -18,12 +19,25 @@ const COLOR = '#1B5E20';
 const GRADIENT = 'linear-gradient(135deg, #2E7D32, #1B5E20)';
 
 export default function LMOOfficers() {
+  const [searchParams] = useSearchParams();
+  const assignOfficerIdFromUrl = searchParams.get('assignOfficerId');
+
   const [officers, setOfficers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [feedback, setFeedback] = useState({ type: '', message: '' });
 
   // Task assignment dialog
   const [selected, setSelected] = useState(null);
+  const [pendingApps, setPendingApps] = useState([]);
+  const [, setLoadingApps] = useState(false);
+  const [assignForm, setAssignForm] = useState({
+    appId: '',
+    scheduledDate: new Date().toISOString().split('T')[0],
+    scheduledTime: '11:30 AM',
+    priority: 'Normal',
+    notes: '',
+    submitting: false,
+  });
 
   // Nomination dialog state
   const [openNominate, setOpenNominate] = useState(false);
@@ -52,9 +66,97 @@ export default function LMOOfficers() {
     }
   };
 
+  const fetchPendingApps = async () => {
+    setLoadingApps(true);
+    try {
+      const res = await fetch('http://localhost:5000/api/lmo/applications', { credentials: 'include' });
+      if (res.ok) {
+        const data = await res.json();
+        const pending = (data.applications || []).filter((a) => a.status === 'Pending');
+        setPendingApps(pending);
+      }
+    } catch (err) {
+      console.warn('LMO pending apps fetch fallback:', err);
+    } finally {
+      setLoadingApps(false);
+    }
+  };
+
   useEffect(() => {
     fetchOfficers();
+    fetchPendingApps();
   }, []);
+
+  // Auto-open modal if assignOfficerId is in URL
+  useEffect(() => {
+    if (assignOfficerIdFromUrl && officers.length > 0 && !selected) {
+      const targetOfficer = officers.find((o) => o.dbId === assignOfficerIdFromUrl || o.id === assignOfficerIdFromUrl);
+      if (targetOfficer) {
+        handleOpenAssign(targetOfficer);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [assignOfficerIdFromUrl, officers]);
+
+  const handleOpenAssign = (officer) => {
+    setSelected(officer);
+    const firstApp = pendingApps[0];
+    setAssignForm({
+      appId: firstApp?.id || '',
+      scheduledDate: new Date().toISOString().split('T')[0],
+      scheduledTime: '11:30 AM',
+      priority: firstApp?.priority || 'Normal',
+      notes: `Territorial on-site verification under Section 24 of Legal Metrology Act in ${officer.zone}. Verify Rule 11 tolerances.`,
+      submitting: false,
+    });
+  };
+
+  const handleDispatchTask = async (e) => {
+    e.preventDefault();
+    if (!assignForm.appId) {
+      setFeedback({ type: 'error', message: 'Please select a pending application to assign to this officer.' });
+      return;
+    }
+    if (!selected?.dbId) {
+      setFeedback({ type: 'error', message: 'Invalid Field Officer selected.' });
+      return;
+    }
+
+    setAssignForm((prev) => ({ ...prev, submitting: true }));
+    try {
+      const res = await fetch(`http://localhost:5000/api/lmo/applications/${assignForm.appId}/assign`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          assigneeType: 'FIELD_OFFICER',
+          foUserId: selected.dbId,
+          scheduledDate: assignForm.scheduledDate,
+          scheduledTime: assignForm.scheduledTime,
+          priority: assignForm.priority,
+          notes: assignForm.notes,
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        const assignedApp = pendingApps.find((a) => a.id === assignForm.appId);
+        setFeedback({
+          type: 'success',
+          message: `Application ${assignedApp?.appNumber || ''} successfully allocated to Inspector ${selected.name}! Scheduled on ${assignForm.scheduledDate}.`,
+        });
+        setSelected(null);
+        fetchOfficers();
+        fetchPendingApps();
+      } else {
+        setFeedback({ type: 'error', message: data.error || 'Failed to dispatch task.' });
+      }
+    } catch (err) {
+      setFeedback({ type: 'error', message: 'Network error while dispatching task.' });
+    } finally {
+      setAssignForm((prev) => ({ ...prev, submitting: false }));
+    }
+  };
 
   const handleNominateSubmit = async (e) => {
     e.preventDefault();
@@ -356,7 +458,7 @@ export default function LMOOfficers() {
                     size="small"
                     startIcon={<AssignmentIcon />}
                     disabled={isPending || isActivation}
-                    onClick={() => setSelected(o)}
+                    onClick={() => handleOpenAssign(o)}
                     sx={{ ml: 'auto', color: COLOR, fontWeight: 700, fontSize: '0.78rem' }}
                   >
                     Assign Task
@@ -485,26 +587,198 @@ export default function LMOOfficers() {
       </Dialog>
 
       {/* ── MODAL: ASSIGN TASK TO ACTIVE OFFICER ── */}
-      <Dialog open={!!selected} onClose={() => setSelected(null)} maxWidth="sm" fullWidth>
-        <DialogTitle sx={{ fontWeight: 700 }}>Assign Inspection Task — {selected?.name}</DialogTitle>
-        <DialogContent dividers sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 2 }}>
-          <TextField label="Application Reference ID" fullWidth size="small" placeholder="e.g. APP-2026-019" />
-          <TextField label="Scheduled Inspection Date" type="date" fullWidth size="small" InputLabelProps={{ shrink: true }} />
-          <TextField label="Special Calibration Directives" fullWidth size="small" multiline rows={3} />
-        </DialogContent>
-        <DialogActions sx={{ p: 2, gap: 1 }}>
-          <Button onClick={() => setSelected(null)} sx={{ color: '#757575' }}>Cancel</Button>
-          <Button
-            variant="contained"
-            sx={{ background: GRADIENT, fontWeight: 700 }}
-            onClick={() => {
-              setSelected(null);
-              setFeedback({ type: 'success', message: `Inspection order dispatched to ${selected?.name}.` });
-            }}
-          >
-            Dispatch Task
-          </Button>
-        </DialogActions>
+      <Dialog
+        open={!!selected}
+        onClose={() => !assignForm.submitting && setSelected(null)}
+        maxWidth="md"
+        fullWidth
+        PaperProps={{ sx: { borderRadius: 3 } }}
+      >
+        <Box component="form" onSubmit={handleDispatchTask}>
+          <DialogTitle sx={{ fontWeight: 800, display: 'flex', alignItems: 'center', gap: 1.5, color: '#1B5E20' }}>
+            <AssignmentIcon sx={{ color: COLOR }} />
+            Assign Verification Task to Inspector
+          </DialogTitle>
+          <Divider />
+          <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, pt: 2.5 }}>
+            {/* Inspector Identity Banner */}
+            {selected && (
+              <Paper
+                elevation={0}
+                sx={{
+                  p: 2,
+                  borderRadius: 2,
+                  bgcolor: '#F0FDF4',
+                  border: '1.5px solid #BBF7D0',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: 1.5,
+                }}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                  <Avatar sx={{ background: GRADIENT, fontWeight: 800, width: 42, height: 42 }}>
+                    {selected.name?.charAt(0) || 'F'}
+                  </Avatar>
+                  <Box>
+                    <Typography variant="body1" sx={{ fontWeight: 800, color: '#14532D' }}>
+                      {selected.name}
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: '#15803D', fontWeight: 600, display: 'block' }}>
+                      ID: {selected.id} · 📍 {selected.zone} {selected.phone ? `• 📞 ${selected.phone}` : ''}
+                    </Typography>
+                  </Box>
+                </Box>
+                <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                  <Chip
+                    size="small"
+                    label={`${selected.assigned || 0} active tasks`}
+                    sx={{
+                      bgcolor: '#FFFFFF',
+                      color: (selected.assigned || 0) === 0 ? '#15803D' : '#B45309',
+                      fontWeight: 700,
+                      border: '1px solid #BBF7D0',
+                    }}
+                  />
+                  <Chip
+                    size="small"
+                    label={selected.status}
+                    sx={{
+                      bgcolor: selected.status === 'Active' ? '#DCFCE7' : '#FEF3C7',
+                      color: selected.status === 'Active' ? '#15803D' : '#92400E',
+                      fontWeight: 800,
+                    }}
+                  />
+                </Box>
+              </Paper>
+            )}
+
+            {/* Pending Application Selector */}
+            {pendingApps.length === 0 ? (
+              <Alert severity="info" sx={{ borderRadius: 2 }}>
+                <strong>No pending applications in queue.</strong> All current applications in this jurisdiction are already assigned or processed.
+              </Alert>
+            ) : (
+              <>
+                <FormControl fullWidth size="small" required>
+                  <InputLabel>Select Pending Application *</InputLabel>
+                  <Select
+                    value={assignForm.appId}
+                    label="Select Pending Application *"
+                    onChange={(e) => {
+                      const app = pendingApps.find((a) => a.id === e.target.value);
+                      setAssignForm((prev) => ({
+                        ...prev,
+                        appId: e.target.value,
+                        priority: app?.priority || prev.priority,
+                        notes: `Territorial on-site verification of ${app?.instrument || 'instrument'} at ${app?.applicant || 'applicant premises'}. Verify Rule 11 tolerances.`,
+                      }));
+                    }}
+                  >
+                    {pendingApps.map((a) => (
+                      <MenuItem key={a.id} value={a.id}>
+                        <strong>{a.appNumber}</strong> &nbsp;—&nbsp; {a.applicant} &nbsp;({a.instrument}) &nbsp;•&nbsp; Priority: {a.priority}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+
+                {/* Selected Application Preview Dossier */}
+                {(() => {
+                  const currApp = pendingApps.find((a) => a.id === assignForm.appId);
+                  if (!currApp) return null;
+                  return (
+                    <Paper
+                      elevation={0}
+                      sx={{
+                        p: 2,
+                        borderRadius: 2,
+                        bgcolor: '#F8FAFC',
+                        border: '1px solid #E2E8F0',
+                      }}
+                    >
+                      <Grid container spacing={2}>
+                        <Grid item xs={12} sm={6}>
+                          <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 600, display: 'block' }}>APPLICANT &amp; FIRM</Typography>
+                          <Typography variant="body2" sx={{ fontWeight: 800, color: '#0F172A' }}>{currApp.applicant}</Typography>
+                          <Typography variant="caption" sx={{ color: '#475569' }}>📍 {currApp.address}</Typography>
+                        </Grid>
+                        <Grid item xs={12} sm={6}>
+                          <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 600, display: 'block' }}>INSTRUMENT DETAILS</Typography>
+                          <Typography variant="body2" sx={{ fontWeight: 800, color: '#0F172A' }}>{currApp.instrument}</Typography>
+                          <Typography variant="caption" sx={{ color: '#475569' }}>S/N: {currApp.serial} • Make: {currApp.make}</Typography>
+                        </Grid>
+                      </Grid>
+                    </Paper>
+                  );
+                })()}
+
+                <Grid container spacing={2}>
+                  <Grid item xs={12} sm={4}>
+                    <TextField
+                      fullWidth
+                      size="small"
+                      type="date"
+                      label="Scheduled Inspection Date *"
+                      required
+                      value={assignForm.scheduledDate}
+                      onChange={(e) => setAssignForm({ ...assignForm, scheduledDate: e.target.value })}
+                      InputLabelProps={{ shrink: true }}
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={4}>
+                    <TextField
+                      fullWidth
+                      size="small"
+                      label="Scheduled Time *"
+                      required
+                      value={assignForm.scheduledTime}
+                      onChange={(e) => setAssignForm({ ...assignForm, scheduledTime: e.target.value })}
+                      placeholder="e.g. 11:30 AM"
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={4}>
+                    <FormControl fullWidth size="small">
+                      <InputLabel>Priority</InputLabel>
+                      <Select
+                        value={assignForm.priority}
+                        label="Priority"
+                        onChange={(e) => setAssignForm({ ...assignForm, priority: e.target.value })}
+                      >
+                        <MenuItem value="High">🔴 High Priority</MenuItem>
+                        <MenuItem value="Normal">🔵 Normal</MenuItem>
+                        <MenuItem value="Low">🟢 Low Priority</MenuItem>
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                </Grid>
+
+                <TextField
+                  fullWidth
+                  size="small"
+                  multiline
+                  rows={3}
+                  label="Special Calibration Directives &amp; Inspection Instructions"
+                  value={assignForm.notes}
+                  onChange={(e) => setAssignForm({ ...assignForm, notes: e.target.value })}
+                  placeholder="Enter specific verification requirements, physical stamping instructions, or standard weights specifications..."
+                />
+              </>
+            )}
+          </DialogContent>
+          <DialogActions sx={{ p: 2.5, gap: 1 }}>
+            <Button onClick={() => setSelected(null)} sx={{ color: '#757575', fontWeight: 600 }}>Cancel</Button>
+            <Button
+              type="submit"
+              disabled={assignForm.submitting || pendingApps.length === 0 || !assignForm.appId}
+              variant="contained"
+              sx={{ background: GRADIENT, fontWeight: 700, px: 3 }}
+            >
+              {assignForm.submitting ? 'Dispatching...' : `Dispatch Task to ${selected?.name?.split(' ')[0] || 'Officer'}`}
+            </Button>
+          </DialogActions>
+        </Box>
       </Dialog>
     </Box>
   );

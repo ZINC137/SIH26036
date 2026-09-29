@@ -560,51 +560,108 @@ export default function Login({ onLogin }) {
             </Box>
 
             {/* Quick Demo Credentials Pill with One-Click Fill */}
-            <Box
-              sx={{
-                mb: 3,
-                p: 1.75,
-                bgcolor: '#F8FAFC',
-                border: '1px solid #E2E8F0',
-                borderRadius: '14px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                flexWrap: 'wrap',
-                gap: 1.5,
-              }}
-            >
-              <Box>
-                <Typography variant="caption" sx={{ color: '#64748B', display: 'block', fontWeight: 600 }}>
-                  DEMO CREDENTIALS ({portal.roleBadge}):
-                </Typography>
-                <Typography variant="caption" sx={{ color: '#0F172A', fontWeight: 700 }}>
-                  {portal.demoEmail} &nbsp;|&nbsp; {portal.demoPass}
-                </Typography>
-              </Box>
-              <Button
-                size="small"
-                variant="outlined"
-                onClick={fillDemoCredentials}
-                startIcon={<FlashOnRoundedIcon sx={{ fontSize: '1rem !important' }} />}
+            {roleFromUrl === 'field_officer' ? (
+              <Box
                 sx={{
-                  color: portal.darkColor,
-                  borderColor: portal.accentBorder,
-                  bgcolor: portal.lightBg,
-                  fontWeight: 700,
-                  fontSize: '0.75rem',
-                  borderRadius: '8px',
-                  textTransform: 'none',
-                  py: 0.5,
-                  '&:hover': {
-                    bgcolor: portal.accentBorder,
-                    borderColor: portal.color,
-                  },
+                  mb: 3,
+                  p: 1.75,
+                  bgcolor: '#FAF5FF',
+                  border: '1.5px solid #E9D5FF',
+                  borderRadius: '14px',
                 }}
               >
-                Auto Fill
-              </Button>
-            </Box>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.25 }}>
+                  <Typography variant="caption" sx={{ color: '#7E22CE', fontWeight: 800, letterSpacing: '0.02em' }}>
+                    ⚡ MULTI-INSPECTOR DEMO SWITCHER ({portal.roleBadge}):
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: '#9333EA', fontWeight: 600 }}>
+                    Password: FoPassword123!
+                  </Typography>
+                </Box>
+                <Grid container spacing={1}>
+                  {[
+                    { name: 'Insp. Anjali (Zone 1)', email: 'anjali@example.com' },
+                    { name: 'Insp. Rajesh (Zone 2)', email: 'rajesh@example.com' },
+                    { name: 'Insp. Vikram (Zone 3)', email: 'vikram@example.com' },
+                    { name: 'Insp. Amit (Zone 4)', email: 'fo@gmail.com' },
+                  ].map((fo) => (
+                    <Grid item xs={6} key={fo.email}>
+                      <Button
+                        fullWidth
+                        size="small"
+                        variant={email === fo.email ? 'contained' : 'outlined'}
+                        onClick={() => {
+                          setEmail(fo.email);
+                          setPassword('FoPassword123!');
+                          setError('');
+                        }}
+                        sx={{
+                          fontSize: '0.73rem',
+                          fontWeight: 700,
+                          textTransform: 'none',
+                          py: 0.6,
+                          borderRadius: '8px',
+                          bgcolor: email === fo.email ? '#7E22CE' : '#FFFFFF',
+                          borderColor: '#D8B4FE',
+                          color: email === fo.email ? '#FFFFFF' : '#6B21A8',
+                          '&:hover': {
+                            bgcolor: email === fo.email ? '#6B21A8' : '#F3E8FF',
+                          },
+                        }}
+                      >
+                        {fo.name}
+                      </Button>
+                    </Grid>
+                  ))}
+                </Grid>
+              </Box>
+            ) : (
+              <Box
+                sx={{
+                  mb: 3,
+                  p: 1.75,
+                  bgcolor: '#F8FAFC',
+                  border: '1px solid #E2E8F0',
+                  borderRadius: '14px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: 1.5,
+                }}
+              >
+                <Box>
+                  <Typography variant="caption" sx={{ color: '#64748B', display: 'block', fontWeight: 600 }}>
+                    DEMO CREDENTIALS ({portal.roleBadge}):
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: '#0F172A', fontWeight: 700 }}>
+                    {portal.demoEmail} &nbsp;|&nbsp; {portal.demoPass}
+                  </Typography>
+                </Box>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  onClick={fillDemoCredentials}
+                  startIcon={<FlashOnRoundedIcon sx={{ fontSize: '1rem !important' }} />}
+                  sx={{
+                    color: portal.darkColor,
+                    borderColor: portal.accentBorder,
+                    bgcolor: portal.lightBg,
+                    fontWeight: 700,
+                    fontSize: '0.75rem',
+                    borderRadius: '8px',
+                    textTransform: 'none',
+                    py: 0.5,
+                    '&:hover': {
+                      bgcolor: portal.accentBorder,
+                      borderColor: portal.color,
+                    },
+                  }}
+                >
+                  Auto Fill
+                </Button>
+              </Box>
+            )}
 
             {/* Verification Status Alerts from URL */}
             {verifiedParam === 'true' && (

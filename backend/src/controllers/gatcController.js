@@ -1,5 +1,4 @@
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../db');
 
 const recordAuditLog = async (action, actor, target, details) => {
   try {
@@ -119,6 +118,7 @@ const submitGatcInspection = async (req, res) => {
       inspection_notes,
       working_standards_used,
       test_observations,
+      document_ids,
     } = req.body;
 
     const app = await prisma.application.findUnique({ where: { id } });
@@ -180,6 +180,14 @@ const submitGatcInspection = async (req, res) => {
       },
     });
 
+    // Link uploaded test sheets and photos to this application
+    if (Array.isArray(document_ids) && document_ids.length > 0) {
+      await prisma.document.updateMany({
+        where: { id: { in: document_ids } },
+        data: { application_id: id },
+      });
+    }
+
     // 2. Update Application state
     const updatedApp = await prisma.application.update({
       where: { id },
@@ -238,6 +246,7 @@ const getGatcHistory = async (req, res) => {
       orderBy: { updated_at: 'desc' },
       include: {
         verifications: true,
+        documents: true,
       },
     });
 
@@ -269,6 +278,7 @@ const getGatcHistory = async (req, res) => {
         notes: a.inspection_notes,
         stampedBy: a.stamped_by,
         verifications: a.verifications,
+        documents: a.documents || [],
         raw: a,
       };
     });

@@ -1,7 +1,6 @@
 const argon2 = require('argon2');
 const crypto = require('crypto');
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../db');
 const { recordAuditLog } = require('./adminController');
 const { validateAuthorityAssignment, calculateValidityDates } = require('../services/ruleEngineService');
 
@@ -200,7 +199,10 @@ const getLmoApplications = async (req, res) => {
     const apps = await prisma.application.findMany({
       where,
       orderBy: { submitted_at: 'desc' },
-      include: { user: { include: { profile: true } } },
+      include: {
+        user: { include: { profile: true } },
+        documents: true,
+      },
     });
 
     let filtered = apps;
@@ -245,6 +247,7 @@ const getLmoApplications = async (req, res) => {
       inspectionResult: a.inspection_result,
       securitySealNo: a.security_seal_no,
       stampedBy: a.stamped_by,
+      documents: a.documents || [],
       raw: a,
     }));
 
@@ -627,7 +630,7 @@ const reviewApplication = async (req, res) => {
       });
 
     } else if (action === 'reject') {
-      if (!['Pending', 'Inspection Reported', 'Correction Required'].includes(app.status)) {
+      if (!['Pending', 'Inspection Reported', 'Correction Required', 'Rejected'].includes(app.status)) {
         return res.status(400).json({ error: `Cannot reject application in "${app.status}" status.` });
       }
 
@@ -683,6 +686,7 @@ const getLmoCertificates = async (req, res) => {
         user: {
           select: { email: true, profile: true },
         },
+        documents: true,
       },
     });
 
@@ -726,6 +730,7 @@ const getLmoCertificates = async (req, res) => {
         submittedAt: new Date(a.submitted_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
         feeAmount: a.fee_amount,
         paymentStatus: a.payment_status,
+        documents: a.documents || [],
         raw: a,
       };
     });
