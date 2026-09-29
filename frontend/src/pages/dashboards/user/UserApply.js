@@ -85,6 +85,8 @@ export default function UserApply() {
   const [preferredDate, setPreferredDate] = useState("");
   const [uploadedDocuments, setUploadedDocuments] = useState([]);
   const [uploadingDoc, setUploadingDoc] = useState(false);
+  const [uploadError, setUploadError] = useState("");
+  const [localPreviews, setLocalPreviews] = useState({});
 
   // Legal Metrology Rule Configuration Engine states
   const [categories, setCategories] = useState([]);
@@ -194,9 +196,32 @@ export default function UserApply() {
   // Upload photo / document handler
   const handleFileUpload = async (e, docType) => {
     const file = e.target.files?.[0];
+    const inputEl = e.target;
     if (!file) return;
+
+    // Client-side pre-validation
+    const MAX_SIZE = 10 * 1024 * 1024; // 10MB
+    if (file.size > MAX_SIZE) {
+      const errMsg = "File exceeds the 10MB limit. Please choose an image or document under 10MB.";
+      setError(errMsg);
+      setUploadError(errMsg);
+      if (inputEl) inputEl.value = "";
+      return;
+    }
+
+    const ext = file.name.split('.').pop().toLowerCase();
+    const validExts = ['jpg', 'jpeg', 'jfif', 'png', 'webp', 'pdf'];
+    if (!validExts.includes(ext)) {
+      const errMsg = `Unsupported file format (.${ext}). Only JPG, PNG, WEBP, and PDF documents are permitted.`;
+      setError(errMsg);
+      setUploadError(errMsg);
+      if (inputEl) inputEl.value = "";
+      return;
+    }
+
     setUploadingDoc(true);
     setError("");
+    setUploadError("");
     try {
       const formData = new FormData();
       formData.append("file", file);
@@ -210,22 +235,220 @@ export default function UserApply() {
 
       const data = await res.json();
       if (res.ok && data.document) {
+        if (file.type.startsWith("image/")) {
+          const previewUrl = URL.createObjectURL(file);
+          setLocalPreviews((prev) => ({ ...prev, [data.document.id]: previewUrl }));
+        }
         setUploadedDocuments((prev) => [...prev, data.document]);
+        setUploadError("");
       } else {
-        setError(data.error || "File upload failed.");
+        const errMsg = data.error || "File upload failed. Ensure the image is a valid format.";
+        setError(errMsg);
+        setUploadError(errMsg);
       }
     } catch {
-      setError("Failed to upload document to server.");
+      const errMsg = "Failed to upload document to server.";
+      setError(errMsg);
+      setUploadError(errMsg);
     } finally {
       setUploadingDoc(false);
-      // Reset input value
-      e.target.value = "";
+      if (inputEl) {
+        inputEl.value = "";
+      }
     }
   };
 
   const removeDocument = (docId) => {
     setUploadedDocuments((prev) => prev.filter((d) => d.id !== docId));
+    setLocalPreviews((prev) => {
+      const copy = { ...prev };
+      if (copy[docId]) {
+        URL.revokeObjectURL(copy[docId]);
+        delete copy[docId];
+      }
+      return copy;
+    });
   };
+
+  const renderDocumentUploader = (sectionTitle = "Upload Instrument Evidence & Supporting Documents") => (
+    <Box sx={{ mb: 3 }}>
+      <Typography variant="caption" sx={{ fontWeight: 800, color: "#64748B", textTransform: "uppercase", letterSpacing: 1, display: "block", mb: 1.5 }}>
+        {sectionTitle}
+      </Typography>
+
+      {uploadError && (
+        <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }} onClose={() => setUploadError("")}>
+          {uploadError}
+        </Alert>
+      )}
+
+      <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap", mb: 2 }}>
+        <Button
+          variant="contained"
+          component="label"
+          startIcon={<CloudUploadIcon />}
+          disabled={uploadingDoc}
+          sx={{
+            background: GRADIENT,
+            color: "#FFFFFF",
+            fontWeight: 700,
+            borderRadius: 2,
+            px: 2.5,
+            py: 1.2,
+            boxShadow: "0 4px 12px rgba(230,81,0,0.25)",
+            "&:hover": { background: "linear-gradient(135deg, #E65100, #BF360C)" }
+          }}
+        >
+          {uploadingDoc ? "Uploading..." : "Upload Instrument / Nameplate Photo"}
+          <input
+            type="file"
+            hidden
+            accept="image/jpeg,image/png,image/webp,image/jpg,.jpg,.jpeg,.png,.webp,.jfif"
+            onChange={(e) => handleFileUpload(e, "INSTRUMENT_PHOTO")}
+          />
+        </Button>
+
+        <Button
+          variant="outlined"
+          component="label"
+          startIcon={<AttachFileIcon />}
+          disabled={uploadingDoc}
+          sx={{
+            borderColor: "#CBD5E1",
+            color: "#334155",
+            fontWeight: 700,
+            borderRadius: 2,
+            px: 2.5,
+            py: 1.2,
+            "&:hover": { borderColor: COLOR, color: COLOR }
+          }}
+        >
+          Upload Invoice / Stamping Slip
+          <input
+            type="file"
+            hidden
+            accept="image/jpeg,image/png,image/webp,image/jpg,application/pdf,.jpg,.jpeg,.png,.webp,.pdf,.jfif"
+            onChange={(e) => handleFileUpload(e, "SUPPORTING_DOCUMENT")}
+          />
+        </Button>
+
+        {uploadingDoc && (
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            <CircularProgress size={22} sx={{ color: COLOR }} />
+            <Typography variant="body2" sx={{ color: "#64748B", fontWeight: 600 }}>Uploading securely...</Typography>
+          </Box>
+        )}
+      </Box>
+
+      {/* Render uploaded document cards with thumbnails */}
+      {uploadedDocuments.length > 0 ? (
+        <Grid container spacing={2} sx={{ mt: 0.5, mb: 2 }}>
+          {uploadedDocuments.map((doc) => {
+            const isImage = doc.mime_type?.startsWith("image/") || doc.doc_type === "INSTRUMENT_PHOTO";
+            const previewSrc = localPreviews[doc.id] || doc.file_path;
+            return (
+              <Grid item xs={12} sm={6} md={4} key={doc.id}>
+                <Paper
+                  variant="outlined"
+                  sx={{
+                    p: 1.5,
+                    borderRadius: 2,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 1.5,
+                    bgcolor: "#F8FAFC",
+                    border: "1px solid #E2E8F0",
+                    position: "relative",
+                  }}
+                >
+                  {isImage ? (
+                    <Box
+                      component="img"
+                      src={previewSrc}
+                      alt={doc.file_name}
+                      sx={{
+                        width: 52,
+                        height: 52,
+                        objectFit: "cover",
+                        borderRadius: 1.5,
+                        border: "1px solid #CBD5E1",
+                        bgcolor: "#FFFFFF",
+                        flexShrink: 0,
+                      }}
+                      onError={(e) => {
+                        e.target.style.display = "none";
+                      }}
+                    />
+                  ) : (
+                    <Box
+                      sx={{
+                        width: 52,
+                        height: 52,
+                        borderRadius: 1.5,
+                        bgcolor: "#EFF6FF",
+                        color: "#1E40AF",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: 24,
+                        flexShrink: 0,
+                      }}
+                    >
+                      📄
+                    </Box>
+                  )}
+                  <Box sx={{ flex: 1, minWidth: 0 }}>
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        fontWeight: 700,
+                        color: doc.doc_type === "INSTRUMENT_PHOTO" ? "#C2410C" : "#1D4ED8",
+                        display: "block",
+                        textTransform: "uppercase",
+                        letterSpacing: 0.5,
+                        lineHeight: 1.2,
+                      }}
+                    >
+                      {doc.doc_type === "INSTRUMENT_PHOTO" ? "📷 Nameplate Photo" : "📄 Supporting Doc"}
+                    </Typography>
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        fontWeight: 600,
+                        color: "#1E293B",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                        mt: 0.3,
+                      }}
+                      title={doc.file_name}
+                    >
+                      {doc.file_name}
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: "#64748B" }}>
+                      {(doc.file_size / 1024).toFixed(0)} KB • Verified
+                    </Typography>
+                  </Box>
+                  <Button
+                    size="small"
+                    onClick={() => removeDocument(doc.id)}
+                    sx={{ minWidth: 32, p: 0.5, color: "#94A3B8", "&:hover": { color: "#EF4444" } }}
+                    title="Remove attachment"
+                  >
+                    <CloseIcon fontSize="small" />
+                  </Button>
+                </Paper>
+              </Grid>
+            );
+          })}
+        </Grid>
+      ) : (
+        <Typography variant="caption" sx={{ color: "#94A3B8", display: "block", mb: 1 }}>
+          No documents uploaded yet. You can attach clear photos of the instrument nameplate or serial number mark (JPG, PNG, WEBP, JFIF up to 10MB).
+        </Typography>
+      )}
+    </Box>
+  );
 
   const handleSubmit = async () => {
     setError("");
@@ -683,50 +906,7 @@ export default function UserApply() {
               </Box>
             )}
 
-            <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap", mb: 2 }}>
-              <Button
-                variant="outlined"
-                component="label"
-                startIcon={<CloudUploadIcon />}
-                disabled={uploadingDoc}
-                sx={{ borderColor: "#CBD5E1", color: "#334155", fontWeight: 700, borderRadius: 2 }}
-              >
-                Upload Nameplate Photo
-                <input type="file" hidden accept="image/*" onChange={(e) => handleFileUpload(e, "INSTRUMENT_PHOTO")} />
-              </Button>
-
-              <Button
-                variant="outlined"
-                component="label"
-                startIcon={<AttachFileIcon />}
-                disabled={uploadingDoc}
-                sx={{ borderColor: "#CBD5E1", color: "#334155", fontWeight: 700, borderRadius: 2 }}
-              >
-                Upload Invoice / Stamping Slip
-                <input type="file" hidden accept="image/*,application/pdf" onChange={(e) => handleFileUpload(e, "SUPPORTING_DOCUMENT")} />
-              </Button>
-
-              {uploadingDoc && (
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                  <CircularProgress size={20} sx={{ color: COLOR }} />
-                  <Typography variant="caption" sx={{ color: "#64748B" }}>Uploading securely...</Typography>
-                </Box>
-              )}
-            </Box>
-
-            {uploadedDocuments.length > 0 && (
-              <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap", p: 1.5, bgcolor: "#F1F5F9", borderRadius: 2 }}>
-                {uploadedDocuments.map((doc) => (
-                  <Chip
-                    key={doc.id}
-                    label={`${doc.doc_type === "INSTRUMENT_PHOTO" ? "📷 Photo" : "📄 Doc"}: ${doc.file_name}`}
-                    onDelete={() => removeDocument(doc.id)}
-                    deleteIcon={<CloseIcon />}
-                    sx={{ bgcolor: "#FFFFFF", fontWeight: 600, border: "1px solid #CBD5E1" }}
-                  />
-                ))}
-              </Box>
-            )}
+            {renderDocumentUploader("Upload Nameplate Photo & Supporting Documents")}
           </Box>
         )}
 
@@ -873,25 +1053,7 @@ export default function UserApply() {
               ))}
             </Grid>
 
-            {/* Uploaded Documents Summary */}
-            <Typography variant="overline" sx={{ color: COLOR, fontWeight: 700, letterSpacing: 1.2, display: "block", mb: 1 }}>
-              Uploaded Documents ({uploadedDocuments.length})
-            </Typography>
-            {uploadedDocuments.length > 0 ? (
-              <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap", mb: 3 }}>
-                {uploadedDocuments.map((doc) => (
-                  <Chip
-                    key={doc.id}
-                    label={`${doc.file_name} (${(doc.file_size / 1024).toFixed(0)} KB)`}
-                    sx={{ bgcolor: "#EFF6FF", color: "#1E40AF", fontWeight: 700 }}
-                  />
-                ))}
-              </Box>
-            ) : (
-              <Typography variant="caption" sx={{ color: "#94A3B8", display: "block", mb: 3 }}>
-                No documents uploaded. Photographs may be requested by the verifying officer during on-site visit.
-              </Typography>
-            )}
+            {renderDocumentUploader("Uploaded Instrument Evidence & Verification Documents")}
 
             <Alert severity="warning" sx={{ borderRadius: 2 }}>
               Once submitted, this application enters the official Legal Metrology statutory register and is locked against modifications.

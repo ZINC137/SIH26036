@@ -1,6 +1,7 @@
 const express = require('express');
 const multer = require('multer');
 const path = require('path');
+const fs = require('fs');
 const crypto = require('crypto');
 const { authMiddleware } = require('../middleware/authMiddleware');
 const {
@@ -26,13 +27,14 @@ const uploadRateLimiter = rateLimit({
   },
 });
 
-const ALLOWED_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp', '.pdf'];
+const ALLOWED_EXTENSIONS = ['.jpg', '.jpeg', '.jfif', '.png', '.webp', '.pdf'];
 const ALLOWED_MIME_TYPES = {
-  '.jpg': 'image/jpeg',
-  '.jpeg': 'image/jpeg',
-  '.png': 'image/png',
-  '.webp': 'image/webp',
-  '.pdf': 'application/pdf',
+  '.jpg': ['image/jpeg', 'image/jpg', 'image/pjpeg'],
+  '.jpeg': ['image/jpeg', 'image/jpg', 'image/pjpeg'],
+  '.jfif': ['image/jpeg', 'image/jfif', 'image/pjpeg'],
+  '.png': ['image/png', 'image/x-png'],
+  '.webp': ['image/webp'],
+  '.pdf': ['application/pdf', 'application/x-pdf'],
 };
 
 // Forbidden extensions anywhere in the filename (prevents double extension attacks like test.php.jpg or invoice.pdf.exe)
@@ -41,7 +43,11 @@ const DANGEROUS_EXT_REGEX = /\.(exe|bat|cmd|sh|php|phtml|html|htm|svg|js|vbs|jar
 // Multer disk storage configuration with randomized filenames
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, path.join(__dirname, '../../uploads'));
+    const uploadDir = path.join(__dirname, '../../uploads');
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
   },
   filename: (req, file, cb) => {
     const ext = path.extname(file.originalname).toLowerCase();
@@ -71,8 +77,8 @@ const fileFilter = (req, file, cb) => {
   }
 
   // 4. Strict MIME type check
-  const expectedMime = ALLOWED_MIME_TYPES[ext];
-  if (file.mimetype !== expectedMime) {
+  const expectedMimes = ALLOWED_MIME_TYPES[ext] || [];
+  if (!expectedMimes.includes(file.mimetype)) {
     return cb(new Error(`MIME type mismatch: Extension ${ext} does not match declared type ${file.mimetype}.`), false);
   }
 
