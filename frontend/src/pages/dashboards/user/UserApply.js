@@ -196,6 +196,13 @@ export default function UserApply() {
   const handleFileUpload = async (e, docType) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    if (file.size > 10 * 1024 * 1024) {
+      setError(`File "${file.name}" exceeds the 10MB limit (${(file.size / (1024 * 1024)).toFixed(1)}MB). Please choose a smaller file.`);
+      e.target.value = "";
+      return;
+    }
+
     setUploadingDoc(true);
     setError("");
     try {
@@ -750,7 +757,7 @@ export default function UserApply() {
               </Box>
             )}
 
-            <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap", mb: 2 }}>
+            <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap", alignItems: "center", mb: 1.5 }}>
               <Button
                 variant="outlined"
                 component="label"
@@ -759,7 +766,7 @@ export default function UserApply() {
                 sx={{ borderColor: "#CBD5E1", color: "#334155", fontWeight: 700, borderRadius: 2 }}
               >
                 Upload Nameplate Photo
-                <input type="file" hidden accept="image/*" onChange={(e) => handleFileUpload(e, "INSTRUMENT_PHOTO")} />
+                <input type="file" hidden accept="image/*,.jpg,.jpeg,.png,.webp,.jfif,.heic,.heif,.bmp" onChange={(e) => handleFileUpload(e, "INSTRUMENT_PHOTO")} />
               </Button>
 
               <Button
@@ -770,16 +777,20 @@ export default function UserApply() {
                 sx={{ borderColor: "#CBD5E1", color: "#334155", fontWeight: 700, borderRadius: 2 }}
               >
                 Upload Invoice / Stamping Slip
-                <input type="file" hidden accept="image/*,application/pdf" onChange={(e) => handleFileUpload(e, "SUPPORTING_DOCUMENT")} />
+                <input type="file" hidden accept="image/*,application/pdf,.pdf,.jpg,.jpeg,.png,.webp,.jfif,.heic,.heif" onChange={(e) => handleFileUpload(e, "SUPPORTING_DOCUMENT")} />
               </Button>
 
               {uploadingDoc && (
                 <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                   <CircularProgress size={20} sx={{ color: COLOR }} />
-                  <Typography variant="caption" sx={{ color: "#64748B" }}>Uploading securely...</Typography>
+                  <Typography variant="caption" sx={{ color: "#64748B", fontWeight: 600 }}>Uploading securely...</Typography>
                 </Box>
               )}
             </Box>
+
+            <Typography variant="caption" sx={{ color: "#64748B", display: "block", mb: 2 }}>
+              Supported formats: JPG, PNG, WEBP, JFIF, HEIC, PDF (Max 10MB per file)
+            </Typography>
 
             {uploadedDocuments.length > 0 && (
               <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap", p: 1.5, bgcolor: "#F1F5F9", borderRadius: 2 }}>

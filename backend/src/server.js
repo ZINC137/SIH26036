@@ -39,6 +39,11 @@ app.use(cors({
   credentials: true, // Allow cookies to be sent
 }));
 
+const uploadsDir = path.join(__dirname, '../uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
 // Protected static files for uploaded supporting documents and photographs
 // Enforces:
 // 1. Valid authentication (via cookie or Bearer token)
