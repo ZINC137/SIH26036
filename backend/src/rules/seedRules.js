@@ -1,6 +1,6 @@
-require('dotenv').config();
-
+const argon2 = require('argon2');
 const { PrismaClient } = require('@prisma/client');
+const { demoPortals } = require('../config/demoPortals');
 const {
   CENTRAL_GATC_NOTIFICATION,
   CENTRAL_GATC_SOURCE,
@@ -11,6 +11,61 @@ const {
 } = require('./categoriesData');
 
 const prisma = new PrismaClient();
+
+async function upsertProfile(tx, userId, portal) {
+  if (portal.role === 'user') {
+    await tx.userProfile.upsert({
+      where: { user_id: userId },
+      update: portal.profile,
+      create: { user_id: userId, ...portal.profile },
+    });
+    return;
+  }
+
+  const profileModel = {
+    lmo: 'lmoProfile',
+    field_officer: 'fieldOfficerProfile',
+    gatc: 'gatcProfile',
+    admin: 'adminProfile',
+  }[portal.role];
+
+  await tx[profileModel].upsert({
+    where: { user_id: userId },
+    update: portal.profile,
+    create: { user_id: userId, ...portal.profile },
+  });
+}
+
+async function seedDemoUsers(tx) {
+  for (const portal of demoPortals) {
+    const password_hash = await argon2.hash(portal.password, {
+      type: argon2.argon2id,
+      memoryCost: 2 ** 16,
+      hashLength: 50,
+    });
+
+    const user = await tx.user.upsert({
+      where: { email: portal.email },
+      update: {
+        password_hash,
+        role: portal.role,
+        status: 'ACTIVE',
+        is_verified: true,
+        failed_login_attempts: 0,
+        lockout_until: null,
+      },
+      create: {
+        email: portal.email,
+        password_hash,
+        role: portal.role,
+        status: 'ACTIVE',
+        is_verified: true,
+      },
+    });
+
+    await upsertProfile(tx, user.id, portal);
+  }
+}
 
 async function seedRules() {
   console.log('🏛️ Initializing Legal Metrology Rule Configuration & Authority Eligibility Layer...');
@@ -282,13 +337,18 @@ async function seedRules() {
     }
   }
 
+  // Provision initial portal accounts (Admin, LMO, GATC, Field Officer, Citizen)
+  await seedDemoUsers(prisma);
+
   const categoryCount = await prisma.instrumentCategory.count();
   const ruleSetCount = await prisma.ruleSet.count();
   const authorityCount = await prisma.authorityEligibility.count();
   const testCount = await prisma.testDefinition.count();
   const validityCount = await prisma.validityRule.count();
+  const userCount = await prisma.user.count();
 
-  console.log(`✅ Legal Metrology Rule Configuration seeded successfully!`);
+  console.log(`✅ Legal Metrology Rule Configuration & Portal Accounts seeded successfully!`);
+  console.log(`   - Portal Users Configured: ${userCount}`);
   console.log(`   - Instrument Categories: ${categoryCount}`);
   console.log(`   - Rule Sets Configured: ${ruleSetCount}`);
   console.log(`   - Authority Eligibility Records: ${authorityCount}`);
