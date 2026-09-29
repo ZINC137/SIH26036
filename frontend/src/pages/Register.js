@@ -14,6 +14,7 @@ import BusinessIcon from '@mui/icons-material/Business';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
+import API_BASE from '../config/api';
 
 const steps = ['Create Account', 'Personal Details', 'Done'];
 
@@ -58,9 +59,10 @@ export default function Register() {
     setResending(true);
     setResendStatus(null);
     try {
-      const res = await fetch('/api/auth/resend-verification', {
+      const res = await fetch(`${API_BASE}/api/auth/resend-verification`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ email: email.trim().toLowerCase() }),
       });
       const data = await res.json();
@@ -122,9 +124,10 @@ export default function Register() {
     setLoading(true);
     try {
       // Single call — creates user + profile atomically, sends verification email
-      const res = await fetch('/api/auth/register', {
+      const res = await fetch(`${API_BASE}/api/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           email: email.trim().toLowerCase(),
           password,

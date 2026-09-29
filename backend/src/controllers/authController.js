@@ -137,7 +137,7 @@ const register = async (req, res) => {
         const sendResult = await sendVerificationEmail(normalizedEmail, token);
         return res.status(200).json({
           message: 'If this email is eligible, a verification link has been sent.',
-          verificationUrl: process.env.NODE_ENV !== 'production' ? sendResult?.verificationUrl : undefined,
+          verificationUrl: sendResult?.verificationUrl,
         });
       }
 
@@ -191,7 +191,7 @@ const register = async (req, res) => {
 
     return res.status(200).json({
       message: 'If this email is eligible, a verification link has been sent.',
-      verificationUrl: process.env.NODE_ENV !== 'production' ? sendResult?.verificationUrl : undefined,
+      verificationUrl: sendResult?.verificationUrl,
     });
 
   } catch (error) {

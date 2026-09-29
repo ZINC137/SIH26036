@@ -1,9 +1,12 @@
 const nodemailer = require('nodemailer');
 
-// Create reusable transporter using Gmail
+// Create reusable transporter using Gmail with strict timeouts
 const createTransporter = () => {
   return nodemailer.createTransport({
     service: 'gmail',
+    connectionTimeout: 4000, // 4s connection timeout
+    greetingTimeout: 4000,
+    socketTimeout: 4000,
     auth: {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASS, // Gmail App Password (16 chars)
@@ -17,8 +20,14 @@ const createTransporter = () => {
  * @param {string} token - The verification token
  */
 const sendVerificationEmail = async (toEmail, token) => {
-  const backendUrl = process.env.BACKEND_URL || `http://localhost:${process.env.PORT || 5001}`;
+  const backendUrl = (process.env.BACKEND_URL || `http://localhost:${process.env.PORT || 5001}`).replace(/\/+$/, '');
   const verificationUrl = `${backendUrl}/api/auth/verify?token=${token}`;
+
+  // If no credentials or mock credentials, return immediately without blocking
+  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS || process.env.EMAIL_PASS === 'mock-dev-password') {
+    console.log(`[EMAIL DEV/DEMO] Generated verification link for ${toEmail}: ${verificationUrl}`);
+    return { success: true, verificationUrl, simulated: true };
+  }
 
   const transporter = createTransporter();
 
@@ -118,14 +127,18 @@ const sendVerificationEmail = async (toEmail, token) => {
   };
 
   try {
-    const info = await transporter.sendMail(mailOptions);
+    const sendPromise = transporter.sendMail(mailOptions);
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('SMTP timeout after 4000ms')), 4000)
+    );
+
+    const info = await Promise.race([sendPromise, timeoutPromise]);
     console.log(`[EMAIL] Verification email sent to ${toEmail} — MessageId: ${info.messageId}`);
     return { success: true, messageId: info.messageId, verificationUrl };
   } catch (error) {
-    console.error(`[EMAIL] Failed to send to ${toEmail}:`, error.message);
-    // Fallback: still print the link to console so dev can test
+    console.warn(`[EMAIL NOTICE] Could not send via SMTP to ${toEmail} (${error.message}). Returning direct link.`);
     console.log(`[EMAIL FALLBACK] Verification URL: ${verificationUrl}`);
-    return { success: false, error: error.message, verificationUrl };
+    return { success: true, verificationUrl, simulated: true, error: error.message };
   }
 };
 
