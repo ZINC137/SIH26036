@@ -1,5 +1,6 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
+import App from './App';
 
 jest.mock('react-router-dom', () => {
   const React = require('react');
@@ -16,8 +17,6 @@ jest.mock('react-router-dom', () => {
     useParams: () => ({})
   };
 });
-
-import App from './App';
 
 test('renders Legal Metrology platform application shell without crashing', () => {
   render(<App />);
