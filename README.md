@@ -1,118 +1,78 @@
-# Legal Metrology Verification System
-## Smart India Hackathon 2026 (SIH26036)
+# SIH26036 — Legal Metrology Verification System
 
-### 🎯 Project Overview
-A secure web-based and mobile-enabled software platform for online verification, certification, and lifecycle management of weighing and measuring instruments under Legal Metrology regulations (Legal Metrology Act, 2009).
+A web application for managing verification and certification of weighing and measuring instruments. It supports applicant submissions, statutory rules-based routing, field inspections, laboratory verification, and digital certificates.
 
-### 📋 Problem Statement
-Develop a unified online verification and digital certification system for weighing and measuring instruments to improve transparency, efficiency, and ease of compliance within the Legal Metrology ecosystem.
+## Features
 
-### ✨ Key Features
-- Online registration of stakeholders (users, LMOs, GATCs)
-- Application submission for verification/re-verification
-- Digital verification certificates with QR codes
-- Verification scheduling and workflow management
-- Real-time dashboards for monitoring status
-- Mobile app for field verification activities
-- Automated alerts for expiring certificates
-- Search and retrieval of verification records
+- Role-based portals for applicants, administrators, Legal Metrology Officers (LMOs), field officers, and Government Approved Test Centres (GATCs).
+- Application tracking, officer assignment, inspection evidence uploads, and verification workflows.
+- Statutory rules engine for authority eligibility, routing, test requirements, and validity.
+- Digital certificates, QR codes, notifications, and audit history.
+- Local SQLite database and append-only database/upload backups.
 
-### 📁 Folder Structure
-```
-SIH26036/
-├── backend/              # REST API, business logic, database
-├── frontend/             # Web dashboard and user interfaces
-├── mobile/               # Mobile application (iOS/Android)
-├── docs/                 # Technical documentation
-├── deployment/           # Docker configs, deployment scripts
-├── tests/                # Test suites and QA
-└── README.md
-```
+## Technology
 
-### 👥 Team Members
-| Name | Role | GitHub |
-|------|------|--------|
-| [Member 1] | Backend Lead | @username |
-| [Member 2] | Frontend Lead | @username |
-| [Member 3] | Mobile Developer | @username |
-| [Member 4] | DevOps/Infrastructure | @username |
-| [Member 5] | QA/Integration | @username |
-| [Member 6] | PM/Documentation | @username |
+- Frontend: React, React Router, and Material UI.
+- Backend: Node.js, Express, and Prisma.
+- Database: SQLite.
 
-### 🚀 Quick Start Guide
+## Local development
 
-#### Prerequisites
-- Git
-- Node.js/Python (backend)
-- React (frontend)
-- React Native/Flutter (mobile)
-- PostgreSQL
+Prerequisites: Node.js 20+ and npm.
 
-#### Setup
+1. Install and configure the backend:
+
+   ```bash
+   cd backend
+   npm ci
+   cp .env.example .env
+   ```
+
+   Set `JWT_SECRET` in `backend/.env` to a long, unique secret. For a **new local database only**, initialize the schema and generate the Prisma client:
+
+   ```bash
+   npx prisma db push
+   npx prisma generate
+   ```
+
+   Do not point `DATABASE_URL` at a database with data you need to preserve before backing it up. Start the backend:
+
+   ```bash
+   npm start
+   ```
+
+2. In a separate terminal, start the frontend:
+
+   ```bash
+   cd frontend
+   npm ci
+   npm start
+   ```
+
+   The frontend runs at `http://localhost:3000` and proxies API requests to the backend at `http://localhost:5001`.
+
+## Tests
+
+Run backend tests from `backend/` after setting up a local database:
+
 ```bash
-# Clone repository
-git clone https://github.com/ZINC137/SIH26036.git
-cd SIH26036
-
-# Each team member creates their feature branch
-git checkout -b feature/your-feature-name
-
-# Install dependencies (in respective folders)
-cd backend && npm install
-cd ../frontend && npm install
-# ... etc
+npm test
+npm run test:e2e
+npm run test:security
 ```
 
-#### Workflow
-1. Create a branch for your feature: `git checkout -b feature/feature-name`
-2. Make changes and commit: `git commit -m "descriptive message"`
-3. Push to GitHub: `git push origin feature/feature-name`
-4. Create a Pull Request for review
-5. After approval, merge to main
+Run frontend tests or build from `frontend/`:
 
+```bash
+npm test
+npm run build
+```
 
-### 📊 Project Milestones
-- **Week 1:** Architecture, database schema, API setup
-- **Week 2:** Core APIs, authentication, user registration
-- **Week 3:** Dashboards, workflows, digital certificates
-- **Week 4:** Mobile app, testing, deployment, polish
+## Documentation
 
-### 🔧 Tech Stack (Recommended)
-- **Backend:** Node.js + Express / Python + FastAPI
-- **Frontend:** React + Material-UI
-- **Mobile:** React Native
-- **Database:** PostgreSQL
-- **Authentication:** JWT + bcrypt
-- **QR Codes:** qrcode.js
-- **Deployment:** Docker + AWS/Heroku
-- **Real-time:** Socket.io
-
-### 📝 Documentation
-- [Architecture Design](./docs/ARCHITECTURE.md)
-- [API Documentation](./docs/API.md)
-- [Database Schema](./docs/DATABASE.md)
-- [Deployment Guide](./docs/DEPLOYMENT.md)
-
-### 🤝 Contributing
-1. Never push directly to main
-2. Always create feature branches
-3. Follow commit message conventions
-4. Request PR reviews before merging
-5. Keep documentation updated
-
-### 📞 Communication
-- Daily standup: Async updates in project board
-- Weekly sync: [Meeting details]
-- Questions: Create GitHub issues
-
-### 📄 License
-[Your License Here]
-
-### 📚 References
-- [Legal Metrology Act, 2009](https://consumeraffairs.gov.in/)
-- [Smart India Hackathon 2026](https://www.sih.gov.in/)
-- [Problem Statement SIH26036](https://www.sih.gov.in/sih2026PS)
-
----
-
-**Last Updated:** As development progresses
+- [Architecture](./docs/ARCHITECTURE.md)
+- [API](./docs/API.md)
+- [Database](./docs/DATABASE.md)
+- [Deployment](./docs/DEPLOYMENT.md)
+- [Contributing](./CONTRIBUTING.md)
+- [Local backups](./backups/README.md)
