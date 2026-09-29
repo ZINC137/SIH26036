@@ -31,6 +31,10 @@ jobs:
         working-directory: backend
         run: npx prisma generate
 
+      - name: Initialize CI Database Schema
+        working-directory: backend
+        run: npx prisma db push
+
       - name: Run Backend Test Suite
         working-directory: backend
         run: npm test
