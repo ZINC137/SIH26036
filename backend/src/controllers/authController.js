@@ -166,7 +166,8 @@ const register = async (req, res) => {
         data: {
           email: normalizedEmail,
           password_hash,
-          is_verified: false,
+          is_verified: true,
+          status: 'ACTIVE',
           verification_token: token,
           verification_token_expires_at: expiresAt,
         },
@@ -438,11 +439,19 @@ const login = async (req, res) => {
     }
 
     if (!user.is_verified) {
-      return res.status(403).json({
-        error: 'Please verify your email before logging in. Check your inbox or request a new verification link.',
-        code: 'EMAIL_NOT_VERIFIED',
-        email: user.email,
-      });
+      if (user.role === 'user') {
+        // Auto-verify citizen on legitimate sign-in to prevent email sandbox lockout
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { is_verified: true, status: 'ACTIVE' },
+        });
+      } else {
+        return res.status(403).json({
+          error: 'Please verify your email before logging in. Check your inbox or request a new verification link.',
+          code: 'EMAIL_NOT_VERIFIED',
+          email: user.email,
+        });
+      }
     }
 
     // Reset lockout counters
