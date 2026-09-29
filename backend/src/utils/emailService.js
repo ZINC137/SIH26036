@@ -1,15 +1,20 @@
 const nodemailer = require('nodemailer');
 
-// Create reusable transporter using Gmail with strict timeouts
+// Create reusable transporter using Gmail SSL on port 465
 const createTransporter = () => {
+  const user = (process.env.EMAIL_USER || '').trim();
+  const pass = (process.env.EMAIL_PASS || '').replace(/\s+/g, '').trim();
+
   return nodemailer.createTransport({
-    service: 'gmail',
-    connectionTimeout: 4000, // 4s connection timeout
-    greetingTimeout: 4000,
-    socketTimeout: 4000,
+    host: 'smtp.gmail.com',
+    port: 465,
+    secure: true, // Direct SSL
+    connectionTimeout: 8000,
+    greetingTimeout: 8000,
+    socketTimeout: 8000,
     auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS, // Gmail App Password (16 chars)
+      user,
+      pass,
     },
   });
 };

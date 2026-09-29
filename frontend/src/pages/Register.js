@@ -434,24 +434,28 @@ export default function Register() {
                   </Typography>
 
                   {verificationUrl && (
-                    <Box sx={{ mt: 2, pt: 1.5, borderTop: '1px dashed #A5D6A7' }}>
-                      <Typography variant="caption" sx={{ color: '#2E7D32', fontWeight: 700, display: 'block', mb: 0.5 }}>
-                        ⚡ LOCAL DEVELOPMENT SHORTCUT:
+                    <Box sx={{ mt: 2.5, pt: 2, borderTop: '1px dashed #A5D6A7' }}>
+                      <Typography variant="caption" sx={{ color: '#1B5E20', fontWeight: 700, display: 'block', mb: 1, letterSpacing: 0.5 }}>
+                        ⚡ INSTANT 1-CLICK ACTIVATION (DIRECT LINK):
                       </Typography>
                       <Button
-                        size="small"
-                        variant="outlined"
+                        size="medium"
+                        variant="contained"
+                        fullWidth
                         href={verificationUrl}
                         target="_blank"
+                        rel="noreferrer"
                         sx={{
-                          textTransform: 'none',
-                          fontSize: '0.78rem',
-                          borderColor: '#2E7D32',
-                          color: '#1B5E20',
-                          '&:hover': { bgcolor: '#C8E6C9' },
+                          py: 1,
+                          fontWeight: 700,
+                          fontSize: '0.9rem',
+                          background: 'linear-gradient(135deg, #2E7D32 0%, #43A047 100%)',
+                          color: '#ffffff',
+                          boxShadow: '0 4px 12px rgba(46,125,50,0.3)',
+                          '&:hover': { background: 'linear-gradient(135deg, #1B5E20 0%, #2E7D32 100%)' },
                         }}
                       >
-                        Click to Verify Instantly (Localhost) →
+                        🚀 Click Here to Verify & Activate Instantly →
                       </Button>
                     </Box>
                   )}
