@@ -415,6 +415,27 @@ export default function LandingPage() {
       setVerifyError('Please enter a valid Certificate ID, Serial Number, or scan a QR code.');
       return;
     }
+
+    let cleanQuery = queryText.trim();
+    // If input is a URL or QR code text with certId parameter
+    try {
+      if (cleanQuery.includes('://') || cleanQuery.includes('?') || cleanQuery.includes('#')) {
+        if (cleanQuery.includes('#')) {
+          const hashPart = cleanQuery.split('#')[1] || '';
+          if (hashPart.includes('?')) {
+            const hashParams = new URLSearchParams(hashPart.split('?')[1]);
+            const certFromHash = hashParams.get('certId') || hashParams.get('cert') || hashParams.get('id');
+            if (certFromHash) cleanQuery = certFromHash;
+          }
+        }
+        if (cleanQuery.includes('?')) {
+          const urlParams = new URLSearchParams(cleanQuery.split('?')[1]);
+          const certFromUrl = urlParams.get('certId') || urlParams.get('cert') || urlParams.get('id');
+          if (certFromUrl) cleanQuery = certFromUrl;
+        }
+      }
+    } catch {}
+
     setVerifying(true);
     setVerifyError('');
     setVerifyNotice('');
@@ -422,14 +443,14 @@ export default function LandingPage() {
       const res = await fetch('/api/auth/validate-certificate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: queryText.trim() }),
+        body: JSON.stringify({ query: cleanQuery }),
       });
       const data = await res.json();
       if (res.ok && data.valid && data.certificate) {
         setVerifyResult(data.certificate);
-        setSearchCert(data.certificate.certificateNo || queryText.trim());
+        setSearchCert(data.certificate.certificateNo || cleanQuery);
       } else {
-        setVerifyError(data.error || `No statutory certificate found matching "${queryText.trim().slice(0, 45)}". Please verify your entry.`);
+        setVerifyError(data.error || `No statutory certificate found matching "${cleanQuery.slice(0, 45)}". Please verify your entry.`);
       }
     } catch (err) {
       console.error('Validation request failed:', err);
