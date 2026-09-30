@@ -15,6 +15,7 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import FactCheckIcon from '@mui/icons-material/FactCheck';
 import CancelIcon from '@mui/icons-material/Cancel';
 import CertificateQrCode from '../../../components/CertificateQrCode';
+import { authFetch } from '../../../config/api';
 
 const COLOR = '#7E22CE';
 
@@ -30,7 +31,7 @@ export default function FOHistory() {
   const fetchHistory = () => {
     setLoading(true);
     setError('');
-    fetch('/api/field-officer/history', { credentials: 'include' })
+    authFetch('/api/field-officer/history')
       .then((res) => res.json())
       .then((data) => {
         if (data.reports) {

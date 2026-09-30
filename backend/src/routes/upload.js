@@ -1,6 +1,7 @@
 const express = require('express');
 const multer = require('multer');
 const path = require('path');
+const fs = require('fs');
 const crypto = require('crypto');
 const { authMiddleware } = require('../middleware/authMiddleware');
 const {
@@ -17,7 +18,7 @@ const rateLimit = require('express-rate-limit');
 // Rate limiter for file uploads (defense against DoS and disk exhaustion)
 const uploadRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: process.env.NODE_ENV === 'production' ? 30 : 200,
+  max: process.env.NODE_ENV === 'production' ? 60 : 200,
   standardHeaders: true,
   legacyHeaders: false,
   message: {
@@ -26,13 +27,22 @@ const uploadRateLimiter = rateLimit({
   },
 });
 
-const ALLOWED_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp', '.pdf'];
+const uploadsDir = path.join(__dirname, '../../uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+const ALLOWED_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp', '.pdf', '.jfif', '.heic', '.heif', '.bmp'];
 const ALLOWED_MIME_TYPES = {
-  '.jpg': 'image/jpeg',
-  '.jpeg': 'image/jpeg',
-  '.png': 'image/png',
-  '.webp': 'image/webp',
-  '.pdf': 'application/pdf',
+  '.jpg': ['image/jpeg', 'image/jpg', 'image/pjpeg', 'application/octet-stream'],
+  '.jpeg': ['image/jpeg', 'image/jpg', 'image/pjpeg', 'application/octet-stream'],
+  '.png': ['image/png', 'image/x-png', 'application/octet-stream'],
+  '.webp': ['image/webp', 'application/octet-stream'],
+  '.pdf': ['application/pdf', 'application/x-pdf', 'application/octet-stream'],
+  '.jfif': ['image/jpeg', 'image/jfif', 'image/pjpeg', 'application/octet-stream'],
+  '.heic': ['image/heic', 'image/heif', 'application/octet-stream'],
+  '.heif': ['image/heic', 'image/heif', 'application/octet-stream'],
+  '.bmp': ['image/bmp', 'image/x-ms-bmp', 'application/octet-stream'],
 };
 
 // Forbidden extensions anywhere in the filename (prevents double extension attacks like test.php.jpg or invoice.pdf.exe)
@@ -41,7 +51,10 @@ const DANGEROUS_EXT_REGEX = /\.(exe|bat|cmd|sh|php|phtml|html|htm|svg|js|vbs|jar
 // Multer disk storage configuration with randomized filenames
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, path.join(__dirname, '../../uploads'));
+    if (!fs.existsSync(uploadsDir)) {
+      fs.mkdirSync(uploadsDir, { recursive: true });
+    }
+    cb(null, uploadsDir);
   },
   filename: (req, file, cb) => {
     const ext = path.extname(file.originalname).toLowerCase();
@@ -71,8 +84,9 @@ const fileFilter = (req, file, cb) => {
   }
 
   // 4. Strict MIME type check
-  const expectedMime = ALLOWED_MIME_TYPES[ext];
-  if (file.mimetype !== expectedMime) {
+  const allowedMimes = ALLOWED_MIME_TYPES[ext] || [];
+  const fileMime = (file.mimetype || '').toLowerCase();
+  if (!allowedMimes.includes(fileMime)) {
     return cb(new Error(`MIME type mismatch: Extension ${ext} does not match declared type ${file.mimetype}.`), false);
   }
 

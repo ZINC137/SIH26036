@@ -25,6 +25,7 @@ import LogoutRoundedIcon from '@mui/icons-material/LogoutRounded';
 import AccountBalanceRoundedIcon from '@mui/icons-material/AccountBalanceRounded';
 import FiberManualRecordRoundedIcon from '@mui/icons-material/FiberManualRecordRounded';
 import ShieldRoundedIcon from '@mui/icons-material/ShieldRounded';
+import { authFetch, setAuthToken } from '../config/api';
 
 const DRAWER_WIDTH = 280;
 
@@ -87,11 +88,11 @@ export default function RoleLayout({ userRole, userEmail, onLogout, navItems }) 
 
   const handleLogout = async () => {
     try {
-      await fetch('/api/auth/logout', {
+      await authFetch('/api/auth/logout', {
         method: 'POST',
-        credentials: 'include',
       });
     } catch (e) {}
+    setAuthToken(null);
     setAnchorEl(null);
     onLogout();
     navigate('/');

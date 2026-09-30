@@ -14,6 +14,8 @@ import {
   Alert,
   AlertTitle,
   Grid,
+  IconButton,
+  Tooltip,
 } from '@mui/material';
 import AssignmentRoundedIcon from '@mui/icons-material/AssignmentRounded';
 import CheckCircleRoundedIcon from '@mui/icons-material/CheckCircleRounded';
@@ -24,7 +26,9 @@ import ArrowForwardRoundedIcon from '@mui/icons-material/ArrowForwardRounded';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import NotificationsActiveRoundedIcon from '@mui/icons-material/NotificationsActiveRounded';
 import AutorenewRoundedIcon from '@mui/icons-material/AutorenewRounded';
+import CloseRoundedIcon from '@mui/icons-material/CloseRounded';
 import { useNavigate } from 'react-router-dom';
+import { authFetch } from '../../config/api';
 
 const COLOR = '#D97706';
 const GRADIENT = 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)';
@@ -107,7 +111,7 @@ export default function UserDashboard({ userEmail }) {
   const [loadingInstruments, setLoadingInstruments] = useState(true);
 
   const fetchDashboardData = () => {
-    fetch('/api/auth/me', { credentials: 'include' })
+    authFetch('/api/auth/me')
       .then(async (response) => {
         const data = await response.json();
         if (!response.ok) {
@@ -118,7 +122,7 @@ export default function UserDashboard({ userEmail }) {
       .catch((error) => setProfileError(error.message || 'Could not load your profile.'))
       .finally(() => setLoadingProfile(false));
 
-    fetch('/api/auth/dashboard-stats', { credentials: 'include' })
+    authFetch('/api/auth/dashboard-stats')
       .then((r) => r.json())
       .then((d) => {
         if (d.stats) setStats(d.stats);
@@ -126,7 +130,7 @@ export default function UserDashboard({ userEmail }) {
       .catch(() => {})
       .finally(() => setLoadingStats(false));
 
-    fetch('/api/auth/applications', { credentials: 'include' })
+    authFetch('/api/auth/applications')
       .then((r) => r.json())
       .then((d) => {
         if (d.applications) setApplications(d.applications.slice(0, 5));
@@ -134,14 +138,14 @@ export default function UserDashboard({ userEmail }) {
       .catch(() => {})
       .finally(() => setLoadingApps(false));
 
-    fetch('/api/auth/notifications', { credentials: 'include' })
+    authFetch('/api/auth/notifications')
       .then((r) => r.json())
       .then((d) => {
         if (d.notifications) setNotifications(d.notifications);
       })
       .catch(() => {});
 
-    fetch('/api/auth/instruments', { credentials: 'include' })
+    authFetch('/api/auth/instruments')
       .then((r) => r.json())
       .then((d) => {
         if (d.instruments) setInstruments(d.instruments);
@@ -155,13 +159,17 @@ export default function UserDashboard({ userEmail }) {
   }, []);
 
   const handleDismissNotification = async (notifId) => {
+    setNotifications((prev) => prev.filter((n) => n.id !== notifId));
     try {
-      await fetch(`/api/auth/notifications/${notifId}/read`, {
-        method: 'PUT',
-        credentials: 'include',
+      await authFetch(`/api/auth/notifications/${notifId}`, {
+        method: 'DELETE',
       });
-      setNotifications((prev) => prev.filter((n) => n.id !== notifId));
-    } catch {}
+      await authFetch(`/api/auth/notifications/${notifId}/read`, {
+        method: 'PUT',
+      });
+    } catch (err) {
+      console.error('Failed to dismiss notification:', err);
+    }
   };
 
   const statCards = [
@@ -326,17 +334,39 @@ export default function UserDashboard({ userEmail }) {
               key={n.id}
               severity={n.type === 'EXPIRED' ? 'error' : n.type === 'EXPIRY_WARNING_7D' ? 'warning' : 'info'}
               icon={<NotificationsActiveRoundedIcon />}
-              onClose={() => handleDismissNotification(n.id)}
               action={
-                <Button
-                  color="inherit"
-                  size="small"
-                  startIcon={<AutorenewRoundedIcon />}
-                  onClick={() => navigate('/dashboard/user/apply')}
-                  sx={{ fontWeight: 800, textTransform: 'none', ml: 1 }}
-                >
-                  Renew / Re-verify
-                </Button>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  {(n.type === 'EXPIRED' || n.type === 'EXPIRY_WARNING_7D' || n.type === 'CERTIFICATE_ISSUED') && (
+                    <Button
+                      color="inherit"
+                      size="small"
+                      startIcon={<AutorenewRoundedIcon />}
+                      onClick={() => navigate('/dashboard/user/apply')}
+                      sx={{ fontWeight: 800, textTransform: 'none', whiteSpace: 'nowrap' }}
+                    >
+                      Renew / Re-verify
+                    </Button>
+                  )}
+                  <Tooltip title="Dismiss notification">
+                    <IconButton
+                      size="small"
+                      aria-label="Dismiss notification"
+                      onClick={() => handleDismissNotification(n.id)}
+                      sx={{
+                        color: 'inherit',
+                        opacity: 0.75,
+                        transition: 'all 0.2s',
+                        '&:hover': {
+                          opacity: 1,
+                          bgcolor: 'rgba(0, 0, 0, 0.08)',
+                          transform: 'scale(1.08)',
+                        },
+                      }}
+                    >
+                      <CloseRoundedIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                </Box>
               }
               sx={{ mb: 1.5, borderRadius: 3, boxShadow: '0 2px 10px rgba(0,0,0,0.04)' }}
             >

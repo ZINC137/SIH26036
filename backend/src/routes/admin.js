@@ -11,6 +11,7 @@ const {
   updateUserStatus,
   getAdminAnalytics,
   getAllVerifications,
+  resetDatabaseToDefault,
 } = require('../controllers/adminController');
 const { authMiddleware, requireRole } = require('../middleware/authMiddleware');
 
@@ -19,6 +20,9 @@ const router = express.Router();
 // All admin routes require valid authentication and admin privileges
 router.use(authMiddleware);
 router.use(requireRole('admin'));
+
+// System database reset to default state (Admin only)
+router.post('/system/reset-database', resetDatabaseToDefault);
 
 // LMO appointment & registry
 router.post('/lmo/appoint', appointLMO);

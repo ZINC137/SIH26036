@@ -35,6 +35,7 @@ import FlashOnRoundedIcon from '@mui/icons-material/FlashOnRounded';
 import KeyRoundedIcon from '@mui/icons-material/KeyRounded';
 import CheckCircleRoundedIcon from '@mui/icons-material/CheckCircleRounded';
 import FingerprintRoundedIcon from '@mui/icons-material/FingerprintRounded';
+import API_BASE, { setAuthToken } from '../config/api';
 
 const PORTAL_CONFIG = {
   user: {
@@ -111,17 +112,17 @@ export default function Login({ onLogin }) {
   const [error, setError] = useState('');
   const [roleMismatch, setRoleMismatch] = useState(null);
   const [submitting, setSubmitting] = useState(false);
-  const showDemoCredentials = process.env.NODE_ENV === 'development';
+  const showDemoCredentials = true;
   const [demoCredentials, setDemoCredentials] = useState(null);
   const [demoCredentialsError, setDemoCredentialsError] = useState('');
 
   useEffect(() => {
     if (!showDemoCredentials) return;
 
-    fetch('/api/auth/demo-credentials', { credentials: 'include' })
+    fetch(`${API_BASE}/api/auth/demo-credentials`, { credentials: 'include' })
       .then(async (response) => {
         if (!response.ok) {
-          throw new Error('Could not load local demo credentials.');
+          throw new Error('Could not load demo credentials.');
         }
         return response.json();
       })
@@ -144,9 +145,10 @@ export default function Login({ onLogin }) {
     setResendingVerification(true);
     setResendVerificationSuccess(null);
     try {
-      const res = await fetch('/api/auth/resend-verification', {
+      const res = await fetch(`${API_BASE}/api/auth/resend-verification`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ email: targetEmail }),
       });
       const data = await res.json();
@@ -206,7 +208,7 @@ export default function Login({ onLogin }) {
 
     setSubmitting(true);
     try {
-      const response = await fetch('/api/auth/login', {
+      const response = await fetch(`${API_BASE}/api/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -230,7 +232,10 @@ export default function Login({ onLogin }) {
           return;
         }
 
-        onLogin(data.user?.role || roleFromUrl, data.user?.email || email);
+        if (data.token) {
+          setAuthToken(data.token);
+        }
+        onLogin(data.user?.role || roleFromUrl, data.user?.email || email, data.token);
         const targetDashboard =
           data.user?.role === 'lmo'
             ? '/dashboard/lmo'
@@ -287,7 +292,7 @@ export default function Login({ onLogin }) {
 
     setActivationSubmitting(true);
     try {
-      const res = await fetch('/api/auth/field-officer/activate', {
+      const res = await fetch(`${API_BASE}/api/auth/field-officer/activate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

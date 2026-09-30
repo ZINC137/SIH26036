@@ -110,7 +110,8 @@ async function runComprehensiveAudit() {
   console.log('SIH26036 COMPREHENSIVE SECURITY, PRIVACY & RED-TEAM QA AUDIT');
   console.log('================================================================\n');
 
-  const BASE_URL = 'http://localhost:5000';
+  require('dotenv').config();
+  const BASE_URL = process.env.BACKEND_URL || `http://localhost:${process.env.PORT || 5001}`;
   let passed = 0;
   let failed = 0;
   const findings = [];

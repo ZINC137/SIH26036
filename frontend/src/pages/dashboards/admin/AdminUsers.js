@@ -3,7 +3,7 @@ import {
   Box, Paper, Typography, Grid, Table, TableBody, TableCell, TableHead, TableRow,
   Chip, Button, Avatar, IconButton, Tooltip, TextField, InputAdornment,
   Select, MenuItem, FormControl, InputLabel, Dialog, DialogTitle, DialogContent, DialogActions,
-  Tabs, Tab, Alert, Card, Divider,
+  Tabs, Tab, Alert, Card, Divider, CircularProgress,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import EditIcon from '@mui/icons-material/Edit';
@@ -18,7 +18,8 @@ import GavelIcon from '@mui/icons-material/Gavel';
 import HistoryIcon from '@mui/icons-material/History';
 import PeopleIcon from '@mui/icons-material/People';
 import RefreshIcon from '@mui/icons-material/Refresh';
-
+import DeleteSweepIcon from '@mui/icons-material/DeleteSweep';
+import { authFetch } from '../../../config/api';
 
 const COLOR = '#B71C1C';
 const GRADIENT = 'linear-gradient(135deg, #C62828 0%, #B71C1C 100%)';
@@ -75,26 +76,54 @@ export default function AdminUsers() {
   const [editUser, setEditUser] = useState(null);
   const [newRole, setNewRole] = useState('');
 
+  // Database Reset Modal State
+  const [openResetModal, setOpenResetModal] = useState(false);
+  const [resetting, setResetting] = useState(false);
+
+  const handleResetDatabase = async () => {
+    setResetting(true);
+    try {
+      const res = await authFetch('/api/admin/system/reset-database', {
+        method: 'POST',
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setFeedback({
+          type: 'success',
+          message: data.message || 'Database successfully cleared and reset to pristine default state.',
+        });
+        setOpenResetModal(false);
+        refreshData();
+      } else {
+        setFeedback({ type: 'error', message: data.error || 'Failed to reset database.' });
+      }
+    } catch (err) {
+      setFeedback({ type: 'error', message: 'Network error connecting to backend.' });
+    } finally {
+      setResetting(false);
+    }
+  };
+
   // Fetch data on load and on tab change
   const refreshData = async () => {
     setLoading(true);
     try {
       // 1. Fetch system users
-      const usersRes = await fetch('/api/admin/users', { credentials: 'include' });
+      const usersRes = await authFetch('/api/admin/users');
       if (usersRes.ok) {
         const data = await usersRes.json();
         if (data.users) setUsers(data.users);
       }
 
       // 2. Fetch pending officers
-      const officersRes = await fetch('/api/admin/officers/pending-approvals', { credentials: 'include' });
+      const officersRes = await authFetch('/api/admin/officers/pending-approvals');
       if (officersRes.ok) {
         const offData = await officersRes.json();
         setPendingOfficers(offData.officers || []);
       }
 
       // 3. Fetch audit logs
-      const logsRes = await fetch('/api/admin/audit-logs', { credentials: 'include' });
+      const logsRes = await authFetch('/api/admin/audit-logs');
       if (logsRes.ok) {
         const logData = await logsRes.json();
         setAuditLogs(logData.logs || []);
@@ -133,10 +162,9 @@ export default function AdminUsers() {
     };
 
     try {
-      const res = await fetch('/api/admin/lmo/appoint', {
+      const res = await authFetch('/api/admin/lmo/appoint', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify(payload),
       });
       const data = await res.json();
@@ -182,10 +210,9 @@ export default function AdminUsers() {
   // Clear or Reject Field Inspector
   const handleClearanceAction = async (officerId, action) => {
     try {
-      const res = await fetch('/api/admin/officers/clear', {
+      const res = await authFetch('/api/admin/officers/clear', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify({ officerId, action }),
       });
       const data = await res.json();
@@ -228,10 +255,9 @@ export default function AdminUsers() {
   const toggleSuspend = async (user) => {
     const nextStatus = user.status === 'SUSPENDED' ? 'ACTIVE' : 'SUSPENDED';
     try {
-      await fetch('/api/admin/users/status', {
+      await authFetch('/api/admin/users/status', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify({ userId: user.id, status: nextStatus }),
       });
       refreshData();
@@ -292,6 +318,16 @@ export default function AdminUsers() {
             sx={{ borderRadius: 2, borderColor: '#CFD8DC', color: '#37474F', fontWeight: 700 }}
           >
             {loading ? 'Refreshing...' : 'Refresh Data'}
+          </Button>
+
+          <Button
+            variant="outlined"
+            color="error"
+            startIcon={<DeleteSweepIcon />}
+            onClick={() => setOpenResetModal(true)}
+            sx={{ borderRadius: 2, fontWeight: 700, borderColor: '#FFCDD2', color: '#C62828', '&:hover': { borderColor: '#E53935', bgcolor: '#FFEBEE' } }}
+          >
+            Clear Test Data
           </Button>
 
           <Button
@@ -1142,10 +1178,9 @@ export default function AdminUsers() {
             sx={{ background: GRADIENT, fontWeight: 700 }}
             onClick={async () => {
               try {
-                await fetch('/api/admin/users/status', {
+                await authFetch('/api/admin/users/status', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
-                  credentials: 'include',
                   body: JSON.stringify({ userId: editUser.id, role: newRole }),
                 });
                 refreshData();
@@ -1156,6 +1191,52 @@ export default function AdminUsers() {
             }}
           >
             Save Role
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* ── MODAL 4: CLEAR DATABASE & RESET TO DEFAULT ── */}
+      <Dialog open={openResetModal} onClose={() => !resetting && setOpenResetModal(false)} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ fontWeight: 800, color: '#D32F2F', display: 'flex', alignItems: 'center', gap: 1 }}>
+          <DeleteSweepIcon /> Clear Database &amp; Reset to Defaults
+        </DialogTitle>
+        <DialogContent dividers>
+          <Typography variant="body2" sx={{ color: '#334155', mb: 2 }}>
+            Are you sure you want to clear test data from the system database?
+          </Typography>
+          <Box sx={{ p: 2, bgcolor: '#FEF2F2', borderRadius: 2, border: '1px solid #FECACA', mb: 2 }}>
+            <Typography variant="caption" sx={{ fontWeight: 700, color: '#991B1B', display: 'block', mb: 0.5 }}>
+              What will be cleared:
+            </Typography>
+            <Typography variant="caption" sx={{ color: '#B91C1C', display: 'block', lineHeight: 1.6 }}>
+              • All test applications and submitted verification records<br />
+              • All temporary instruments and test measurements<br />
+              • All non-default user accounts and temporary uploads
+            </Typography>
+          </Box>
+          <Box sx={{ p: 2, bgcolor: '#F0FDF4', borderRadius: 2, border: '1px solid #BBF7D0' }}>
+            <Typography variant="caption" sx={{ fontWeight: 700, color: '#166534', display: 'block', mb: 0.5 }}>
+              What will be preserved:
+            </Typography>
+            <Typography variant="caption" sx={{ color: '#15803D', display: 'block', lineHeight: 1.6 }}>
+              • Default portal accounts (admin@example.com, priya@example.com, lmo1@gov.in, etc.)<br />
+              • Statutory Legal Metrology rules, categories, and test matrices
+            </Typography>
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button onClick={() => setOpenResetModal(false)} disabled={resetting} sx={{ color: '#64748B' }}>
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            color="error"
+            onClick={handleResetDatabase}
+            disabled={resetting}
+            startIcon={resetting ? <CircularProgress size={16} color="inherit" /> : <DeleteSweepIcon />}
+            sx={{ fontWeight: 700, px: 2.5 }}
+          >
+            {resetting ? 'Clearing Database...' : 'Confirm Clear Database'}
           </Button>
         </DialogActions>
       </Dialog>

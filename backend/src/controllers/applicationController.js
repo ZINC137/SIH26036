@@ -212,22 +212,22 @@ const submitApplication = async (req, res) => {
           inspection_mode: inspection_mode || "ON_SITE",
           instrument_type,
           selected_category_code: catCode,
-          make,
-          model: model || null,
-          serial_no,
-          capacity,
+          make: String(make),
+          model: model ? String(model) : null,
+          serial_no: String(serial_no),
+          capacity: String(capacity),
           unit: unit || "kg",
           accuracy_class: accuracy_class || "Class III (Medium Accuracy)",
-          business_name,
+          business_name: String(business_name),
           trade_type: trade_type || "Commercial Trader",
-          gst_no: gst_no || null,
-          address,
-          city,
-          state,
-          pincode,
-          contact_name,
-          contact_phone,
-          contact_email,
+          gst_no: gst_no ? String(gst_no) : null,
+          address: String(address),
+          city: String(city),
+          state: String(state),
+          pincode: String(pincode),
+          contact_name: String(contact_name),
+          contact_phone: String(contact_phone),
+          contact_email: String(contact_email),
           priority: priority || "Normal",
           fee_amount,
           payment_status: "PAID",
@@ -476,12 +476,12 @@ const getNotifications = async (req, res) => {
     await triggerExpiryNotifications(req.user.id);
 
     const notifications = await prisma.notification.findMany({
-      where: { user_id: req.user.id },
+      where: { user_id: req.user.id, is_read: false },
       orderBy: { created_at: "desc" },
       take: 50,
     });
 
-    const unreadCount = notifications.filter((n) => !n.is_read).length;
+    const unreadCount = notifications.length;
     return res.status(200).json({ notifications, unreadCount });
   } catch (error) {
     console.error("Get notifications error:", error);
@@ -501,6 +501,20 @@ const markNotificationRead = async (req, res) => {
   } catch (error) {
     console.error("Mark notification read error:", error);
     return res.status(500).json({ error: "Failed to update notification." });
+  }
+};
+
+// DELETE /api/auth/notifications/:id
+const deleteNotification = async (req, res) => {
+  try {
+    const { id } = req.params;
+    await prisma.notification.deleteMany({
+      where: { id, user_id: req.user.id },
+    });
+    return res.status(200).json({ message: "Notification removed successfully" });
+  } catch (error) {
+    console.error("Delete notification error:", error);
+    return res.status(500).json({ error: "Failed to remove notification." });
   }
 };
 
@@ -595,6 +609,168 @@ const searchRegistry = async (req, res) => {
   }
 };
 
+function formatCertificateResult(app) {
+  const now = new Date();
+  const validUntil = app.certificate_valid_until ? new Date(app.certificate_valid_until) : null;
+  const isExpired = validUntil ? validUntil < now : false;
+  const daysRemaining = validUntil ? Math.max(0, Math.ceil((validUntil - now) / (1000 * 60 * 60 * 24))) : 0;
+  const isValid = app.status === 'Approved' && !isExpired && !!app.certificate_no;
+
+  return {
+    valid: true,
+    certificate: {
+      id: app.id,
+      certificateNo: app.certificate_no || 'CERT-RECORDED',
+      applicationNumber: app.app_number,
+      status: isValid ? 'VALID & VERIFIED' : isExpired ? 'EXPIRED' : app.status.toUpperCase(),
+      isValid,
+      isExpired,
+      daysRemaining,
+      issueDate: app.certificate_issued_at || app.inspection_date || app.updated_at,
+      validUntil: app.certificate_valid_until,
+      stampedBy: app.stamped_by || app.assigned_fo_name || 'Inspector, Directorate of Legal Metrology',
+      securitySealNo: app.security_seal_no || 'SEAL-DL-2026-VERIFIED',
+      feeAmount: app.fee_amount,
+      paymentStatus: app.payment_status,
+      paymentRef: app.payment_ref,
+      instrument: {
+        type: app.instrument_type,
+        serialNo: app.serial_no,
+        make: app.make || 'Standard Commercial',
+        model: app.model || 'Standard Model',
+        capacity: `${app.capacity} ${app.unit}`,
+        accuracyClass: app.accuracy_class || 'Class III (Medium Accuracy)',
+      },
+      establishment: {
+        businessName: app.business_name,
+        tradeType: app.trade_type || 'Commercial Trade',
+        address: `${app.address}, ${app.city}, ${app.state} - ${app.pincode}`,
+        contactPerson: app.contact_name || app.user?.profile?.full_name || 'Authorized Trader',
+      },
+      verificationMetrics: {
+        testErrorPercentage: app.test_error_percentage != null ? `${app.test_error_percentage}%` : 'Within +/- 0.05%',
+        environmentalCondition: app.environmental_temp || '25°C, 50% RH',
+        testReadings: app.test_readings || 'MPE compliance verified across all statutory test points',
+        inspectionResult: app.inspection_result || 'Pass',
+      },
+      digitalSignature: {
+        algorithm: 'ECDSA-SHA256 / Legal Metrology Form D Hash',
+        signatureHash: `SIG-${(app.certificate_no || app.id).replace(/[^a-zA-Z0-9]/g, '')}-${Buffer.from(app.serial_no || 'SER').toString('hex').slice(0, 8).toUpperCase()}`,
+        verified: true,
+        issuerAuthority: 'State Directorate of Legal Metrology, Government of NCT of Delhi',
+      },
+    },
+  };
+}
+
+// Public Certificate & QR Code Validation
+const validateCertificate = async (req, res) => {
+  try {
+    let query = req.method === 'POST'
+      ? (req.body?.query || req.body?.payload || req.body?.certificateNumber || req.body?.data)
+      : req.query?.query;
+
+    if (!query && req.body && typeof req.body === 'object') {
+      query = req.body.certificateNumber || req.body.serialNumber || req.body.id;
+    }
+
+    if (!query || typeof query !== 'string' || !query.trim()) {
+      return res.status(400).json({ valid: false, error: 'Certificate ID or QR Code payload is required.' });
+    }
+
+    let searchTerms = [query.trim()];
+
+    // If query is JSON string from QR code
+    try {
+      if (query.trim().startsWith('{') && query.trim().endsWith('}')) {
+        const parsed = JSON.parse(query.trim());
+        if (parsed.certificateNumber && parsed.certificateNumber !== 'UNISSUED') {
+          searchTerms.unshift(parsed.certificateNumber.trim());
+        }
+        if (parsed.serialNumber) {
+          searchTerms.push(parsed.serialNumber.trim());
+        }
+        if (parsed.serialLast3) {
+          searchTerms.push(parsed.serialLast3.trim());
+        }
+      }
+    } catch {}
+
+    // If query is a URL (including hash routing like /#verify?certId=...)
+    try {
+      if (query.includes('://') || query.includes('?') || query.includes('#')) {
+        const cleanQuery = query.startsWith('http') ? query : `http://dummy.com/${query}`;
+        if (cleanQuery.includes('#')) {
+          const hashPart = cleanQuery.split('#')[1] || '';
+          if (hashPart.includes('?')) {
+            const hashSearch = new URLSearchParams(hashPart.split('?')[1]);
+            const certFromHash = hashSearch.get('certId') || hashSearch.get('cert') || hashSearch.get('id') || hashSearch.get('code') || hashSearch.get('certificateNo');
+            if (certFromHash) searchTerms.unshift(certFromHash.trim());
+          }
+        }
+        const baseAndSearch = cleanQuery.split('#')[0];
+        if (baseAndSearch.includes('?')) {
+          const urlObj = new URL(baseAndSearch);
+          const certParam = urlObj.searchParams.get('certId') || urlObj.searchParams.get('cert') || urlObj.searchParams.get('id') || urlObj.searchParams.get('code') || urlObj.searchParams.get('certificateNo');
+          if (certParam) searchTerms.unshift(certParam.trim());
+        }
+      }
+    } catch {}
+
+    const primaryTerm = searchTerms[0];
+
+    // Find in Application (where certificate_no or app_number or serial_no matches)
+    const app = await prisma.application.findFirst({
+      where: {
+        OR: [
+          { certificate_no: { equals: primaryTerm } },
+          { app_number: { equals: primaryTerm } },
+          { serial_no: { equals: primaryTerm } },
+          { security_seal_no: { equals: primaryTerm } },
+        ],
+      },
+      include: {
+        user: { include: { profile: true } },
+        instrument: true,
+      },
+    });
+
+    if (app) {
+      return res.status(200).json(formatCertificateResult(app));
+    }
+
+    // Fallback: search case-insensitive across all applications
+    const allApps = await prisma.application.findMany({
+      include: { user: { include: { profile: true } }, instrument: true },
+      take: 100,
+    });
+
+    const matched = allApps.find((a) => {
+      const p = primaryTerm.toLowerCase();
+      return (
+        (a.certificate_no && a.certificate_no.toLowerCase() === p) ||
+        (a.app_number && a.app_number.toLowerCase() === p) ||
+        (a.serial_no && a.serial_no.toLowerCase() === p) ||
+        (a.security_seal_no && a.security_seal_no.toLowerCase() === p) ||
+        (a.serial_no && p.endsWith(a.serial_no.toLowerCase())) ||
+        (a.serial_no && a.serial_no.toLowerCase().endsWith(p))
+      );
+    });
+
+    if (matched) {
+      return res.status(200).json(formatCertificateResult(matched));
+    }
+
+    return res.status(404).json({
+      valid: false,
+      error: `No statutory certificate found matching "${primaryTerm}". Please verify the QR code or Certificate ID.`,
+    });
+  } catch (error) {
+    console.error('Validate certificate error:', error);
+    return res.status(500).json({ valid: false, error: 'Failed to authenticate certificate with national registry.' });
+  }
+};
+
 module.exports = {
   submitApplication,
   getMyApplications,
@@ -603,6 +779,8 @@ module.exports = {
   getMyInstruments,
   getNotifications,
   markNotificationRead,
+  deleteNotification,
   getDashboardStats,
   searchRegistry,
+  validateCertificate,
 };

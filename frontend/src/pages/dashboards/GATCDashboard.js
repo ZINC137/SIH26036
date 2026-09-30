@@ -16,6 +16,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import ArrowForwardRoundedIcon from '@mui/icons-material/ArrowForwardRounded';
 import UploadFileRoundedIcon from '@mui/icons-material/UploadFileRounded';
 import CertificateQrCode from '../../components/CertificateQrCode';
+import { authFetch } from '../../config/api';
 
 const COLOR = '#0D9488';
 const GRADIENT = 'linear-gradient(135deg, #14B8A6 0%, #0D9488 100%)';
@@ -62,9 +63,9 @@ export default function GATCDashboard({ userEmail }) {
     setError('');
     try {
       const [tasksRes, statsRes, histRes] = await Promise.all([
-        fetch('/api/gatc/tasks', { credentials: 'include' }),
-        fetch('/api/gatc/stats', { credentials: 'include' }),
-        fetch('/api/gatc/history', { credentials: 'include' }),
+        authFetch('/api/gatc/tasks'),
+        authFetch('/api/gatc/stats'),
+        authFetch('/api/gatc/history'),
       ]);
 
       const tasksData = await tasksRes.json();
@@ -107,10 +108,9 @@ export default function GATCDashboard({ userEmail }) {
 
     setInspectModal((prev) => ({ ...prev, submitting: true }));
     try {
-      const res = await fetch(`/api/gatc/applications/${inspectModal.task.id}/inspect`, {
+      const res = await authFetch(`/api/gatc/applications/${inspectModal.task.id}/inspect`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify({
           test_error_percentage: inspectModal.testError,
           environmental_temp: inspectModal.envTemp,
@@ -129,9 +129,8 @@ export default function GATCDashboard({ userEmail }) {
           formData.append('file', inspectModal.file);
           formData.append('doc_type', 'GATC_TEST_REPORT');
           formData.append('application_id', inspectModal.task.id);
-          await fetch('/api/upload', {
+          await authFetch('/api/upload', {
             method: 'POST',
-            credentials: 'include',
             body: formData,
           });
         }

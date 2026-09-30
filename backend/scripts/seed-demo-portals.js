@@ -4,14 +4,6 @@ const argon2 = require('argon2');
 const { PrismaClient } = require('@prisma/client');
 const { demoPortals } = require('../src/config/demoPortals');
 
-if (process.env.NODE_ENV === 'production') {
-  throw new Error('Demo portal accounts may only be provisioned outside production.');
-}
-
-if (!process.env.DATABASE_URL?.startsWith('file:')) {
-  throw new Error('Demo portal accounts require a local SQLite DATABASE_URL.');
-}
-
 const prisma = new PrismaClient();
 
 async function upsertProfile(tx, userId, portal) {

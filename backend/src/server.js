@@ -10,6 +10,7 @@ const gatcRoutes = require('./routes/gatc');
 const uploadRoutes = require('./routes/upload');
 const rulesRoutes = require('./routes/rules');
 const path = require('path');
+const fs = require('fs');
 
 const { securityHeaders } = require('./middleware/securityHeaders');
 const { authMiddleware } = require('./middleware/authMiddleware');
@@ -20,6 +21,9 @@ const { createBackupSnapshot } = require('./services/backupService');
 dotenv.config();
 
 const app = express();
+
+// Trust reverse proxy (Create React App dev proxy / Nginx)
+app.set('trust proxy', 1);
 
 // Disable information disclosure header
 app.disable('x-powered-by');
@@ -35,6 +39,11 @@ app.use(cors({
   credentials: true, // Allow cookies to be sent
 }));
 
+const uploadsDir = path.join(__dirname, '../uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
 // Protected static files for uploaded supporting documents and photographs
 // Enforces:
 // 1. Valid authentication (via cookie or Bearer token)
@@ -42,10 +51,10 @@ app.use(cors({
 app.use(
   '/uploads',
   authMiddleware,
-  async (req, res, next) => {
+  async (req, res) => {
     try {
       const filename = path.basename(req.path);
-      if (!filename || filename === '.' || filename === '/' || filename !== req.path) {
+      if (!filename || filename === '.' || filename === '..' || req.path !== `/${filename}`) {
         return res.status(403).json({ error: 'Directory listing forbidden.' });
       }
 
@@ -62,13 +71,19 @@ app.use(
         return res.status(403).json({ error: 'Forbidden: You do not have permission to access this document.' });
       }
 
-      next();
+      const filePath = path.join(__dirname, '../uploads', filename);
+      if (!fs.existsSync(filePath)) {
+        return res.status(404).json({ error: 'Physical file not found on server.' });
+      }
+
+      res.setHeader('Content-Type', doc.mime_type || 'application/octet-stream');
+      res.setHeader('Content-Disposition', `inline; filename="${doc.file_name || filename}"`);
+      return res.sendFile(filePath);
     } catch (err) {
       console.error('Uploads authorization check error:', err);
       return res.status(500).json({ error: 'Internal Server Error' });
     }
-  },
-  express.static(path.join(__dirname, '../uploads'))
+  }
 );
 
 // Routes

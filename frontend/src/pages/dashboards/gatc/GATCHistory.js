@@ -11,6 +11,7 @@ import PrintIcon from '@mui/icons-material/Print';
 import CloseIcon from '@mui/icons-material/Close';
 import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
 import CertificateQrCode from '../../../components/CertificateQrCode';
+import { authFetch } from '../../../config/api';
 
 const COLOR = '#0D9488';
 
@@ -25,7 +26,7 @@ export default function GATCHistory({ userEmail }) {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch('/api/gatc/history', { credentials: 'include' });
+      const res = await authFetch('/api/gatc/history');
       const data = await res.json();
       if (data.reports) {
         setHistory(data.reports);

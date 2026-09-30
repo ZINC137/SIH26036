@@ -3,7 +3,7 @@ import {
   Box, Paper, Typography, Grid, TextField, MenuItem, Button,
   Stepper, Step, StepLabel, Divider, Alert, Chip, Select,
   FormControl, InputLabel, CircularProgress, Card, Radio,
-  RadioGroup, FormControlLabel,
+  RadioGroup, FormControlLabel, InputAdornment,
 } from "@mui/material";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import BuildIcon from "@mui/icons-material/Build";
@@ -14,7 +14,26 @@ import CloseIcon from "@mui/icons-material/Close";
 import AutorenewIcon from "@mui/icons-material/Autorenew";
 import VerifiedUserIcon from "@mui/icons-material/VerifiedUser";
 import GavelIcon from "@mui/icons-material/Gavel";
+import StorefrontIcon from "@mui/icons-material/Storefront";
+import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
+import LocationOnOutlinedIcon from "@mui/icons-material/LocationOnOutlined";
+import HomeWorkOutlinedIcon from "@mui/icons-material/HomeWorkOutlined";
+import PlaceOutlinedIcon from "@mui/icons-material/PlaceOutlined";
+import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
+import PersonOutlinedIcon from "@mui/icons-material/PersonOutlined";
+import CategoryOutlinedIcon from "@mui/icons-material/CategoryOutlined";
+import HandymanOutlinedIcon from "@mui/icons-material/HandymanOutlined";
+import NumbersOutlinedIcon from "@mui/icons-material/NumbersOutlined";
+import ScaleOutlinedIcon from "@mui/icons-material/ScaleOutlined";
+import PhoneOutlinedIcon from "@mui/icons-material/PhoneOutlined";
+import EmailOutlinedIcon from "@mui/icons-material/EmailOutlined";
+import LocalShippingOutlinedIcon from "@mui/icons-material/LocalShippingOutlined";
+import ScienceOutlinedIcon from "@mui/icons-material/ScienceOutlined";
+import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import CheckCircleOutlinedIcon from "@mui/icons-material/CheckCircleOutlined";
 import { useNavigate } from "react-router-dom";
+import { authFetch } from "../../../config/api";
 
 const COLOR = "#E65100";
 const GRADIENT = "linear-gradient(135deg, #FF6D00, #E65100)";
@@ -36,33 +55,95 @@ const UNITS = ["kg", "g", "L", "mL", "bar", "m³/h"];
 
 const steps = ["Instrument & Verification Type", "Business & Premises Info", "Review & Submit"];
 
-// Consistent styling applied to every field (TextField & FormControl alike)
+// Modern refined styling applied to every field (TextField & FormControl alike)
 const fieldSx = {
   "& .MuiOutlinedInput-root": {
-    borderRadius: 2,
-    minHeight: 56,
-    "&:hover fieldset": { borderColor: COLOR },
-    "&.Mui-focused fieldset": { borderColor: COLOR },
+    borderRadius: "10px",
+    backgroundColor: "#FFFFFF",
+    transition: "all 0.2s ease-in-out",
+    "&:hover": {
+      backgroundColor: "#F8FAFC",
+      "& fieldset": { borderColor: "#CBD5E1" },
+    },
+    "&.Mui-focused": {
+      backgroundColor: "#FFFFFF",
+      boxShadow: "0 0 0 3px rgba(230, 81, 0, 0.12)",
+      "& fieldset": { borderColor: COLOR, borderWidth: "1.5px" },
+    },
   },
-  "& .MuiInputLabel-root.Mui-focused": { color: COLOR },
+  "& .MuiInputLabel-root": {
+    color: "#64748B",
+    fontSize: "0.92rem",
+    fontWeight: 500,
+    "&.Mui-focused": { color: COLOR, fontWeight: 700 },
+  },
+  "& .MuiFormHelperText-root": {
+    fontSize: "0.75rem",
+    fontWeight: 500,
+    color: "#64748B",
+    mt: 0.5,
+  },
 };
 
 // Section header component used in each step
-function StepHeader({ icon, title, subtitle }) {
+function StepHeader({ icon, title, subtitle, badge }) {
   return (
-    <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 3 }}>
-      <Box sx={{
-        width: 44, height: 44, borderRadius: 2,
-        bgcolor: "#FFF3E0",
-        display: "flex", alignItems: "center", justifyContent: "center",
-        flexShrink: 0,
-      }}>
-        {React.cloneElement(icon, { sx: { color: COLOR, fontSize: 22 } })}
+    <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 2, mb: 3 }}>
+      <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+        <Box sx={{
+          width: 48, height: 48, borderRadius: 2.5,
+          bgcolor: "#FFF7ED",
+          border: "1px solid #FFEDD5",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          flexShrink: 0,
+          boxShadow: "0 2px 8px rgba(230, 81, 0, 0.08)",
+        }}>
+          {React.cloneElement(icon, { sx: { color: COLOR, fontSize: 24 } })}
+        </Box>
+        <Box>
+          <Typography variant="h6" sx={{ fontWeight: 800, color: "#0F172A", lineHeight: 1.25, letterSpacing: "-0.01em" }}>
+            {title}
+          </Typography>
+          <Typography variant="body2" sx={{ color: "#64748B", mt: 0.3, fontWeight: 500 }}>
+            {subtitle}
+          </Typography>
+        </Box>
       </Box>
-      <Box>
-        <Typography variant="h6" sx={{ fontWeight: 700, color: "#1A1A2E", lineHeight: 1.2 }}>{title}</Typography>
-        <Typography variant="body2" sx={{ color: "#9E9E9E", mt: 0.2 }}>{subtitle}</Typography>
+      {badge && (
+        <Chip
+          label={badge}
+          size="small"
+          sx={{ bgcolor: "#F1F5F9", color: "#475569", fontWeight: 700, fontSize: "0.75rem", border: "1px solid #E2E8F0" }}
+        />
+      )}
+    </Box>
+  );
+}
+
+// Sub-section header component for organized cards
+function SectionTitle({ icon, title, subtitle, badge }) {
+  return (
+    <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 2, pb: 1, borderBottom: "1px solid #F1F5F9" }}>
+      <Box sx={{ display: "flex", alignItems: "center", gap: 1.2 }}>
+        {icon && React.cloneElement(icon, { sx: { color: COLOR, fontSize: 20 } })}
+        <Box>
+          <Typography variant="subtitle2" sx={{ fontWeight: 800, color: "#1E293B", letterSpacing: "0.01em" }}>
+            {title}
+          </Typography>
+          {subtitle && (
+            <Typography variant="caption" sx={{ color: "#64748B", display: "block" }}>
+              {subtitle}
+            </Typography>
+          )}
+        </Box>
       </Box>
+      {badge && (
+        <Chip
+          label={badge}
+          size="small"
+          sx={{ bgcolor: "#ECFDF5", color: "#065F46", fontWeight: 700, fontSize: "0.7rem", border: "1px solid #A7F3D0" }}
+        />
+      )}
     </Box>
   );
 }
@@ -107,7 +188,7 @@ export default function UserApply() {
   };
 
   useEffect(() => {
-    fetch("/api/auth/me", { credentials: "include" })
+    authFetch("/api/auth/me")
       .then((r) => r.json())
       .then((data) => {
         const p = data.user?.profile || {};
@@ -127,7 +208,7 @@ export default function UserApply() {
       .catch(() => {});
 
     // 2. Fetch existing instruments for re-verification linking
-    fetch("/api/auth/instruments", { credentials: "include" })
+    authFetch("/api/auth/instruments")
       .then((r) => r.json())
       .then((data) => {
         if (data.instruments) {
@@ -137,7 +218,7 @@ export default function UserApply() {
       .catch(() => {});
 
     // 3. Fetch Legal Metrology Instrument Categories
-    fetch("/api/rules/categories")
+    authFetch("/api/rules/categories")
       .then((r) => r.json())
       .then((data) => {
         if (data.categories && data.categories.length > 0) {
@@ -157,7 +238,7 @@ export default function UserApply() {
     }));
     setLoadingRule(true);
     try {
-      const res = await fetch(`/api/rules/applicable?categoryCode=${catCode}&stateCode=${form.state || 'Delhi'}`);
+      const res = await authFetch(`/api/rules/applicable?categoryCode=${catCode}&stateCode=${form.state || 'Delhi'}`);
       const data = await res.json();
       if (data.category) {
         setActiveRule(data);
@@ -195,6 +276,13 @@ export default function UserApply() {
   const handleFileUpload = async (e, docType) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    if (file.size > 10 * 1024 * 1024) {
+      setError(`File "${file.name}" exceeds the 10MB limit (${(file.size / (1024 * 1024)).toFixed(1)}MB). Please choose a smaller file.`);
+      e.target.value = "";
+      return;
+    }
+
     setUploadingDoc(true);
     setError("");
     try {
@@ -202,9 +290,8 @@ export default function UserApply() {
       formData.append("file", file);
       formData.append("doc_type", docType);
 
-      const res = await fetch("/api/upload", {
+      const res = await authFetch("/api/upload", {
         method: "POST",
-        credentials: "include",
         body: formData,
       });
 
@@ -227,31 +314,98 @@ export default function UserApply() {
     setUploadedDocuments((prev) => prev.filter((d) => d.id !== docId));
   };
 
+  const validateStep0 = () => {
+    const instType = form.instrumentType || selectedCategoryCode;
+    if (!instType) {
+      setError("Please select a Legal Metrology Instrument Category.");
+      return false;
+    }
+    if (!form.make || !form.make.trim()) {
+      setError("Please enter the Make / Brand of the instrument.");
+      return false;
+    }
+    if (!form.serialNo || !form.serialNo.trim()) {
+      setError("Please enter the Serial Number.");
+      return false;
+    }
+    if (!form.capacity || !form.capacity.toString().trim()) {
+      setError("Please enter the Capacity of the instrument.");
+      return false;
+    }
+    return true;
+  };
+
+  const validateStep1 = () => {
+    if (!form.businessName || !form.businessName.trim()) {
+      setError("Please enter the Business / Shop Name.");
+      return false;
+    }
+    if (!form.address || !form.address.trim()) {
+      setError("Please enter the Premises Address.");
+      return false;
+    }
+    if (!form.city || !form.city.trim()) {
+      setError("Please enter the City.");
+      return false;
+    }
+    if (!form.state || !form.state.trim()) {
+      setError("Please enter the State.");
+      return false;
+    }
+    if (!form.pincode || !form.pincode.trim()) {
+      setError("Please enter the Pincode.");
+      return false;
+    }
+    if (!form.contactName || !form.contactName.trim()) {
+      setError("Please enter the Contact Person Name.");
+      return false;
+    }
+    if (!form.contactPhone || !form.contactPhone.trim()) {
+      setError("Please enter the Contact Phone Number.");
+      return false;
+    }
+    if (!form.contactEmail || !form.contactEmail.trim()) {
+      setError("Please enter the Contact Email Address.");
+      return false;
+    }
+    return true;
+  };
+
+  const handleNextStep = () => {
+    setError("");
+    if (activeStep === 0 && !validateStep0()) return;
+    if (activeStep === 1 && !validateStep1()) return;
+    setActiveStep((s) => s + 1);
+  };
+
   const handleSubmit = async () => {
     setError("");
+    if (!validateStep0() || !validateStep1()) return;
+
     setSubmitting(true);
     try {
-      const res = await fetch("/api/auth/applications", {
+      const resolvedInstType = form.instrumentType || (categories.find((c) => c.code === selectedCategoryCode)?.name) || selectedCategoryCode || "Weighing Scale";
+
+      const res = await authFetch("/api/auth/applications", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "include",
         body: JSON.stringify({
           application_type: applicationType,
           instrument_id: selectedInstrumentId || undefined,
           previous_certificate_no: previousCertificateNo || undefined,
           inspection_mode: inspectionMode,
           preferred_date: preferredDate || undefined,
-          instrument_type: form.instrumentType,
+          instrument_type: resolvedInstType,
           selected_category_code: selectedCategoryCode || undefined,
           preferred_verification_route: preferredRoute,
           category_fields_data: Object.keys(dynamicFields).length > 0 ? JSON.stringify(dynamicFields) : undefined,
           make: form.make,
-          model: form.model,
+          model: form.model || undefined,
           serial_no: form.serialNo,
           capacity: form.capacity,
-          unit: form.unit,
+          unit: form.unit || "kg",
           business_name: form.businessName,
-          gst_no: form.gstNo,
+          gst_no: form.gstNo || undefined,
           address: form.address,
           city: form.city,
           state: form.state,
@@ -263,7 +417,7 @@ export default function UserApply() {
         }),
       });
       const data = await res.json();
-      if (res.ok) {
+      if (res.ok && data.application) {
         setAppNumber(data.application.app_number);
         setSubmitted(true);
       } else {
@@ -308,26 +462,61 @@ export default function UserApply() {
 
   // ── Main form ────────────────────────────────────────────────────
   return (
-    <Box sx={{ p: { xs: 2, md: 4 }, maxWidth: 880, mx: "auto" }}>
+    <Box sx={{ p: { xs: 2, md: 4 }, maxWidth: 940, mx: "auto" }}>
 
       {/* Page header */}
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="overline" sx={{ color: COLOR, fontWeight: 700, letterSpacing: 1.5 }}>USER PORTAL</Typography>
-        <Typography variant="h4" sx={{ fontWeight: 900, color: "#1A1A2E", lineHeight: 1.2 }}>New Verification Application</Typography>
-        <Typography variant="body2" sx={{ color: "#757575", mt: 0.5 }}>
-          Apply for instrument verification under the Legal Metrology Act, 2009
+      <Box sx={{ mb: 3.5 }}>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 0.8 }}>
+          <Chip
+            label="CITIZEN & TRADER PORTAL"
+            size="small"
+            sx={{ bgcolor: "#FFF7ED", color: COLOR, fontWeight: 800, fontSize: "0.7rem", border: "1px solid #FFEDD5" }}
+          />
+          <Chip
+            label="SECTION 24 VERIFICATION"
+            size="small"
+            sx={{ bgcolor: "#F0FDF4", color: "#166534", fontWeight: 800, fontSize: "0.7rem", border: "1px solid #BBF7D0" }}
+          />
+        </Box>
+        <Typography variant="h4" sx={{ fontWeight: 900, color: "#0F172A", lineHeight: 1.2, letterSpacing: "-0.02em" }}>
+          New Verification Application
+        </Typography>
+        <Typography variant="body2" sx={{ color: "#64748B", mt: 0.5, fontWeight: 500 }}>
+          Statutory electronic application for stamping & verification of weights and measures (Legal Metrology Act, 2009)
         </Typography>
       </Box>
 
       {/* Stepper */}
-      <Paper elevation={0} sx={{ p: 2.5, borderRadius: 3, border: "1px solid #E0E0E0", mb: 3 }}>
+      <Paper
+        elevation={0}
+        sx={{
+          p: { xs: 2, sm: 2.5 },
+          borderRadius: 3.5,
+          border: "1px solid #E2E8F0",
+          bgcolor: "#FFFFFF",
+          boxShadow: "0 2px 10px rgba(0,0,0,0.02)",
+          mb: 3.5,
+        }}
+      >
         <Stepper activeStep={activeStep} alternativeLabel>
           {steps.map((label, i) => (
             <Step key={label}>
               <StepLabel
-                StepIconProps={{ sx: { "&.Mui-active": { color: COLOR }, "&.Mui-completed": { color: COLOR } } }}
+                StepIconProps={{
+                  sx: {
+                    "&.Mui-active": { color: COLOR },
+                    "&.Mui-completed": { color: "#10B981" },
+                  },
+                }}
               >
-                <Typography variant="caption" sx={{ fontWeight: activeStep === i ? 700 : 500, color: activeStep === i ? COLOR : "#757575" }}>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    fontWeight: activeStep === i ? 800 : 600,
+                    color: activeStep === i ? COLOR : activeStep > i ? "#10B981" : "#94A3B8",
+                    fontSize: "0.82rem",
+                  }}
+                >
                   {label}
                 </Typography>
               </StepLabel>
@@ -337,125 +526,165 @@ export default function UserApply() {
       </Paper>
 
       {error && (
-        <Alert severity="error" sx={{ mb: 3, borderRadius: 2 }} onClose={() => setError("")}>{error}</Alert>
+        <Alert severity="error" sx={{ mb: 3.5, borderRadius: 2.5, fontWeight: 600 }} onClose={() => setError("")}>
+          {error}
+        </Alert>
       )}
 
       {/* Form card */}
-      <Paper elevation={0} sx={{ p: { xs: 3, md: 4 }, borderRadius: 3, border: "1px solid #E0E0E0" }}>
+      <Paper
+        elevation={0}
+        sx={{
+          p: { xs: 3, md: 4.5 },
+          borderRadius: 4,
+          border: "1px solid #E2E8F0",
+          bgcolor: "#FFFFFF",
+          boxShadow: "0 4px 24px rgba(0,0,0,0.03)",
+        }}
+      >
 
         {/* ────────── STEP 0 : Instrument & Verification Type ────────── */}
         {activeStep === 0 && (
           <Box>
-            <StepHeader icon={<BuildIcon />} title="Verification Category & Instrument Details" subtitle="Select statutory verification workflow and specify instrument parameters" />
+            <StepHeader
+              icon={<BuildIcon />}
+              title="Verification Category & Instrument Details"
+              subtitle="Select statutory verification workflow, specify category, and provide instrument technical parameters"
+              badge="Step 1 of 3"
+            />
             <Divider sx={{ mb: 3 }} />
 
-            {/* Application Type Selector */}
-            <Typography variant="caption" sx={{ fontWeight: 800, color: "#64748B", textTransform: "uppercase", letterSpacing: 1, display: "block", mb: 1.5 }}>
-              1. Statutory Verification Workflow (Legal Metrology Act, Sec 24)
-            </Typography>
-            <Grid container spacing={2} sx={{ mb: 3 }}>
-              <Grid item xs={12} sm={6}>
-                <Card
-                  variant="outlined"
-                  onClick={() => { setApplicationType("INITIAL_VERIFICATION"); setSelectedInstrumentId(""); }}
-                  sx={{
-                    p: 2, cursor: "pointer", borderRadius: 3,
-                    borderColor: applicationType === "INITIAL_VERIFICATION" ? COLOR : "#E2E8F0",
-                    bgcolor: applicationType === "INITIAL_VERIFICATION" ? "#FFF7ED" : "#FFFFFF",
-                    borderWidth: applicationType === "INITIAL_VERIFICATION" ? 2 : 1,
-                    transition: "all 0.2s ease",
-                  }}
-                >
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-                    <VerifiedUserIcon sx={{ color: applicationType === "INITIAL_VERIFICATION" ? COLOR : "#94A3B8" }} />
-                    <Box>
-                      <Typography variant="subtitle2" sx={{ fontWeight: 800, color: "#0F172A" }}>
-                        Initial Verification
-                      </Typography>
-                      <Typography variant="caption" sx={{ color: "#64748B", display: "block" }}>
-                        For newly manufactured, imported or commissioned weights & measures.
-                      </Typography>
-                    </Box>
-                  </Box>
-                </Card>
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <Card
-                  variant="outlined"
-                  onClick={() => setApplicationType("RE_VERIFICATION")}
-                  sx={{
-                    p: 2, cursor: "pointer", borderRadius: 3,
-                    borderColor: applicationType === "RE_VERIFICATION" ? COLOR : "#E2E8F0",
-                    bgcolor: applicationType === "RE_VERIFICATION" ? "#FFF7ED" : "#FFFFFF",
-                    borderWidth: applicationType === "RE_VERIFICATION" ? 2 : 1,
-                    transition: "all 0.2s ease",
-                  }}
-                >
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-                    <AutorenewIcon sx={{ color: applicationType === "RE_VERIFICATION" ? COLOR : "#94A3B8" }} />
-                    <Box>
-                      <Typography variant="subtitle2" sx={{ fontWeight: 800, color: "#0F172A" }}>
-                        Periodical Re-verification
-                      </Typography>
-                      <Typography variant="caption" sx={{ color: "#64748B", display: "block" }}>
-                        Mandatory annual/biennial renewal or post-repair re-stamping.
-                      </Typography>
-                    </Box>
-                  </Box>
-                </Card>
-              </Grid>
-            </Grid>
+            {/* 1. Statutory Verification Workflow Selector */}
+            <Paper elevation={0} sx={{ p: { xs: 2.5, sm: 3 }, mb: 3.5, borderRadius: 3, border: "1px solid #E2E8F0", bgcolor: "#FAFAFC" }}>
+              <SectionTitle
+                icon={<VerifiedUserIcon />}
+                title="Statutory Verification Workflow (Legal Metrology Act, Sec 24)"
+                subtitle="Select whether this is an initial certification for new equipment or periodic renewal"
+                badge="Statutory Basis"
+              />
 
-            {/* Re-verification helper: Select registered instrument */}
-            {applicationType === "RE_VERIFICATION" && (
-              <Box sx={{ mb: 3, p: 2.5, bgcolor: "#F8FAFC", borderRadius: 3, border: "1px dashed #CBD5E1" }}>
-                <Typography variant="subtitle2" sx={{ fontWeight: 700, color: "#1E293B", mb: 1.5 }}>
-                  Select from Your Registered Instruments
-                </Typography>
-                {registeredInstruments.length > 0 ? (
-                  <FormControl fullWidth sx={{ ...fieldSx, mb: 2 }}>
-                    <InputLabel>Choose Existing Instrument</InputLabel>
-                    <Select
-                      value={selectedInstrumentId}
-                      label="Choose Existing Instrument"
-                      onChange={(e) => handleSelectInstrument(e.target.value)}
-                    >
-                      <MenuItem value="">-- Enter Instrument Details Manually --</MenuItem>
-                      {registeredInstruments.map((inst) => (
-                        <MenuItem key={inst.id} value={inst.id}>
-                          {inst.instrument_type} — {inst.make} (S/N: {inst.serial_no}) · Status: {inst.current_status}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                ) : (
-                  <Typography variant="caption" sx={{ color: "#64748B", display: "block", mb: 2 }}>
-                    No previously verified instruments found in your account. You can enter your previous certificate details below.
+              <Grid container spacing={2}>
+                <Grid size={{ xs: 12, sm: 6 }} sx={{ width: "100%" }}>
+                  <Card
+                    variant="outlined"
+                    onClick={() => { setApplicationType("INITIAL_VERIFICATION"); setSelectedInstrumentId(""); }}
+                    sx={{
+                      p: 2.2, cursor: "pointer", borderRadius: 2.5,
+                      borderColor: applicationType === "INITIAL_VERIFICATION" ? COLOR : "#E2E8F0",
+                      bgcolor: applicationType === "INITIAL_VERIFICATION" ? "#FFF7ED" : "#FFFFFF",
+                      borderWidth: applicationType === "INITIAL_VERIFICATION" ? 2 : 1,
+                      transition: "all 0.2s ease",
+                      "&:hover": { borderColor: COLOR },
+                    }}
+                  >
+                    <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1.5 }}>
+                      <VerifiedUserIcon sx={{ color: applicationType === "INITIAL_VERIFICATION" ? COLOR : "#94A3B8", fontSize: 26, mt: 0.2 }} />
+                      <Box>
+                        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                          <Typography variant="subtitle2" sx={{ fontWeight: 800, color: "#0F172A" }}>
+                            Initial Verification
+                          </Typography>
+                          {applicationType === "INITIAL_VERIFICATION" && (
+                            <Chip label="Selected" size="small" sx={{ height: 20, bgcolor: COLOR, color: "#FFFFFF", fontWeight: 800, fontSize: "0.65rem" }} />
+                          )}
+                        </Box>
+                        <Typography variant="caption" sx={{ color: "#64748B", display: "block", mt: 0.4 }}>
+                          For newly manufactured, imported, or newly installed weights and measures prior to commercial use.
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </Card>
+                </Grid>
+
+                <Grid size={{ xs: 12, sm: 6 }} sx={{ width: "100%" }}>
+                  <Card
+                    variant="outlined"
+                    onClick={() => setApplicationType("RE_VERIFICATION")}
+                    sx={{
+                      p: 2.2, cursor: "pointer", borderRadius: 2.5,
+                      borderColor: applicationType === "RE_VERIFICATION" ? COLOR : "#E2E8F0",
+                      bgcolor: applicationType === "RE_VERIFICATION" ? "#FFF7ED" : "#FFFFFF",
+                      borderWidth: applicationType === "RE_VERIFICATION" ? 2 : 1,
+                      transition: "all 0.2s ease",
+                      "&:hover": { borderColor: COLOR },
+                    }}
+                  >
+                    <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1.5 }}>
+                      <AutorenewIcon sx={{ color: applicationType === "RE_VERIFICATION" ? COLOR : "#94A3B8", fontSize: 26, mt: 0.2 }} />
+                      <Box>
+                        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                          <Typography variant="subtitle2" sx={{ fontWeight: 800, color: "#0F172A" }}>
+                            Periodical Re-verification
+                          </Typography>
+                          {applicationType === "RE_VERIFICATION" && (
+                            <Chip label="Selected" size="small" sx={{ height: 20, bgcolor: COLOR, color: "#FFFFFF", fontWeight: 800, fontSize: "0.65rem" }} />
+                          )}
+                        </Box>
+                        <Typography variant="caption" sx={{ color: "#64748B", display: "block", mt: 0.4 }}>
+                          Mandatory annual/biennial re-stamping or post-repair verification under Legal Metrology Rules.
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </Card>
+                </Grid>
+              </Grid>
+
+              {/* Re-verification helper: Select registered instrument */}
+              {applicationType === "RE_VERIFICATION" && (
+                <Box sx={{ mt: 2.5, p: 2.5, bgcolor: "#FFFFFF", borderRadius: 2.5, border: "1px dashed #CBD5E1" }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 800, color: "#1E293B", mb: 1.5, display: "flex", alignItems: "center", gap: 1 }}>
+                    <ScaleOutlinedIcon sx={{ color: COLOR, fontSize: 18 }} />
+                    Link to Previously Registered Instrument
                   </Typography>
-                )}
-                <TextField
-                  fullWidth
-                  label="Previous Verification Certificate Number"
-                  value={previousCertificateNo}
-                  onChange={(e) => setPreviousCertificateNo(e.target.value)}
-                  placeholder="e.g. DL-LM-2025-XXXX"
-                  sx={fieldSx}
-                />
-              </Box>
-            )}
+                  {registeredInstruments.length > 0 ? (
+                    <FormControl fullWidth sx={{ ...fieldSx, mb: 2 }}>
+                      <InputLabel>Choose Existing Registered Instrument</InputLabel>
+                      <Select
+                        value={selectedInstrumentId}
+                        label="Choose Existing Registered Instrument"
+                        onChange={(e) => handleSelectInstrument(e.target.value)}
+                      >
+                        <MenuItem value="">-- Enter Instrument Details Manually Below --</MenuItem>
+                        {registeredInstruments.map((inst) => (
+                          <MenuItem key={inst.id} value={inst.id}>
+                            {inst.instrument_type} — {inst.make} (S/N: {inst.serial_no}) · Status: {inst.current_status}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  ) : (
+                    <Typography variant="caption" sx={{ color: "#64748B", display: "block", mb: 2 }}>
+                      No previously verified instruments found in your registered account. Please specify your previous certificate number below.
+                    </Typography>
+                  )}
+                  <TextField
+                    fullWidth
+                    label="Previous Verification Certificate Number"
+                    value={previousCertificateNo}
+                    onChange={(e) => setPreviousCertificateNo(e.target.value)}
+                    placeholder="e.g. DL-LM-2025-XXXX"
+                    sx={fieldSx}
+                    helperText="Reference from previous physical stamping slip or digital certificate"
+                  />
+                </Box>
+              )}
+            </Paper>
 
-            <Typography variant="caption" sx={{ fontWeight: 800, color: "#64748B", textTransform: "uppercase", letterSpacing: 1, display: "block", mb: 1.5 }}>
-              2. Technical Specifications
-            </Typography>
+            {/* 2. Regulated Instrument Category */}
+            <Paper elevation={0} sx={{ p: { xs: 2.5, sm: 3 }, mb: 3.5, borderRadius: 3, border: "1px solid #E2E8F0", bgcolor: "#FAFAFC" }}>
+              <SectionTitle
+                icon={<CategoryOutlinedIcon />}
+                title="Regulated Instrument Category"
+                subtitle="First Schedule classification prescribed under Legal Metrology Rules, 2011"
+                badge="Statutory Schedule"
+              />
 
-            <Grid container spacing={3}>
-              {/* Instrument Category Selector */}
-              <Grid item xs={12}>
-                <FormControl fullWidth sx={fieldSx}>
-                  <InputLabel>Legal Metrology Instrument Category *</InputLabel>
+              <Box sx={{ width: "100%", mb: activeRule ? 2.5 : 0 }}>
+                <FormControl fullWidth sx={{ ...fieldSx, width: "100%" }}>
+                  <InputLabel>Legal Metrology Regulated Category *</InputLabel>
                   <Select
                     value={selectedCategoryCode || form.instrumentType}
-                    label="Legal Metrology Instrument Category *"
+                    label="Legal Metrology Regulated Category *"
                     onChange={(e) => {
                       const val = e.target.value;
                       const matchedCat = categories.find((c) => c.code === val || c.name === val);
@@ -477,335 +706,656 @@ export default function UserApply() {
                     )}
                   </Select>
                 </FormControl>
-              </Grid>
+                <Typography variant="caption" sx={{ color: "#64748B", display: "block", mt: 0.8 }}>
+                  Specifies mandatory inspection tests, Maximum Permissible Error (MPE) thresholds, and authorized verifying authorities.
+                </Typography>
+              </Box>
 
-              {/* Statutory Verification Route Eligibility Panel (Section 5 & 18) */}
+              {/* Statutory Verification Route Eligibility Panel */}
               {loadingRule && (
-                <Grid item xs={12} sx={{ display: 'flex', alignItems: 'center', gap: 1.5, py: 1 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, py: 2 }}>
                   <CircularProgress size={20} sx={{ color: COLOR }} />
                   <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 600 }}>
                     Evaluating statutory legal rules and jurisdiction authority matrix...
                   </Typography>
-                </Grid>
+                </Box>
               )}
 
               {activeRule && !loadingRule && (
-                <Grid item xs={12}>
-                  <Paper
-                    sx={{
-                      p: 2.5,
-                      bgcolor: '#F8FAFC',
-                      borderRadius: 3,
-                      border: '1px solid #E2E8F0',
-                      boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-                    }}
-                  >
-                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5, flexWrap: 'wrap', gap: 1 }}>
-                      <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#0F172A', display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <GavelIcon sx={{ color: COLOR, fontSize: 20 }} /> Verification Route Eligibility (Statutory Source of Truth)
-                      </Typography>
-                      <Chip
-                        size="small"
-                        label={`Statutory Rule: ${activeRule.category?.sourceRule || 'Rule 3(1)'} · ${activeRule.category?.sourceDocument || 'LM Act 2009'}`}
-                        sx={{ bgcolor: '#FFF3E0', color: COLOR, fontWeight: 700, fontSize: '0.75rem' }}
-                      />
-                    </Box>
-
-                    <Typography variant="caption" sx={{ color: '#64748B', display: 'block', mb: 1.5 }}>
-                      Legal Metrology (GATC) Rules, 2013 (amended 2025/2026): Weight/Measure may be verified either by accredited GATC or by Legal Metrology Officers.
+                <Box
+                  sx={{
+                    p: 2.5,
+                    bgcolor: '#FFFFFF',
+                    borderRadius: 2.5,
+                    border: '1px solid #E2E8F0',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+                  }}
+                >
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5, flexWrap: 'wrap', gap: 1 }}>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#0F172A', display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <GavelIcon sx={{ color: COLOR, fontSize: 18 }} /> Verification Route Eligibility
                     </Typography>
-
-                    <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap', mb: 2 }}>
-                      <Chip
-                        icon={<CheckCircleIcon sx={{ color: '#16A34A !important' }} />}
-                        label="✓ Legal Metrology Officer (LMO / Field Officer) — Legally Permitted"
-                        sx={{ bgcolor: '#DCFCE7', color: '#15803D', fontWeight: 700, py: 0.5 }}
-                      />
-
-                      {activeRule.category?.isGatcEligible ? (
-                        <Chip
-                          icon={<CheckCircleIcon sx={{ color: '#2563EB !important' }} />}
-                          label="✓ Government Approved Test Centre (GATC Lab) — Legally Permitted"
-                          sx={{ bgcolor: '#DBEAFE', color: '#1D4ED8', fontWeight: 700, py: 0.5 }}
-                        />
-                      ) : (
-                        <Chip
-                          label="✗ GATC: Not permitted under First Schedule (LMO Reserved Stamping)"
-                          sx={{ bgcolor: '#F1F5F9', color: '#64748B', fontWeight: 700, py: 0.5 }}
-                        />
-                      )}
-                    </Box>
-
-                    <Alert severity="info" sx={{ borderRadius: 2, mb: 2, fontSize: '0.82rem', py: 0.5 }}>
-                      <strong>Statutory Assignment Policy:</strong> Final verification authority will be assigned by the department based on applicable rules, jurisdiction, authorization and availability.
-                    </Alert>
-
-                    {/* Applicant Preferred Route Option */}
-                    <Box sx={{ pt: 1, borderTop: '1px dashed #CBD5E1' }}>
-                      <Typography variant="caption" sx={{ fontWeight: 800, color: '#334155', textTransform: 'uppercase', letterSpacing: 0.5, display: 'block', mb: 1 }}>
-                        Preferred Verification Route (Optional Preference Only — Does Not Override Backend Eligibility):
-                      </Typography>
-                      <RadioGroup
-                        row
-                        value={preferredRoute}
-                        onChange={(e) => setPreferredRoute(e.target.value)}
-                      >
-                        <FormControlLabel
-                          value="NO_PREFERENCE"
-                          control={<Radio size="small" sx={{ color: COLOR, '&.Mui-checked': { color: COLOR } }} />}
-                          label={<Typography variant="body2" sx={{ fontWeight: 600 }}>No Preference (Department Chooses)</Typography>}
-                        />
-                        <FormControlLabel
-                          value="LMO"
-                          control={<Radio size="small" sx={{ color: COLOR, '&.Mui-checked': { color: COLOR } }} />}
-                          label={<Typography variant="body2" sx={{ fontWeight: 600 }}>Legal Metrology Officer (LMO)</Typography>}
-                        />
-                        <FormControlLabel
-                          value="GATC"
-                          disabled={!activeRule.category?.isGatcEligible}
-                          control={<Radio size="small" sx={{ color: COLOR, '&.Mui-checked': { color: COLOR } }} />}
-                          label={
-                            <Typography variant="body2" sx={{ fontWeight: 600, color: !activeRule.category?.isGatcEligible ? '#94A3B8' : 'inherit' }}>
-                              Government Approved Test Centre (GATC) {!activeRule.category?.isGatcEligible ? '(Ineligible)' : ''}
-                            </Typography>
-                          }
-                        />
-                      </RadioGroup>
-                    </Box>
-                  </Paper>
-                </Grid>
-              )}
-
-              {/* Make / Brand */}
-              <Grid item xs={12} sm={6}>
-                <TextField fullWidth label="Make / Brand *" value={form.make} onChange={set("make")} sx={fieldSx} />
-              </Grid>
-
-              {/* Model */}
-              <Grid item xs={12} sm={6}>
-                <TextField fullWidth label="Model Number" value={form.model} onChange={set("model")} sx={fieldSx} helperText="Optional" />
-              </Grid>
-
-              {/* Serial No */}
-              <Grid item xs={12} sm={6}>
-                <TextField fullWidth label="Serial Number *" value={form.serialNo} onChange={set("serialNo")} sx={fieldSx} />
-              </Grid>
-
-              {/* Capacity + Unit */}
-              <Grid item xs={8} sm={4}>
-                <TextField fullWidth label="Capacity *" value={form.capacity} onChange={set("capacity")} type="number" sx={fieldSx} />
-              </Grid>
-              <Grid item xs={4} sm={2}>
-                <FormControl fullWidth sx={fieldSx}>
-                  <InputLabel>Unit</InputLabel>
-                  <Select value={form.unit} label="Unit" onChange={set("unit")}>
-                    {activeRule?.category?.units && activeRule.category.units.length > 0 ? (
-                      activeRule.category.units.map((u) => <MenuItem key={u} value={u}>{u}</MenuItem>)
-                    ) : (
-                      UNITS.map((u) => <MenuItem key={u} value={u}>{u}</MenuItem>)
-                    )}
-                  </Select>
-                </FormControl>
-              </Grid>
-
-              {/* Dynamic Category Fields (Section 7, 8, 9) */}
-              {activeRule?.fieldSchema && activeRule.fieldSchema.length > 0 && (
-                <Grid item xs={12}>
-                  <Box sx={{ p: 2.5, bgcolor: '#FAFAFA', borderRadius: 3, border: '1px solid #EEEEEE' }}>
-                    <Typography variant="caption" sx={{ fontWeight: 800, color: '#64748B', textTransform: 'uppercase', letterSpacing: 1, display: 'block', mb: 2 }}>
-                      Category-Specific Technical Parameters ({activeRule.category?.name})
-                    </Typography>
-                    <Grid container spacing={2}>
-                      {activeRule.fieldSchema.map((field) => (
-                        <Grid item xs={12} sm={field.type === 'select' ? 6 : 6} key={field.name}>
-                          {field.type === 'select' ? (
-                            <FormControl fullWidth size="small" sx={fieldSx}>
-                              <InputLabel>{field.label} {field.required ? '*' : ''}</InputLabel>
-                              <Select
-                                value={dynamicFields[field.name] || ''}
-                                label={`${field.label} ${field.required ? '*' : ''}`}
-                                onChange={(e) => setDynamicField(field.name, e.target.value)}
-                              >
-                                {field.options.map((opt) => (
-                                  <MenuItem key={opt} value={opt}>{opt}</MenuItem>
-                                ))}
-                              </Select>
-                            </FormControl>
-                          ) : (
-                            <TextField
-                              fullWidth
-                              size="small"
-                              label={`${field.label} ${field.required ? '*' : ''}`}
-                              type={field.type === 'number' ? 'number' : 'text'}
-                              value={dynamicFields[field.name] || ''}
-                              onChange={(e) => setDynamicField(field.name, e.target.value)}
-                              sx={fieldSx}
-                            />
-                          )}
-                        </Grid>
-                      ))}
-                    </Grid>
-                  </Box>
-                </Grid>
-              )}
-            </Grid>
-
-            {/* Document & Photo Upload */}
-            <Divider sx={{ my: 3 }} />
-            <Typography variant="caption" sx={{ fontWeight: 800, color: "#64748B", textTransform: "uppercase", letterSpacing: 1, display: "block", mb: 1 }}>
-              3. Supporting Documents & Photographs (Requirement 13)
-            </Typography>
-            <Typography variant="body2" sx={{ color: "#64748B", mb: 2 }}>
-              Upload clear photographs of the instrument nameplate and purchase invoice or previous verification receipt (JPEG/PNG/PDF, Max 10MB).
-            </Typography>
-
-            {/* Category-Specific Statutory Document Requirements (Section 25) */}
-            {activeRule?.documents && activeRule.documents.length > 0 && (
-              <Box sx={{ mb: 2.5, p: 2, bgcolor: '#F8FAFC', borderRadius: 2, border: '1px solid #E2E8F0' }}>
-                <Typography variant="caption" sx={{ fontWeight: 800, color: '#334155', textTransform: 'uppercase', letterSpacing: 0.5, display: 'block', mb: 1 }}>
-                  Prescribed Category Documents for {activeRule.category?.name}:
-                </Typography>
-                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                  {activeRule.documents.map((d) => (
                     <Chip
-                      key={d.id || d.document_code}
                       size="small"
-                      label={`${d.name} ${d.mandatory ? '(Mandatory)' : '(Optional)'}`}
-                      sx={{
-                        bgcolor: d.mandatory ? '#FEF2F2' : '#F1F5F9',
-                        color: d.mandatory ? '#991B1B' : '#475569',
-                        fontWeight: 600,
-                        border: d.mandatory ? '1px solid #FECACA' : '1px solid #CBD5E1',
+                      label={`Rule: ${activeRule.category?.sourceRule || 'Rule 3(1)'} · ${activeRule.category?.sourceDocument || 'LM Act 2009'}`}
+                      sx={{ bgcolor: '#FFF3E0', color: COLOR, fontWeight: 700, fontSize: '0.72rem' }}
+                    />
+                  </Box>
+
+                  <Typography variant="caption" sx={{ color: '#64748B', display: 'block', mb: 1.5 }}>
+                    Under Legal Metrology Rules, weights and measures in this category may be tested by the following designated entities:
+                  </Typography>
+
+                  <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap', mb: 2 }}>
+                    <Chip
+                      icon={<CheckCircleIcon sx={{ color: '#16A34A !important' }} />}
+                      label="✓ Legal Metrology Officer (LMO / Field Inspector) — Permitted"
+                      sx={{ bgcolor: '#DCFCE7', color: '#15803D', fontWeight: 700, py: 0.5 }}
+                    />
+
+                    {activeRule.category?.isGatcEligible ? (
+                      <Chip
+                        icon={<CheckCircleIcon sx={{ color: '#2563EB !important' }} />}
+                        label="✓ Government Approved Test Centre (GATC Lab) — Permitted"
+                        sx={{ bgcolor: '#DBEAFE', color: '#1D4ED8', fontWeight: 700, py: 0.5 }}
+                      />
+                    ) : (
+                      <Chip
+                        label="✗ GATC Lab: Not permitted under First Schedule (LMO Exclusive)"
+                        sx={{ bgcolor: '#F1F5F9', color: '#64748B', fontWeight: 700, py: 0.5 }}
+                      />
+                    )}
+                  </Box>
+
+                  {/* Applicant Preferred Route Option */}
+                  <Box sx={{ pt: 1.5, borderTop: '1px dashed #CBD5E1' }}>
+                    <Typography variant="caption" sx={{ fontWeight: 800, color: '#334155', textTransform: 'uppercase', letterSpacing: 0.5, display: 'block', mb: 1 }}>
+                      Preferred Verification Route (Optional Preference Only):
+                    </Typography>
+                    <RadioGroup
+                      row
+                      value={preferredRoute}
+                      onChange={(e) => setPreferredRoute(e.target.value)}
+                    >
+                      <FormControlLabel
+                        value="NO_PREFERENCE"
+                        control={<Radio size="small" sx={{ color: COLOR, '&.Mui-checked': { color: COLOR } }} />}
+                        label={<Typography variant="body2" sx={{ fontWeight: 600 }}>No Preference (Department Chooses)</Typography>}
+                      />
+                      <FormControlLabel
+                        value="LMO"
+                        control={<Radio size="small" sx={{ color: COLOR, '&.Mui-checked': { color: COLOR } }} />}
+                        label={<Typography variant="body2" sx={{ fontWeight: 600 }}>Legal Metrology Officer (LMO)</Typography>}
+                      />
+                      <FormControlLabel
+                        value="GATC"
+                        disabled={!activeRule.category?.isGatcEligible}
+                        control={<Radio size="small" sx={{ color: COLOR, '&.Mui-checked': { color: COLOR } }} />}
+                        label={
+                          <Typography variant="body2" sx={{ fontWeight: 600, color: !activeRule.category?.isGatcEligible ? '#94A3B8' : 'inherit' }}>
+                            GATC Testing Centre {!activeRule.category?.isGatcEligible ? '(Ineligible)' : ''}
+                          </Typography>
+                        }
+                      />
+                    </RadioGroup>
+                  </Box>
+                </Box>
+              )}
+            </Paper>
+
+            {/* 3. Instrument Technical Specifications */}
+            <Paper elevation={0} sx={{ p: { xs: 2.5, sm: 3 }, mb: 3.5, borderRadius: 3, border: "1px solid #E2E8F0", bgcolor: "#FAFAFC" }}>
+              <SectionTitle
+                icon={<HandymanOutlinedIcon />}
+                title="Instrument Technical Specifications"
+                subtitle="Identification serial numbers, make, model and nominal capacity"
+                badge="Hardware Details"
+              />
+
+              <Grid container spacing={2.5}>
+                {/* Make / Brand */}
+                <Grid size={{ xs: 12, sm: 6 }} sx={{ width: "100%" }}>
+                  <TextField
+                    fullWidth
+                    label="Make / Brand *"
+                    value={form.make}
+                    onChange={set("make")}
+                    placeholder="e.g. Mettler Toledo / Essae / Avery"
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <HandymanOutlinedIcon sx={{ color: "#94A3B8", fontSize: 20 }} />
+                        </InputAdornment>
+                      ),
+                    }}
+                    sx={fieldSx}
+                  />
+                </Grid>
+
+                {/* Model */}
+                <Grid size={{ xs: 12, sm: 6 }} sx={{ width: "100%" }}>
+                  <TextField
+                    fullWidth
+                    label="Model Number"
+                    value={form.model}
+                    onChange={set("model")}
+                    placeholder="e.g. DS-215 / IND231"
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <NumbersOutlinedIcon sx={{ color: "#94A3B8", fontSize: 20 }} />
+                        </InputAdornment>
+                      ),
+                    }}
+                    sx={fieldSx}
+                    helperText="Optional (as stamped on nameplate)"
+                  />
+                </Grid>
+
+                {/* Serial No */}
+                <Grid size={{ xs: 12, sm: 6 }} sx={{ width: "100%" }}>
+                  <TextField
+                    fullWidth
+                    label="Serial Number *"
+                    value={form.serialNo}
+                    onChange={set("serialNo")}
+                    placeholder="e.g. SN-2026-99412"
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <NumbersOutlinedIcon sx={{ color: "#94A3B8", fontSize: 20 }} />
+                        </InputAdornment>
+                      ),
+                    }}
+                    sx={fieldSx}
+                    helperText="Permanent embossed or plate serial number"
+                  />
+                </Grid>
+
+                {/* Capacity + Unit */}
+                <Grid size={{ xs: 12, sm: 6 }} sx={{ width: "100%" }}>
+                  <Box sx={{ display: "flex", gap: 1.5 }}>
+                    <TextField
+                      fullWidth
+                      label="Capacity / Nominal Value *"
+                      value={form.capacity}
+                      onChange={set("capacity")}
+                      type="number"
+                      placeholder="e.g. 50"
+                      InputProps={{
+                        startAdornment: (
+                          <InputAdornment position="start">
+                            <ScaleOutlinedIcon sx={{ color: "#94A3B8", fontSize: 20 }} />
+                          </InputAdornment>
+                        ),
                       }}
+                      sx={{ ...fieldSx, flex: 2 }}
+                    />
+                    <FormControl sx={{ ...fieldSx, flex: 1, minWidth: 100 }}>
+                      <InputLabel>Unit</InputLabel>
+                      <Select value={form.unit} label="Unit" onChange={set("unit")}>
+                        {activeRule?.category?.units && activeRule.category.units.length > 0 ? (
+                          activeRule.category.units.map((u) => <MenuItem key={u} value={u}>{u}</MenuItem>)
+                        ) : (
+                          UNITS.map((u) => <MenuItem key={u} value={u}>{u}</MenuItem>)
+                        )}
+                      </Select>
+                    </FormControl>
+                  </Box>
+                  <Typography variant="caption" sx={{ color: "#64748B", display: "block", mt: 0.5 }}>
+                    Maximum calibrated operating capacity
+                  </Typography>
+                </Grid>
+
+                {/* Dynamic Category Fields */}
+                {activeRule?.fieldSchema && activeRule.fieldSchema.length > 0 && (
+                  <Grid size={{ xs: 12 }} sx={{ width: "100%" }}>
+                    <Box sx={{ p: 2.5, bgcolor: '#FFFFFF', borderRadius: 2.5, border: '1px solid #E2E8F0' }}>
+                      <Typography variant="caption" sx={{ fontWeight: 800, color: '#334155', textTransform: 'uppercase', letterSpacing: 0.5, display: 'block', mb: 2 }}>
+                        Category-Specific Technical Parameters ({activeRule.category?.name})
+                      </Typography>
+                      <Grid container spacing={2}>
+                        {activeRule.fieldSchema.map((field) => (
+                          <Grid size={{ xs: 12, sm: 6 }} key={field.name} sx={{ width: "100%" }}>
+                            {field.type === 'select' ? (
+                              <FormControl fullWidth size="small" sx={fieldSx}>
+                                <InputLabel>{field.label} {field.required ? '*' : ''}</InputLabel>
+                                <Select
+                                  value={dynamicFields[field.name] || ''}
+                                  label={`${field.label} ${field.required ? '*' : ''}`}
+                                  onChange={(e) => setDynamicField(field.name, e.target.value)}
+                                >
+                                  {field.options.map((opt) => (
+                                    <MenuItem key={opt} value={opt}>{opt}</MenuItem>
+                                  ))}
+                                </Select>
+                              </FormControl>
+                            ) : (
+                              <TextField
+                                fullWidth
+                                size="small"
+                                label={`${field.label} ${field.required ? '*' : ''}`}
+                                type={field.type === 'number' ? 'number' : 'text'}
+                                value={dynamicFields[field.name] || ''}
+                                onChange={(e) => setDynamicField(field.name, e.target.value)}
+                                sx={fieldSx}
+                              />
+                            )}
+                          </Grid>
+                        ))}
+                      </Grid>
+                    </Box>
+                  </Grid>
+                )}
+              </Grid>
+            </Paper>
+
+            {/* 4. Document & Photo Upload */}
+            <Paper elevation={0} sx={{ p: { xs: 2.5, sm: 3 }, borderRadius: 3, border: "1px solid #E2E8F0", bgcolor: "#FAFAFC" }}>
+              <SectionTitle
+                icon={<CloudUploadIcon />}
+                title="Supporting Documents & Photographs (Requirement 13)"
+                subtitle="Upload clear photographs of the instrument nameplate and purchase invoice or previous verification receipt"
+                badge="Mandatory Proof"
+              />
+
+              {/* Category-Specific Statutory Document Requirements */}
+              {activeRule?.documents && activeRule.documents.length > 0 && (
+                <Box sx={{ mb: 2.5, p: 2, bgcolor: '#FFFFFF', borderRadius: 2, border: '1px solid #E2E8F0' }}>
+                  <Typography variant="caption" sx={{ fontWeight: 800, color: '#334155', textTransform: 'uppercase', letterSpacing: 0.5, display: 'block', mb: 1 }}>
+                    Prescribed Category Documents for {activeRule.category?.name}:
+                  </Typography>
+                  <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                    {activeRule.documents.map((d) => (
+                      <Chip
+                        key={d.id || d.document_code}
+                        size="small"
+                        label={`${d.name} ${d.mandatory ? '(Mandatory)' : '(Optional)'}`}
+                        sx={{
+                          bgcolor: d.mandatory ? '#FEF2F2' : '#F1F5F9',
+                          color: d.mandatory ? '#991B1B' : '#475569',
+                          fontWeight: 600,
+                          border: d.mandatory ? '1px solid #FECACA' : '1px solid #CBD5E1',
+                        }}
+                      />
+                    ))}
+                  </Box>
+                </Box>
+              )}
+
+              <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap", alignItems: "center", mb: 1.5 }}>
+                <Button
+                  variant="outlined"
+                  component="label"
+                  startIcon={<CloudUploadIcon />}
+                  disabled={uploadingDoc}
+                  sx={{
+                    borderColor: "#CBD5E1",
+                    color: "#334155",
+                    fontWeight: 700,
+                    borderRadius: 2.5,
+                    px: 2.5, py: 1.2,
+                    bgcolor: "#FFFFFF",
+                    "&:hover": { borderColor: COLOR, bgcolor: "#FFF7ED" },
+                  }}
+                >
+                  Upload Nameplate Photo
+                  <input type="file" hidden accept="image/*,.jpg,.jpeg,.png,.webp,.jfif,.heic,.heif,.bmp" onChange={(e) => handleFileUpload(e, "INSTRUMENT_PHOTO")} />
+                </Button>
+
+                <Button
+                  variant="outlined"
+                  component="label"
+                  startIcon={<AttachFileIcon />}
+                  disabled={uploadingDoc}
+                  sx={{
+                    borderColor: "#CBD5E1",
+                    color: "#334155",
+                    fontWeight: 700,
+                    borderRadius: 2.5,
+                    px: 2.5, py: 1.2,
+                    bgcolor: "#FFFFFF",
+                    "&:hover": { borderColor: COLOR, bgcolor: "#FFF7ED" },
+                  }}
+                >
+                  Upload Invoice / Stamping Slip
+                  <input type="file" hidden accept="image/*,application/pdf,.pdf,.jpg,.jpeg,.png,.webp,.jfif,.heic,.heif" onChange={(e) => handleFileUpload(e, "SUPPORTING_DOCUMENT")} />
+                </Button>
+
+                {uploadingDoc && (
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                    <CircularProgress size={20} sx={{ color: COLOR }} />
+                    <Typography variant="caption" sx={{ color: "#64748B", fontWeight: 600 }}>Uploading securely...</Typography>
+                  </Box>
+                )}
+              </Box>
+
+              <Typography variant="caption" sx={{ color: "#64748B", display: "block", mb: 2 }}>
+                Supported formats: JPG, PNG, WEBP, JFIF, HEIC, PDF (Max 10MB per file)
+              </Typography>
+
+              {uploadedDocuments.length > 0 && (
+                <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap", p: 2, bgcolor: "#FFFFFF", borderRadius: 2.5, border: "1px solid #E2E8F0" }}>
+                  {uploadedDocuments.map((doc) => (
+                    <Chip
+                      key={doc.id}
+                      label={`${doc.doc_type === "INSTRUMENT_PHOTO" ? "📷 Nameplate Photo" : "📄 Supporting Doc"}: ${doc.file_name}`}
+                      onDelete={() => removeDocument(doc.id)}
+                      deleteIcon={<CloseIcon />}
+                      sx={{ bgcolor: "#F8FAFC", fontWeight: 700, border: "1px solid #CBD5E1", py: 2 }}
                     />
                   ))}
                 </Box>
-              </Box>
-            )}
-
-            <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap", mb: 2 }}>
-              <Button
-                variant="outlined"
-                component="label"
-                startIcon={<CloudUploadIcon />}
-                disabled={uploadingDoc}
-                sx={{ borderColor: "#CBD5E1", color: "#334155", fontWeight: 700, borderRadius: 2 }}
-              >
-                Upload Nameplate Photo
-                <input type="file" hidden accept="image/*" onChange={(e) => handleFileUpload(e, "INSTRUMENT_PHOTO")} />
-              </Button>
-
-              <Button
-                variant="outlined"
-                component="label"
-                startIcon={<AttachFileIcon />}
-                disabled={uploadingDoc}
-                sx={{ borderColor: "#CBD5E1", color: "#334155", fontWeight: 700, borderRadius: 2 }}
-              >
-                Upload Invoice / Stamping Slip
-                <input type="file" hidden accept="image/*,application/pdf" onChange={(e) => handleFileUpload(e, "SUPPORTING_DOCUMENT")} />
-              </Button>
-
-              {uploadingDoc && (
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                  <CircularProgress size={20} sx={{ color: COLOR }} />
-                  <Typography variant="caption" sx={{ color: "#64748B" }}>Uploading securely...</Typography>
-                </Box>
               )}
-            </Box>
-
-            {uploadedDocuments.length > 0 && (
-              <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap", p: 1.5, bgcolor: "#F1F5F9", borderRadius: 2 }}>
-                {uploadedDocuments.map((doc) => (
-                  <Chip
-                    key={doc.id}
-                    label={`${doc.doc_type === "INSTRUMENT_PHOTO" ? "📷 Photo" : "📄 Doc"}: ${doc.file_name}`}
-                    onDelete={() => removeDocument(doc.id)}
-                    deleteIcon={<CloseIcon />}
-                    sx={{ bgcolor: "#FFFFFF", fontWeight: 600, border: "1px solid #CBD5E1" }}
-                  />
-                ))}
-              </Box>
-            )}
+            </Paper>
           </Box>
         )}
 
         {/* ────────── STEP 1 : Business & Premises Info ────────── */}
         {activeStep === 1 && (
           <Box>
-            <StepHeader icon={<BusinessIcon />} title="Business & Premises Information" subtitle="Details of premises and preferred verification logistics" />
-            <Divider sx={{ mb: profileLoaded ? 2 : 4 }} />
+            <StepHeader
+              icon={<BusinessIcon />}
+              title="Business & Premises Information"
+              subtitle="Establishment identification, verification logistics, and authorized representative details"
+              badge="Step 2 of 3"
+            />
+            <Divider sx={{ mb: 3 }} />
 
             {profileLoaded && (
-              <Alert severity="info" sx={{ mb: 3, borderRadius: 2 }}>
-                ✨ Contact and address fields have been pre-filled from your profile — edit as needed.
-              </Alert>
+              <Box sx={{
+                mb: 3.5, p: 2, borderRadius: 2.5,
+                bgcolor: "#F0FDF4", border: "1px solid #BBF7D0",
+                display: "flex", alignItems: "center", gap: 1.5,
+              }}>
+                <CheckCircleOutlinedIcon sx={{ color: "#16A34A", fontSize: 22, flexShrink: 0 }} />
+                <Box>
+                  <Typography variant="subtitle2" sx={{ color: "#166534", fontWeight: 800 }}>
+                    Profile Pre-Fill Active
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: "#15803D", fontWeight: 500 }}>
+                    Contact and address details have been automatically retrieved from your registered trader profile. You may modify them for this application if needed.
+                  </Typography>
+                </Box>
+              </Box>
             )}
 
-            <Grid container spacing={3}>
-              <Grid item xs={12} sm={8}>
-                <TextField fullWidth label="Business / Shop Name *" value={form.businessName} onChange={set("businessName")} sx={fieldSx} />
-              </Grid>
-              <Grid item xs={12} sm={4}>
-                <TextField fullWidth label="GST Number" value={form.gstNo} onChange={set("gstNo")} sx={fieldSx} helperText="Optional" />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField fullWidth label="Address of Premises *" value={form.address} onChange={set("address")} multiline rows={2} sx={fieldSx} />
-              </Grid>
-              <Grid item xs={12} sm={5}>
-                <TextField fullWidth label="City *" value={form.city} onChange={set("city")} sx={fieldSx} />
-              </Grid>
-              <Grid item xs={12} sm={4}>
-                <TextField fullWidth label="State *" value={form.state} onChange={set("state")} sx={fieldSx} />
-              </Grid>
-              <Grid item xs={12} sm={3}>
-                <TextField fullWidth label="Pincode *" value={form.pincode} onChange={set("pincode")} sx={fieldSx} inputProps={{ maxLength: 6 }} />
-              </Grid>
-            </Grid>
+            {/* 1. Business & Establishment Info */}
+            <Paper elevation={0} sx={{ p: { xs: 2.5, sm: 3 }, mb: 3.5, borderRadius: 3, border: "1px solid #E2E8F0", bgcolor: "#FAFAFC" }}>
+              <SectionTitle
+                icon={<StorefrontIcon />}
+                title="Business Identification & Premises"
+                subtitle="Address where the weights and measures are deployed and commercial trading takes place"
+                badge="Premises Location"
+              />
 
-            <Divider sx={{ my: 3 }}>
-              <Typography variant="caption" sx={{ color: "#9E9E9E", fontWeight: 700, letterSpacing: 1 }}>VERIFICATION PREFERENCES</Typography>
-            </Divider>
-
-            <Grid container spacing={3} sx={{ mb: 2 }}>
-              <Grid item xs={12} sm={6}>
-                <FormControl fullWidth sx={fieldSx}>
-                  <InputLabel>Inspection Mode</InputLabel>
-                  <Select value={inspectionMode} label="Inspection Mode" onChange={(e) => setInspectionMode(e.target.value)}>
-                    <MenuItem value="ON_SITE">On-Site Verification at Business Premises</MenuItem>
-                    <MenuItem value="AT_CENTRE">At Legal Metrology Centre / GATC Lab</MenuItem>
-                  </Select>
-                </FormControl>
+              <Grid container spacing={2.5}>
+                <Grid size={{ xs: 12, sm: 8 }} sx={{ width: "100%" }}>
+                  <TextField
+                    fullWidth
+                    label="Business / Commercial Establishment Name *"
+                    value={form.businessName}
+                    onChange={set("businessName")}
+                    placeholder="e.g. Metro Commercial Traders Pvt Ltd"
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <StorefrontIcon sx={{ color: "#94A3B8", fontSize: 20 }} />
+                        </InputAdornment>
+                      ),
+                    }}
+                    sx={fieldSx}
+                  />
+                </Grid>
+                <Grid size={{ xs: 12, sm: 4 }} sx={{ width: "100%" }}>
+                  <TextField
+                    fullWidth
+                    label="GST Number"
+                    value={form.gstNo}
+                    onChange={set("gstNo")}
+                    placeholder="15-digit GSTIN (optional)"
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <ReceiptLongIcon sx={{ color: "#94A3B8", fontSize: 20 }} />
+                        </InputAdornment>
+                      ),
+                    }}
+                    sx={fieldSx}
+                    helperText="Optional for unregistered traders"
+                  />
+                </Grid>
+                <Grid size={{ xs: 12 }} sx={{ width: "100%" }}>
+                  <TextField
+                    fullWidth
+                    label="Premises Street Address *"
+                    value={form.address}
+                    onChange={set("address")}
+                    multiline
+                    rows={2}
+                    placeholder="Shop/Plot number, Market name, Street, Landmark"
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start" sx={{ alignSelf: "flex-start", mt: 1 }}>
+                          <LocationOnOutlinedIcon sx={{ color: "#94A3B8", fontSize: 20 }} />
+                        </InputAdornment>
+                      ),
+                    }}
+                    sx={fieldSx}
+                  />
+                </Grid>
+                <Grid size={{ xs: 12, sm: 5 }} sx={{ width: "100%" }}>
+                  <TextField
+                    fullWidth
+                    label="City / District *"
+                    value={form.city}
+                    onChange={set("city")}
+                    placeholder="e.g. North Delhi"
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <HomeWorkOutlinedIcon sx={{ color: "#94A3B8", fontSize: 20 }} />
+                        </InputAdornment>
+                      ),
+                    }}
+                    sx={fieldSx}
+                  />
+                </Grid>
+                <Grid size={{ xs: 12, sm: 4 }} sx={{ width: "100%" }}>
+                  <TextField
+                    fullWidth
+                    label="State / UT *"
+                    value={form.state}
+                    onChange={set("state")}
+                    placeholder="e.g. Delhi"
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <PlaceOutlinedIcon sx={{ color: "#94A3B8", fontSize: 20 }} />
+                        </InputAdornment>
+                      ),
+                    }}
+                    sx={fieldSx}
+                  />
+                </Grid>
+                <Grid size={{ xs: 12, sm: 3 }} sx={{ width: "100%" }}>
+                  <TextField
+                    fullWidth
+                    label="Pincode *"
+                    value={form.pincode}
+                    onChange={set("pincode")}
+                    placeholder="e.g. 110054"
+                    inputProps={{ maxLength: 6 }}
+                    sx={fieldSx}
+                    helperText="6-digit PIN code"
+                  />
+                </Grid>
               </Grid>
-              <Grid item xs={12} sm={6}>
+            </Paper>
+
+            {/* 2. Verification Logistics & Preferred Date */}
+            <Paper elevation={0} sx={{ p: { xs: 2.5, sm: 3 }, mb: 3.5, borderRadius: 3, border: "1px solid #E2E8F0", bgcolor: "#FAFAFC" }}>
+              <SectionTitle
+                icon={<CalendarMonthIcon />}
+                title="Verification Logistics & Preferred Schedule"
+                subtitle="Select how inspection should be performed and your preferred date"
+                badge="Statutory Schedule"
+              />
+
+              <Typography variant="caption" sx={{ fontWeight: 800, color: "#475569", textTransform: "uppercase", letterSpacing: 0.5, display: "block", mb: 1.5 }}>
+                Inspection Mode:
+              </Typography>
+
+              <Grid container spacing={2} sx={{ mb: 3 }}>
+                <Grid size={{ xs: 12, sm: 6 }} sx={{ width: "100%" }}>
+                  <Card
+                    variant="outlined"
+                    onClick={() => setInspectionMode("ON_SITE")}
+                    sx={{
+                      p: 2, cursor: "pointer", borderRadius: 2.5,
+                      borderColor: inspectionMode === "ON_SITE" ? COLOR : "#E2E8F0",
+                      bgcolor: inspectionMode === "ON_SITE" ? "#FFF7ED" : "#FFFFFF",
+                      borderWidth: inspectionMode === "ON_SITE" ? 2 : 1,
+                      transition: "all 0.2s ease",
+                      "&:hover": { borderColor: COLOR },
+                    }}
+                  >
+                    <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1.5 }}>
+                      <LocalShippingOutlinedIcon sx={{ color: inspectionMode === "ON_SITE" ? COLOR : "#94A3B8", fontSize: 24, mt: 0.2 }} />
+                      <Box>
+                        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                          <Typography variant="subtitle2" sx={{ fontWeight: 800, color: "#0F172A" }}>
+                            On-Site Verification
+                          </Typography>
+                          {inspectionMode === "ON_SITE" && (
+                            <Chip label="Selected" size="small" sx={{ height: 20, bgcolor: COLOR, color: "#FFFFFF", fontWeight: 800, fontSize: "0.65rem" }} />
+                          )}
+                        </Box>
+                        <Typography variant="caption" sx={{ color: "#64748B", display: "block", mt: 0.3 }}>
+                          Officer visits your commercial premises to test and seal instruments in position.
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </Card>
+                </Grid>
+
+                <Grid size={{ xs: 12, sm: 6 }} sx={{ width: "100%" }}>
+                  <Card
+                    variant="outlined"
+                    onClick={() => setInspectionMode("AT_CENTRE")}
+                    sx={{
+                      p: 2, cursor: "pointer", borderRadius: 2.5,
+                      borderColor: inspectionMode === "AT_CENTRE" ? COLOR : "#E2E8F0",
+                      bgcolor: inspectionMode === "AT_CENTRE" ? "#FFF7ED" : "#FFFFFF",
+                      borderWidth: inspectionMode === "AT_CENTRE" ? 2 : 1,
+                      transition: "all 0.2s ease",
+                      "&:hover": { borderColor: COLOR },
+                    }}
+                  >
+                    <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1.5 }}>
+                      <ScienceOutlinedIcon sx={{ color: inspectionMode === "AT_CENTRE" ? COLOR : "#94A3B8", fontSize: 24, mt: 0.2 }} />
+                      <Box>
+                        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                          <Typography variant="subtitle2" sx={{ fontWeight: 800, color: "#0F172A" }}>
+                            At Lab / Testing Centre
+                          </Typography>
+                          {inspectionMode === "AT_CENTRE" && (
+                            <Chip label="Selected" size="small" sx={{ height: 20, bgcolor: COLOR, color: "#FFFFFF", fontWeight: 800, fontSize: "0.65rem" }} />
+                          )}
+                        </Box>
+                        <Typography variant="caption" sx={{ color: "#64748B", display: "block", mt: 0.3 }}>
+                          Applicant brings equipment to accredited GATC laboratory or Legal Metrology centre.
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </Card>
+                </Grid>
+              </Grid>
+
+              {/* Preferred Inspection Date with clean explicit label avoiding any overlap */}
+              <Box sx={{ p: 2.2, bgcolor: "#FFFFFF", borderRadius: 2.5, border: "1px solid #E2E8F0" }}>
+                <Typography variant="caption" sx={{ fontWeight: 700, color: "#334155", display: "flex", alignItems: "center", gap: 1, mb: 1, textTransform: "uppercase", letterSpacing: 0.5 }}>
+                  <CalendarMonthIcon sx={{ fontSize: 16, color: COLOR }} />
+                  Preferred Inspection Date (Subject to Official Roster Availability)
+                </Typography>
                 <TextField
                   fullWidth
-                  label="Preferred Inspection Date"
                   type="date"
                   value={preferredDate}
                   onChange={(e) => setPreferredDate(e.target.value)}
-                  InputLabelProps={{ shrink: true }}
+                  inputProps={{ min: new Date().toISOString().split("T")[0] }}
                   sx={fieldSx}
-                  helperText="Subject to officer & testing centre scheduling"
+                  helperText="Select a tentative date. The department will allocate the exact inspection slot."
                 />
-              </Grid>
-            </Grid>
+              </Box>
+            </Paper>
 
-            <Divider sx={{ my: 3 }}>
-              <Typography variant="caption" sx={{ color: "#9E9E9E", fontWeight: 700, letterSpacing: 1 }}>CONTACT PERSON</Typography>
-            </Divider>
+            {/* 3. Authorized Contact Person */}
+            <Paper elevation={0} sx={{ p: { xs: 2.5, sm: 3 }, borderRadius: 3, border: "1px solid #E2E8F0", bgcolor: "#FAFAFC" }}>
+              <SectionTitle
+                icon={<PersonOutlinedIcon />}
+                title="Authorized Contact Representative"
+                subtitle="Official representative who will attend the verification inspection"
+                badge="Direct Communication"
+              />
 
-            <Grid container spacing={3}>
-              <Grid item xs={12} sm={4}>
-                <TextField fullWidth label="Contact Name *" value={form.contactName} onChange={set("contactName")} sx={fieldSx} />
+              <Grid container spacing={2.5}>
+                <Grid size={{ xs: 12, sm: 4 }} sx={{ width: "100%" }}>
+                  <TextField
+                    fullWidth
+                    label="Contact Person Name *"
+                    value={form.contactName}
+                    onChange={set("contactName")}
+                    placeholder="Full legal name"
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <PersonOutlinedIcon sx={{ color: "#94A3B8", fontSize: 20 }} />
+                        </InputAdornment>
+                      ),
+                    }}
+                    sx={fieldSx}
+                  />
+                </Grid>
+                <Grid size={{ xs: 12, sm: 4 }} sx={{ width: "100%" }}>
+                  <TextField
+                    fullWidth
+                    label="Mobile Phone Number *"
+                    value={form.contactPhone}
+                    onChange={set("contactPhone")}
+                    placeholder="10-digit mobile"
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <PhoneOutlinedIcon sx={{ color: "#94A3B8", fontSize: 20 }} />
+                        </InputAdornment>
+                      ),
+                    }}
+                    sx={fieldSx}
+                    helperText="For inspection SMS alerts"
+                  />
+                </Grid>
+                <Grid size={{ xs: 12, sm: 4 }} sx={{ width: "100%" }}>
+                  <TextField
+                    fullWidth
+                    label="Official Email Address *"
+                    value={form.contactEmail}
+                    onChange={set("contactEmail")}
+                    type="email"
+                    placeholder="name@company.com"
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <EmailOutlinedIcon sx={{ color: "#94A3B8", fontSize: 20 }} />
+                        </InputAdornment>
+                      ),
+                    }}
+                    sx={fieldSx}
+                    helperText="For statutory digital certificates"
+                  />
+                </Grid>
               </Grid>
-              <Grid item xs={12} sm={4}>
-                <TextField fullWidth label="Phone Number *" value={form.contactPhone} onChange={set("contactPhone")} sx={fieldSx} />
-              </Grid>
-              <Grid item xs={12} sm={4}>
-                <TextField fullWidth label="Email Address *" value={form.contactEmail} onChange={set("contactEmail")} type="email" sx={fieldSx} />
-              </Grid>
-            </Grid>
+            </Paper>
           </Box>
         )}
 
@@ -843,7 +1393,7 @@ export default function UserApply() {
                 ["Capacity", `${form.capacity} ${form.unit}`],
                 ["Previous Certificate", previousCertificateNo || "None (First Time Online Registration)"],
               ].map(([k, v]) => (
-                <Grid item xs={12} sm={6} key={k}>
+                <Grid size={{ xs: 12, sm: 6 }} key={k} sx={{ width: "100%" }}>
                   <Box sx={{ p: 2, borderRadius: 2, bgcolor: "#FAFAFA", border: "1px solid #EEEEEE" }}>
                     <Typography variant="caption" sx={{ color: "#9E9E9E", display: "block", mb: 0.4, fontWeight: 600 }}>{k}</Typography>
                     <Typography variant="body2" sx={{ fontWeight: 700, color: "#1A1A2E" }}>{v}</Typography>
@@ -864,7 +1414,7 @@ export default function UserApply() {
                 ["Contact Person", `${form.contactName} (📞 ${form.contactPhone})`],
                 ["Email", form.contactEmail],
               ].map(([k, v]) => (
-                <Grid item xs={12} sm={6} key={k}>
+                <Grid size={{ xs: 12, sm: 6 }} key={k} sx={{ width: "100%" }}>
                   <Box sx={{ p: 2, borderRadius: 2, bgcolor: "#FAFAFA", border: "1px solid #EEEEEE" }}>
                     <Typography variant="caption" sx={{ color: "#9E9E9E", display: "block", mb: 0.4, fontWeight: 600 }}>{k}</Typography>
                     <Typography variant="body2" sx={{ fontWeight: 700, color: "#1A1A2E" }}>{v}</Typography>
@@ -899,26 +1449,71 @@ export default function UserApply() {
           </Box>
         )}
 
-        {/* Navigation */}
-        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mt: 5, pt: 3, borderTop: "1px solid #F0F0F0" }}>
+        {/* Navigation Bar */}
+        <Box sx={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          flexWrap: "wrap",
+          gap: 2,
+          mt: 5, pt: 3.5,
+          borderTop: "1px solid #E2E8F0",
+        }}>
           <Button
             onClick={() => activeStep === 0 ? navigate("/dashboard/user") : setActiveStep((s) => s - 1)}
-            sx={{ color: "#757575", fontWeight: 600, borderRadius: 2, px: 3, py: 1 }}
+            startIcon={<ArrowBackIcon />}
+            sx={{
+              color: "#64748B",
+              fontWeight: 700,
+              borderRadius: 2.5,
+              px: 3, py: 1.2,
+              border: "1px solid #E2E8F0",
+              bgcolor: "#FFFFFF",
+              "&:hover": { bgcolor: "#F1F5F9", borderColor: "#CBD5E1", color: "#334155" },
+            }}
           >
-            {activeStep === 0 ? "Cancel" : "← Back"}
+            {activeStep === 0 ? "Cancel Application" : "Back to Previous Step"}
           </Button>
 
+          <Box sx={{ display: { xs: "none", sm: "block" } }}>
+            <Typography variant="caption" sx={{ color: "#94A3B8", fontWeight: 600 }}>
+              Step {activeStep + 1} of {steps.length}: {steps[activeStep]}
+            </Typography>
+          </Box>
+
           {activeStep < steps.length - 1 ? (
-            <Button variant="contained"
-              sx={{ background: GRADIENT, borderRadius: 2, fontWeight: 700, px: 5, py: 1.2 }}
-              onClick={() => setActiveStep((s) => s + 1)}>
-              Next Step →
+            <Button
+              variant="contained"
+              endIcon={<ArrowForwardIcon />}
+              sx={{
+                background: GRADIENT,
+                borderRadius: 2.5,
+                fontWeight: 800,
+                px: 4, py: 1.3,
+                boxShadow: "0 4px 14px rgba(230, 81, 0, 0.3)",
+                "&:hover": { boxShadow: "0 6px 20px rgba(230, 81, 0, 0.45)" },
+              }}
+              onClick={handleNextStep}
+            >
+              Continue to {steps[activeStep + 1]}
             </Button>
           ) : (
-            <Button variant="contained"
-              sx={{ background: GRADIENT, borderRadius: 2, fontWeight: 700, px: 5, py: 1.2, minWidth: 200 }}
-              onClick={handleSubmit} disabled={submitting}>
-              {submitting ? <CircularProgress size={22} color="inherit" /> : "Submit Application"}
+            <Button
+              variant="contained"
+              endIcon={<CheckCircleIcon />}
+              sx={{
+                background: "linear-gradient(135deg, #10B981, #059669)",
+                borderRadius: 2.5,
+                fontWeight: 800,
+                px: 4, py: 1.3,
+                minWidth: 220,
+                boxShadow: "0 4px 14px rgba(16, 185, 129, 0.3)",
+                "&:hover": { boxShadow: "0 6px 20px rgba(16, 185, 129, 0.45)" },
+              }}
+              onClick={handleSubmit}
+              disabled={submitting}
+            >
+              {submitting ? <CircularProgress size={22} color="inherit" /> : "Submit Statutory Application"}
             </Button>
           )}
         </Box>
