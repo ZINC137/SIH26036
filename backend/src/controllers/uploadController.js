@@ -68,6 +68,16 @@ const uploadDocument = async (req, res) => {
 
     const relativePath = `/uploads/${req.file.filename}`;
 
+    let data_base64 = null;
+    if (req.file.path && fs.existsSync(req.file.path)) {
+      try {
+        const fileBuffer = await fs.promises.readFile(req.file.path);
+        data_base64 = fileBuffer.toString('base64');
+      } catch (readErr) {
+        console.warn('Could not encode uploaded file to base64:', readErr.message);
+      }
+    }
+
     const doc = await prisma.document.create({
       data: {
         user_id: userId,
@@ -77,6 +87,15 @@ const uploadDocument = async (req, res) => {
         file_path: relativePath,
         file_size: req.file.size,
         mime_type: req.file.mimetype,
+        ...(data_base64
+          ? {
+              content: {
+                create: {
+                  data_base64,
+                },
+              },
+            }
+          : {}),
       },
     });
 
@@ -115,7 +134,7 @@ const downloadDocument = async (req, res) => {
     const { id } = req.params;
     const doc = await prisma.document.findUnique({
       where: { id },
-      include: { application: true },
+      include: { application: true, content: true },
     });
 
     if (!doc) {
@@ -132,13 +151,24 @@ const downloadDocument = async (req, res) => {
     if (relativePath === '.' || relativePath.startsWith(`..${path.sep}`) || relativePath === '..' || path.isAbsolute(relativePath)) {
       return res.status(403).json({ error: 'Access denied: Invalid file path.' });
     }
-    if (!fs.existsSync(absolutePath)) {
-      return res.status(404).json({ error: 'Physical file not found on server.' });
+
+    // 1. If physical file exists on disk cache, stream directly
+    if (fs.existsSync(absolutePath)) {
+      res.setHeader('Content-Type', doc.mime_type || 'application/octet-stream');
+      res.setHeader('Content-Disposition', `inline; filename="${doc.file_name}"`);
+      return res.sendFile(absolutePath);
     }
 
-    res.setHeader('Content-Type', doc.mime_type);
-    res.setHeader('Content-Disposition', `inline; filename="${doc.file_name}"`);
-    return res.sendFile(absolutePath);
+    // 2. If physical file was wiped by Render ephemeral restart, restore from Neon cloud DB
+    if (doc.content && doc.content.data_base64) {
+      const buffer = Buffer.from(doc.content.data_base64, 'base64');
+      fs.promises.writeFile(absolutePath, buffer).catch(() => {});
+      res.setHeader('Content-Type', doc.mime_type || 'application/octet-stream');
+      res.setHeader('Content-Disposition', `inline; filename="${doc.file_name}"`);
+      return res.send(buffer);
+    }
+
+    return res.status(404).json({ error: 'Physical file not found on server.' });
   } catch (error) {
     console.error('Download document error:', error);
     return res.status(500).json({ error: 'Failed to retrieve file.' });
