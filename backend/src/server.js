@@ -147,8 +147,14 @@ const runScheduledBackup = async (reason) => {
   }
 };
 
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(`Server running on port ${PORT}`);
+  try {
+    const { seedRules } = require('./rules/seedRules');
+    await seedRules();
+  } catch (err) {
+    console.warn('Statutory rule verification notice:', err.message);
+  }
   void runScheduledBackup('startup');
   const backupInterval = setInterval(
     () => void runScheduledBackup('scheduled'),

@@ -70,6 +70,16 @@ async function seedDemoUsers(tx) {
 async function seedRules() {
   console.log('🏛️ Initializing Legal Metrology Rule Configuration & Authority Eligibility Layer...');
 
+  try {
+    const existingCount = await prisma.instrumentCategory.count();
+    if (existingCount >= 27) {
+      console.log(`✅ Legal Metrology Rules already configured in database (${existingCount} categories active). Skipping redundant seeding.`);
+      return;
+    }
+  } catch (checkErr) {
+    console.warn('Could not check existing categories, proceeding with seed:', checkErr.message);
+  }
+
   for (const cat of CATEGORIES_DATA) {
     // 1. Upsert InstrumentCategory
     const categoryRecord = await prisma.instrumentCategory.upsert({
