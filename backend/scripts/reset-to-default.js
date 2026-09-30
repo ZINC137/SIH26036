@@ -23,6 +23,7 @@ async function resetToDefault() {
   await prisma.verificationRecord.deleteMany({});
 
   console.log('🧹 Clearing documents and file references...');
+  await prisma.documentContent?.deleteMany({}).catch(() => {});
   await prisma.document.deleteMany({});
 
   console.log('🧹 Clearing notifications...');

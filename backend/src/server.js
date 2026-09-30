@@ -60,7 +60,7 @@ app.use(
 
       const doc = await prisma.document.findFirst({
         where: { file_path: `/uploads/${filename}` },
-        include: { application: true },
+        include: { application: true, content: true },
       });
 
       if (!doc) {
@@ -72,13 +72,24 @@ app.use(
       }
 
       const filePath = path.join(__dirname, '../uploads', filename);
-      if (!fs.existsSync(filePath)) {
-        return res.status(404).json({ error: 'Physical file not found on server.' });
+
+      // 1. If physical file exists on disk cache, stream directly
+      if (fs.existsSync(filePath)) {
+        res.setHeader('Content-Type', doc.mime_type || 'application/octet-stream');
+        res.setHeader('Content-Disposition', `inline; filename="${doc.file_name || filename}"`);
+        return res.sendFile(filePath);
       }
 
-      res.setHeader('Content-Type', doc.mime_type || 'application/octet-stream');
-      res.setHeader('Content-Disposition', `inline; filename="${doc.file_name || filename}"`);
-      return res.sendFile(filePath);
+      // 2. If ephemeral container disk wiped it, stream from Neon cloud database
+      if (doc.content && doc.content.data_base64) {
+        const buffer = Buffer.from(doc.content.data_base64, 'base64');
+        fs.promises.writeFile(filePath, buffer).catch(() => {});
+        res.setHeader('Content-Type', doc.mime_type || 'application/octet-stream');
+        res.setHeader('Content-Disposition', `inline; filename="${doc.file_name || filename}"`);
+        return res.send(buffer);
+      }
+
+      return res.status(404).json({ error: 'Physical file not found on server.' });
     } catch (err) {
       console.error('Uploads authorization check error:', err);
       return res.status(500).json({ error: 'Internal Server Error' });

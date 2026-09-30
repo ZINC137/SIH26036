@@ -10,8 +10,24 @@ jobs:
   backend-test:
     name: Backend Tests & Statutory Rules Engine
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_DB: sih26036_test
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     env:
-      DATABASE_URL: file:./dev.db
+      DATABASE_URL: postgresql://test_user:test_password@localhost:5432/sih26036_test
+      NODE_ENV: test
+      JWT_SECRET: metrology_secure_jwt_secret_key_sih_2026_dev_environment_rnd
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -33,7 +49,7 @@ jobs:
 
       - name: Initialize CI Database Schema
         working-directory: backend
-        run: npx prisma db push
+        run: npx prisma db push --accept-data-loss
 
       - name: Run Backend Test Suite
         working-directory: backend
