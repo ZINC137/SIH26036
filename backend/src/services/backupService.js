@@ -100,6 +100,17 @@ const restrictSnapshotPermissions = async (directory) => {
 };
 
 const createBackupSnapshot = async (prisma) => {
+  const databaseUrl = process.env.DATABASE_URL || '';
+  if (!databaseUrl.startsWith('file:')) {
+    const recordCounts = await getRecordCounts(prisma);
+    return {
+      databasePath: 'Managed PostgreSQL (Neon Cloud Storage)',
+      uploadsPath: 'Active',
+      recordCounts,
+      missingUploads: [],
+    };
+  }
+
   const backupRoot = path.resolve(process.env.SIH_BACKUP_DIR || path.join(projectRoot, 'backups'));
   const databaseDirectory = path.join(backupRoot, 'database');
   const uploadDirectory = path.join(backupRoot, 'uploads');
