@@ -15,6 +15,7 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
 import API_BASE from '../config/api';
+import { useLanguage } from '../i18n/LanguageContext';
 
 const steps = ['Create Account', 'Personal Details', 'Done'];
 
@@ -27,6 +28,7 @@ const inputSx = {
 };
 
 export default function Register() {
+  const { t, language, setLanguage, toggleLanguage } = useLanguage();
   const navigate = useNavigate();
 
   // Step state
@@ -171,12 +173,65 @@ export default function Register() {
     <Box sx={{ minHeight: '100vh', bgcolor: '#F0F4FF', display: 'flex', flexDirection: 'column' }}>
       {/* Header */}
       <Box sx={{ background: 'linear-gradient(135deg, #0D47A1 0%, #1565C0 100%)', color: 'white', py: 2, px: 3, boxShadow: 3 }}>
-        <Container maxWidth="lg">
-          <Typography variant="h5" sx={{ fontWeight: 700, letterSpacing: 0.5 }}>
-            Legal Metrology Verification System
-          </Typography>
-          <Typography variant="body2" sx={{ opacity: 0.85 }}>
-            Ministry of Consumer Affairs, Government of India
+                <Container maxWidth="lg" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Box>
+            <Typography variant="h5" sx={{ fontWeight: 700, letterSpacing: 0.5 }}>
+              {t('Legal Metrology Verification System')}
+            </Typography>
+            <Typography variant="body2" sx={{ opacity: 0.85 }}>
+              {t('Ministry of Consumer Affairs, Government of India')}
+            </Typography>
+          </Box>
+          <Typography
+            variant="caption"
+            onClick={toggleLanguage}
+            data-no-translate="true"
+            translate="no"
+            id="register-language-toggle-btn"
+            title={language === 'en' ? 'हिन्दी में देखें' : 'Switch to English'}
+            sx={{
+              bgcolor: 'rgba(255,255,255,0.15)',
+              px: 1.2,
+              py: 0.4,
+              borderRadius: '6px',
+              color: '#FFFFFF',
+              fontWeight: 600,
+              fontSize: '0.75rem',
+              cursor: 'pointer',
+              userSelect: 'none',
+              display: 'inline-flex',
+              alignItems: 'center',
+            }}
+          >
+            <Box
+              component="span"
+              onClick={(e) => {
+                e.stopPropagation();
+                setLanguage('en');
+              }}
+              sx={{
+                color: language === 'en' ? '#FFFFFF' : 'rgba(255,255,255,0.7)',
+                fontWeight: language === 'en' ? 800 : 500,
+                cursor: 'pointer',
+              }}
+            >
+              English
+            </Box>
+            &nbsp;|&nbsp;
+            <Box
+              component="span"
+              onClick={(e) => {
+                e.stopPropagation();
+                setLanguage('hi');
+              }}
+              sx={{
+                color: language === 'hi' ? '#FFFFFF' : 'rgba(255,255,255,0.7)',
+                fontWeight: language === 'hi' ? 800 : 500,
+                cursor: 'pointer',
+              }}
+            >
+              हिन्दी
+            </Box>
           </Typography>
         </Container>
       </Box>

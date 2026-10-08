@@ -26,6 +26,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import jsQR from 'jsqr';
 import { authFetch } from '../config/api';
+import { useLanguage } from '../i18n/LanguageContext';
 
 // Icons
 import StorefrontRoundedIcon from '@mui/icons-material/StorefrontRounded';
@@ -175,6 +176,7 @@ const portals = [
 ];
 
 function PortalCard({ portal, navigate }) {
+  const { t } = useLanguage();
   const [hovered, setHovered] = useState(false);
   const Icon = portal.icon;
 
@@ -234,7 +236,7 @@ function PortalCard({ portal, navigate }) {
       <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 2.5 }}>
         {/* Role Badge */}
         <Chip
-          label={portal.badge}
+          label={t(portal.badge)}
           size="small"
           sx={{
             bgcolor: portal.lightBg,
@@ -281,7 +283,7 @@ function PortalCard({ portal, navigate }) {
           lineHeight: 1.3,
         }}
       >
-        {portal.title}
+        {t(portal.title)}
       </Typography>
 
       <Typography
@@ -293,7 +295,7 @@ function PortalCard({ portal, navigate }) {
           fontSize: '0.85rem',
         }}
       >
-        {portal.subtitle}
+        {t(portal.subtitle)}
       </Typography>
 
       {/* Portal Description */}
@@ -307,7 +309,7 @@ function PortalCard({ portal, navigate }) {
           flex: 1,
         }}
       >
-        {portal.description}
+        {t(portal.description)}
       </Typography>
 
       {/* Capabilities / Key Features */}
@@ -338,7 +340,7 @@ function PortalCard({ portal, navigate }) {
                 fontSize: '0.875rem',
               }}
             >
-              {feature}
+              {t(feature)}
             </Typography>
           </Box>
         ))}
@@ -373,7 +375,7 @@ function PortalCard({ portal, navigate }) {
           },
         }}
       >
-        Access {portal.title.replace(' Portal', '')}
+        {t('Access ' + portal.title.replace(' Portal', ''))}
       </Button>
     </Box>
   );
@@ -381,6 +383,7 @@ function PortalCard({ portal, navigate }) {
 
 export default function LandingPage() {
   const navigate = useNavigate();
+  const { t, language, setLanguage, toggleLanguage } = useLanguage();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchCert, setSearchCert] = useState('');
   const [verifying, setVerifying] = useState(false);
@@ -650,7 +653,7 @@ export default function LandingPage() {
             </Typography>
             <Box sx={{ display: { xs: 'none', md: 'block' }, color: 'rgba(255,255,255,0.2)' }}>|</Box>
             <Typography variant="caption" sx={{ display: { xs: 'none', md: 'inline' }, color: '#94A3B8' }}>
-              Ministry of Consumer Affairs, Food &amp; Public Distribution
+              {t('Ministry of Consumer Affairs, Food & Public Distribution')}
             </Typography>
           </Box>
 
@@ -658,11 +661,16 @@ export default function LandingPage() {
             <Box sx={{ display: { xs: 'none', sm: 'flex' }, alignItems: 'center', gap: 1, color: '#94A3B8' }}>
               <PhoneInTalkRoundedIcon sx={{ fontSize: 13, color: '#F59E0B' }} />
               <Typography variant="caption" sx={{ fontWeight: 500 }}>
-                Toll Free: <strong>1800-11-4000</strong>
+                {t('Toll Free:')} <strong>1800-11-4000</strong>
               </Typography>
             </Box>
             <Typography
               variant="caption"
+              onClick={toggleLanguage}
+              data-no-translate="true"
+              translate="no"
+              id="language-toggle-btn"
+              title={language === 'en' ? 'हिन्दी में देखें' : 'Switch to English'}
               sx={{
                 bgcolor: 'rgba(255,255,255,0.08)',
                 px: 1,
@@ -671,9 +679,47 @@ export default function LandingPage() {
                 color: '#E2E8F0',
                 fontWeight: 600,
                 fontSize: '0.72rem',
+                cursor: 'pointer',
+                userSelect: 'none',
+                display: 'inline-flex',
+                alignItems: 'center',
+                transition: 'all 0.2s ease',
+                '&:hover': {
+                  bgcolor: 'rgba(255,255,255,0.16)',
+                },
               }}
             >
-              English &nbsp;|&nbsp; हिन्दी
+              <Box
+                component="span"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setLanguage('en');
+                }}
+                sx={{
+                  color: language === 'en' ? '#FFFFFF' : '#94A3B8',
+                  fontWeight: language === 'en' ? 700 : 500,
+                  cursor: 'pointer',
+                  '&:hover': { color: '#FFFFFF' },
+                }}
+              >
+                English
+              </Box>
+              &nbsp;|&nbsp;
+              <Box
+                component="span"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setLanguage('hi');
+                }}
+                sx={{
+                  color: language === 'hi' ? '#FFFFFF' : '#94A3B8',
+                  fontWeight: language === 'hi' ? 700 : 500,
+                  cursor: 'pointer',
+                  '&:hover': { color: '#FFFFFF' },
+                }}
+              >
+                हिन्दी
+              </Box>
             </Typography>
           </Box>
         </Box>
@@ -744,7 +790,7 @@ export default function LandingPage() {
                     letterSpacing: '-0.01em',
                   }}
                 >
-                  Legal Metrology Verification System
+                  {t('Legal Metrology Verification System')}
                 </Typography>
                 <Chip
                   label="SIH 2026"
@@ -770,7 +816,7 @@ export default function LandingPage() {
                   lineHeight: 1.3,
                 }}
               >
-                Department of Consumer Affairs • Legal Metrology Division
+                {t('Department of Consumer Affairs • Legal Metrology Division')}
               </Typography>
             </Box>
           </Box>
@@ -800,7 +846,7 @@ export default function LandingPage() {
                   },
                 }}
               >
-                {item.label}
+                {t(item.label)}
               </Box>
             ))}
           </Box>
@@ -826,7 +872,7 @@ export default function LandingPage() {
                 },
               }}
             >
-              Sign In
+              {t('Sign In')}
             </Button>
 
             {/* Mobile Menu Button */}
@@ -858,7 +904,7 @@ export default function LandingPage() {
       >
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
           <Typography variant="h6" sx={{ fontWeight: 800, color: '#0F172A', fontSize: '1.05rem' }}>
-            Navigation
+            {t('Navigation')}
           </Typography>
           <IconButton onClick={() => setMobileMenuOpen(false)} size="small">
             <CloseRoundedIcon />
@@ -875,7 +921,7 @@ export default function LandingPage() {
                 sx={{ borderRadius: '8px' }}
               >
                 <ListItemText
-                  primary={item.label}
+                  primary={t(item.label)}
                   primaryTypographyProps={{ fontWeight: 600, color: '#334155' }}
                 />
               </ListItemButton>
@@ -897,7 +943,7 @@ export default function LandingPage() {
                 textTransform: 'none',
               }}
             >
-              Access Portal / Login
+              {t('Access Portal / Login')}
             </Button>
           </ListItem>
         </List>
@@ -962,7 +1008,7 @@ export default function LandingPage() {
         <Box sx={{ maxWidth: 1240, mx: 'auto', px: { xs: 2, sm: 3, md: 4 }, position: 'relative', textAlign: 'center' }}>
           {/* Eyebrow Chip */}
           <Chip
-            label="🇮🇳  National Single Window • Digital India Initiative"
+            label={t('🇮🇳  National Single Window • Digital India Initiative')}
             sx={{
               bgcolor: 'rgba(255, 255, 255, 0.12)',
               color: '#FFFFFF',
@@ -990,7 +1036,7 @@ export default function LandingPage() {
               mx: 'auto',
             }}
           >
-            Online Verification &amp; Certification Platform
+            {t('Online Verification & Certification Platform')}
           </Typography>
 
           {/* Supporting Description */}
@@ -1006,9 +1052,8 @@ export default function LandingPage() {
               mb: 4,
             }}
           >
-            A unified national digital architecture for weighing and measuring instrument verification,
-            cryptographic stamping, field inspection compliance, and lifecycle certification under the{' '}
-            <strong style={{ color: '#FCD34D' }}>Legal Metrology Act, 2009</strong>.
+            {t('A unified national digital architecture for weighing and measuring instrument verification, cryptographic stamping, field inspection compliance, and lifecycle certification under the')}{' '}
+            <strong style={{ color: '#FCD34D' }}>{t('Legal Metrology Act, 2009')}</strong>.
           </Typography>
 
           {/* Trust Highlights Strip */}
@@ -1023,10 +1068,10 @@ export default function LandingPage() {
             }}
           >
             {[
-              { icon: <ShieldRoundedIcon sx={{ fontSize: 18, color: '#38BDF8' }} />, text: 'Tamper-Proof QR Stamping' },
-              { icon: <GavelRoundedIcon sx={{ fontSize: 18, color: '#FCD34D' }} />, text: 'Statutory LM Act Compliance' },
-              { icon: <SpeedRoundedIcon sx={{ fontSize: 18, color: '#4ADE80' }} />, text: 'Real-Time Verification Tracking' },
-              { icon: <PublicRoundedIcon sx={{ fontSize: 18, color: '#C084FC' }} />, text: 'Nationwide Interoperable Portal' },
+              { icon: <ShieldRoundedIcon sx={{ fontSize: 18, color: '#38BDF8' }} />, text: t('Tamper-Proof QR Stamping') },
+              { icon: <GavelRoundedIcon sx={{ fontSize: 18, color: '#FCD34D' }} />, text: t('Statutory LM Act Compliance') },
+              { icon: <SpeedRoundedIcon sx={{ fontSize: 18, color: '#4ADE80' }} />, text: t('Real-Time Verification Tracking') },
+              { icon: <PublicRoundedIcon sx={{ fontSize: 18, color: '#C084FC' }} />, text: t('Nationwide Interoperable Portal') },
             ].map((badge, idx) => (
               <Box
                 key={idx}
@@ -1074,7 +1119,7 @@ export default function LandingPage() {
         >
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
             <Chip
-              label="IMPORTANT NOTICE"
+              label={t('IMPORTANT NOTICE')}
               size="small"
               sx={{
                 bgcolor: '#D97706',
@@ -1086,7 +1131,7 @@ export default function LandingPage() {
               }}
             />
             <Typography variant="body2" sx={{ color: '#78350F', fontWeight: 600, fontSize: '0.86rem' }}>
-              Periodic verification &amp; electronic re-stamping for all commercial measuring instruments is mandatory. Verify your certificate authenticity online.
+              {t('Periodic verification & electronic re-stamping for all commercial measuring instruments is mandatory. Verify your certificate authenticity online.')}
             </Typography>
           </Box>
           <Box
@@ -1103,7 +1148,7 @@ export default function LandingPage() {
               '&:hover': { textDecoration: 'underline' },
             }}
           >
-            Verify Certificate Now <ArrowForwardRoundedIcon sx={{ fontSize: 14 }} />
+            {t('Verify Certificate Now')} <ArrowForwardRoundedIcon sx={{ fontSize: 14 }} />
           </Box>
         </Box>
       </Box>
@@ -1133,7 +1178,7 @@ export default function LandingPage() {
                 mb: 0.5,
               }}
             >
-              SECURE PORTAL SELECTION
+              {t('SECURE PORTAL SELECTION')}
             </Typography>
             <Typography
               variant="h3"
@@ -1146,7 +1191,7 @@ export default function LandingPage() {
                 mb: 1.5,
               }}
             >
-              Choose Your Designated Portal
+              {t('Choose Your Designated Portal')}
             </Typography>
             <Typography
               variant="body1"
@@ -1158,8 +1203,7 @@ export default function LandingPage() {
                 lineHeight: 1.65,
               }}
             >
-              Select the operational portal matching your statutory role to access role-tailored dashboards,
-              verification queues, laboratory testing modules, and certification workflows.
+              {t('Select the operational portal matching your statutory role to access role-tailored dashboards, verification queues, laboratory testing modules, and certification workflows.')}
             </Typography>
           </Box>
 
@@ -1255,7 +1299,7 @@ export default function LandingPage() {
           <Box sx={{ flex: 1 }}>
             <Chip
               icon={<QrCodeScannerRoundedIcon sx={{ fontSize: '1rem !important' }} />}
-              label="PUBLIC REPOSITORIES & AUDIT"
+              label={t('PUBLIC REPOSITORIES & AUDIT')}
               size="small"
               sx={{
                 bgcolor: '#EFF6FF',
@@ -1267,29 +1311,29 @@ export default function LandingPage() {
               }}
             />
             <Typography variant="h4" sx={{ fontWeight: 800, color: '#0F172A', fontSize: { xs: '1.4rem', sm: '1.75rem' }, mb: 1 }}>
-              Verify Stamping Certificate & Instrument Details
+              {t('Verify Stamping Certificate & Instrument Details')}
             </Typography>
             <Typography variant="body2" sx={{ color: '#475569', lineHeight: 1.6, fontSize: '0.92rem', mb: 2.5 }}>
-              Scan the official QR code on any Legal Metrology certificate or weighing/measuring instrument to authenticate statutory stamping, validity dates, accuracy class, security seal, and full technical specifications.
+              {t('Scan the official QR code on any Legal Metrology certificate or weighing/measuring instrument to authenticate statutory stamping, validity dates, accuracy class, security seal, and full technical specifications.')}
             </Typography>
 
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <CheckCircleRoundedIcon sx={{ color: '#16A34A', fontSize: '1.1rem' }} />
                 <Typography variant="caption" sx={{ color: '#334155', fontWeight: 600 }}>
-                  Real-time synchronization with National Legal Metrology Database
+                  {t('Real-time synchronization with National Legal Metrology Database')}
                 </Typography>
               </Box>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <CheckCircleRoundedIcon sx={{ color: '#16A34A', fontSize: '1.1rem' }} />
                 <Typography variant="caption" sx={{ color: '#334155', fontWeight: 600 }}>
-                  Statutory verification of lead seal, inspector credentials & MPE tolerance
+                  {t('Statutory verification of lead seal, inspector credentials & MPE tolerance')}
                 </Typography>
               </Box>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <CheckCircleRoundedIcon sx={{ color: '#16A34A', fontSize: '1.1rem' }} />
                 <Typography variant="caption" sx={{ color: '#334155', fontWeight: 600 }}>
-                  Instant digital signature audit under Legal Metrology Act, 2009
+                  {t('Instant digital signature audit under Legal Metrology Act, 2009')}
                 </Typography>
               </Box>
             </Box>
@@ -1325,7 +1369,7 @@ export default function LandingPage() {
                   '&:hover': { bgcolor: '#0369A1' },
                 }}
               >
-                Scan with Camera
+                {t('Scan with Camera')}
               </Button>
 
               <Button
@@ -1347,12 +1391,12 @@ export default function LandingPage() {
                   },
                 }}
               >
-                Upload QR Image
+                {t('Upload QR Image')}
               </Button>
             </Box>
 
             <Divider sx={{ my: 2, fontSize: '0.72rem', color: '#64748B', fontWeight: 700, letterSpacing: '0.05em' }}>
-              OR SEARCH BY CERTIFICATE / SERIAL NO.
+              {t('OR SEARCH BY CERTIFICATE / SERIAL NO.')}
             </Divider>
 
             <Box component="form" onSubmit={handleVerify} sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
@@ -1361,7 +1405,7 @@ export default function LandingPage() {
                 size="medium"
                 value={searchCert}
                 onChange={(e) => setSearchCert(e.target.value)}
-                placeholder="e.g. CERT-DL-2026-12BC or cefc"
+                placeholder={t('e.g. CERT-DL-2026-12BC or cefc')}
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
@@ -1398,10 +1442,10 @@ export default function LandingPage() {
                   {verifying ? (
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <CircularProgress size={18} color="inherit" />
-                      <span>Validating with Registry...</span>
+                      <span>{t('Validating with Registry...')}</span>
                     </Box>
                   ) : (
-                    'Validate Certificate'
+                    t('Validate Certificate')
                   )}
                 </Button>
               </Box>
@@ -1409,7 +1453,7 @@ export default function LandingPage() {
               {/* Quick Demo Test Chip */}
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5, flexWrap: 'wrap' }}>
                 <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 600 }}>
-                  Test with Active Certificate:
+                  {t('Test with Active Certificate:')}
                 </Typography>
                 <Chip
                   label="CERT-DL-2026-12BC"
@@ -1730,7 +1774,7 @@ export default function LandingPage() {
                     <Typography variant="body2" sx={{ fontWeight: 800, color: '#0F172A', fontFamily: 'monospace' }}>
                       {verifyResult.certificateNo}
                     </Typography>
-                    <Tooltip title={copiedCert ? 'Copied!' : 'Copy Certificate Number'}>
+                    <Tooltip title={copiedCert ? t('Copied!') : t('Copy Certificate Number')}>
                       <IconButton
                         size="small"
                         onClick={() => handleCopyCertificateNo(verifyResult.certificateNo)}
@@ -2301,7 +2345,7 @@ export default function LandingPage() {
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: '#CBD5E1', fontSize: '0.84rem' }}>
                   <PhoneInTalkRoundedIcon sx={{ fontSize: 16, color: '#F59E0B' }} />
-                  <span>National Consumer Helpline: <strong>1915</strong> | <strong>1800-11-4000</strong></span>
+                  <span>{t('National Consumer Helpline:')} <strong>1915</strong> | <strong>1800-11-4000</strong></span>
                 </Box>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: '#CBD5E1', fontSize: '0.84rem' }}>
                   <EmailRoundedIcon sx={{ fontSize: 16, color: '#38BDF8' }} />
@@ -2332,7 +2376,7 @@ export default function LandingPage() {
                       '&:hover': { color: '#38BDF8' },
                     }}
                   >
-                    {p.title} <LaunchRoundedIcon sx={{ fontSize: 12, opacity: 0.6 }} />
+                    {t(p.title)} <LaunchRoundedIcon sx={{ fontSize: 12, opacity: 0.6 }} />
                   </Box>
                 ))}
               </Box>
