@@ -36,6 +36,7 @@ import KeyRoundedIcon from '@mui/icons-material/KeyRounded';
 import CheckCircleRoundedIcon from '@mui/icons-material/CheckCircleRounded';
 import FingerprintRoundedIcon from '@mui/icons-material/FingerprintRounded';
 import API_BASE, { setAuthToken } from '../config/api';
+import { useLanguage } from '../i18n/LanguageContext';
 
 const PORTAL_CONFIG = {
   user: {
@@ -96,6 +97,7 @@ const PORTAL_CONFIG = {
 };
 
 export default function Login({ onLogin }) {
+  const { t, language, setLanguage, toggleLanguage } = useLanguage();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const roleFromUrl = searchParams.get('role') || 'user';
@@ -382,9 +384,68 @@ export default function Login({ onLogin }) {
               भारत सरकार &nbsp;|&nbsp; Government of India
             </Typography>
           </Box>
-          <Typography variant="caption" sx={{ color: '#94A3B8', display: { xs: 'none', sm: 'inline' } }}>
-            National Metrology Single Sign-On (SSO) Portal
-          </Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Typography variant="caption" sx={{ color: '#94A3B8', display: { xs: 'none', sm: 'inline' } }}>
+              {t('National Metrology Single Sign-On (SSO) Portal')}
+            </Typography>
+            <Typography
+              variant="caption"
+              onClick={toggleLanguage}
+              data-no-translate="true"
+              translate="no"
+              id="login-language-toggle-btn"
+              title={language === 'en' ? 'हिन्दी में देखें' : 'Switch to English'}
+              sx={{
+                bgcolor: 'rgba(255,255,255,0.08)',
+                px: 1,
+                py: 0.25,
+                borderRadius: '4px',
+                color: '#E2E8F0',
+                fontWeight: 600,
+                fontSize: '0.72rem',
+                cursor: 'pointer',
+                userSelect: 'none',
+                display: 'inline-flex',
+                alignItems: 'center',
+                transition: 'all 0.2s ease',
+                '&:hover': {
+                  bgcolor: 'rgba(255,255,255,0.16)',
+                },
+              }}
+            >
+              <Box
+                component="span"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setLanguage('en');
+                }}
+                sx={{
+                  color: language === 'en' ? '#FFFFFF' : '#94A3B8',
+                  fontWeight: language === 'en' ? 700 : 500,
+                  cursor: 'pointer',
+                  '&:hover': { color: '#FFFFFF' },
+                }}
+              >
+                English
+              </Box>
+              &nbsp;|&nbsp;
+              <Box
+                component="span"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setLanguage('hi');
+                }}
+                sx={{
+                  color: language === 'hi' ? '#FFFFFF' : '#94A3B8',
+                  fontWeight: language === 'hi' ? 700 : 500,
+                  cursor: 'pointer',
+                  '&:hover': { color: '#FFFFFF' },
+                }}
+              >
+                हिन्दी
+              </Box>
+            </Typography>
+          </Box>
         </Box>
       </Box>
 

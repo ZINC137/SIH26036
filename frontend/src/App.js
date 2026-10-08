@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider, createTheme, CssBaseline } from '@mui/material';
 
+import { LanguageProvider } from './i18n/LanguageContext';
+
 // ── Priyanshu's new components ──────────────────────────────────────────────
 import RoleLayout from './components/RoleLayout';
 import LandingPage from './pages/LandingPage';
@@ -206,83 +208,85 @@ function App() {
   };
 
   return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      <Router>
-        <Routes>
-          {/* ── Public routes ─────────────────────────────────────── */}
-          <Route path="/"            element={<LandingPage />} />
-          <Route path="/login"       element={<Login onLogin={handleLogin} />} />
-          <Route path="/register"    element={<Register />} />
-          <Route path="/public"      element={<PublicDashboard />} />
+    <LanguageProvider>
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <Router>
+          <Routes>
+            {/* ── Public routes ─────────────────────────────────────── */}
+            <Route path="/"            element={<LandingPage />} />
+            <Route path="/login"       element={<Login onLogin={handleLogin} />} />
+            <Route path="/register"    element={<Register />} />
+            <Route path="/public"      element={<PublicDashboard />} />
 
-          {isLoggedIn ? (
-            <>
-              {/* ── USER PORTAL ─────────────────────────────────── */}
-              <Route element={portalLayout('user')}>
-                <Route path="/dashboard/user"              element={<UserDashboard userEmail={userEmail} />} />
-                <Route path="/dashboard/user/apply"        element={<UserApply />} />
-                <Route path="/dashboard/user/applications" element={<UserApplications />} />
-                <Route path="/dashboard/user/certificates" element={<UserCertificates />} />
-                <Route path="/dashboard/user/settings"     element={<PortalSettings userRole="user" userEmail={userEmail} />} />
-              </Route>
+            {isLoggedIn ? (
+              <>
+                {/* ── USER PORTAL ─────────────────────────────────── */}
+                <Route element={portalLayout('user')}>
+                  <Route path="/dashboard/user"              element={<UserDashboard userEmail={userEmail} />} />
+                  <Route path="/dashboard/user/apply"        element={<UserApply />} />
+                  <Route path="/dashboard/user/applications" element={<UserApplications />} />
+                  <Route path="/dashboard/user/certificates" element={<UserCertificates />} />
+                  <Route path="/dashboard/user/settings"     element={<PortalSettings userRole="user" userEmail={userEmail} />} />
+                </Route>
 
-              {/* ── LMO PORTAL ──────────────────────────────────── */}
-              <Route element={portalLayout('lmo')}>
-                <Route path="/dashboard/lmo"              element={<LMODashboard userEmail={userEmail} />} />
-                <Route path="/dashboard/lmo/pending"      element={<LMOPending />} />
-                <Route path="/dashboard/lmo/officers"     element={<LMOOfficers />} />
-                <Route path="/dashboard/lmo/certificates" element={<LMOCertificates />} />
-                <Route path="/dashboard/lmo/settings"     element={<PortalSettings userRole="lmo" userEmail={userEmail} />} />
-              </Route>
+                {/* ── LMO PORTAL ──────────────────────────────────── */}
+                <Route element={portalLayout('lmo')}>
+                  <Route path="/dashboard/lmo"              element={<LMODashboard userEmail={userEmail} />} />
+                  <Route path="/dashboard/lmo/pending"      element={<LMOPending />} />
+                  <Route path="/dashboard/lmo/officers"     element={<LMOOfficers />} />
+                  <Route path="/dashboard/lmo/certificates" element={<LMOCertificates />} />
+                  <Route path="/dashboard/lmo/settings"     element={<PortalSettings userRole="lmo" userEmail={userEmail} />} />
+                </Route>
 
-              {/* ── FIELD OFFICER PORTAL ────────────────────────── */}
-              <Route element={portalLayout('field_officer')}>
-                <Route path="/dashboard/field-officer"          element={<FieldOfficerDashboard userEmail={userEmail} />} />
-                <Route path="/dashboard/field-officer/schedule" element={<FieldOfficerDashboard userEmail={userEmail} />} />
-                <Route path="/dashboard/field-officer/report"   element={<FOReport />} />
-                <Route path="/dashboard/field-officer/history"  element={<FOHistory />} />
-                <Route path="/dashboard/field-officer/settings" element={<PortalSettings userRole="field_officer" userEmail={userEmail} />} />
-              </Route>
+                {/* ── FIELD OFFICER PORTAL ────────────────────────── */}
+                <Route element={portalLayout('field_officer')}>
+                  <Route path="/dashboard/field-officer"          element={<FieldOfficerDashboard userEmail={userEmail} />} />
+                  <Route path="/dashboard/field-officer/schedule" element={<FieldOfficerDashboard userEmail={userEmail} />} />
+                  <Route path="/dashboard/field-officer/report"   element={<FOReport />} />
+                  <Route path="/dashboard/field-officer/history"  element={<FOHistory />} />
+                  <Route path="/dashboard/field-officer/settings" element={<PortalSettings userRole="field_officer" userEmail={userEmail} />} />
+                </Route>
 
-              {/* ── ADMIN PORTAL ────────────────────────────────── */}
-              <Route element={portalLayout('admin')}>
-                <Route path="/dashboard/admin"           element={<AdminDashboard userEmail={userEmail} />} />
-                <Route path="/dashboard/admin/users"     element={<AdminUsers />} />
-                <Route path="/dashboard/admin/analytics" element={<AdminDashboard userEmail={userEmail} />} />
-                <Route path="/dashboard/admin/rules"     element={<AdminRules />} />
-                <Route path="/dashboard/admin/certificates" element={<AdminCertificates />} />
-                <Route path="/dashboard/admin/logs"      element={<AdminDashboard userEmail={userEmail} />} />
-                <Route path="/dashboard/admin/settings"  element={<PortalSettings userRole="admin" userEmail={userEmail} />} />
-              </Route>
+                {/* ── ADMIN PORTAL ────────────────────────────────── */}
+                <Route element={portalLayout('admin')}>
+                  <Route path="/dashboard/admin"           element={<AdminDashboard userEmail={userEmail} />} />
+                  <Route path="/dashboard/admin/users"     element={<AdminUsers />} />
+                  <Route path="/dashboard/admin/analytics" element={<AdminDashboard userEmail={userEmail} />} />
+                  <Route path="/dashboard/admin/rules"     element={<AdminRules />} />
+                  <Route path="/dashboard/admin/certificates" element={<AdminCertificates />} />
+                  <Route path="/dashboard/admin/logs"      element={<AdminDashboard userEmail={userEmail} />} />
+                  <Route path="/dashboard/admin/settings"  element={<PortalSettings userRole="admin" userEmail={userEmail} />} />
+                </Route>
 
-              {/* ── GATC PORTAL ── */}
-              <Route element={portalLayout('gatc')}>
-                <Route path="/dashboard/gatc"          element={<GATCDashboard userEmail={userEmail} />} />
-                <Route path="/dashboard/gatc/tasks"    element={<GATCQueue userEmail={userEmail} />} />
-                <Route path="/dashboard/gatc/history"  element={<GATCHistory userEmail={userEmail} />} />
-                <Route path="/dashboard/gatc/settings" element={<PortalSettings userRole="gatc" userEmail={userEmail} />} />
-              </Route>
+                {/* ── GATC PORTAL ── */}
+                <Route element={portalLayout('gatc')}>
+                  <Route path="/dashboard/gatc"          element={<GATCDashboard userEmail={userEmail} />} />
+                  <Route path="/dashboard/gatc/tasks"    element={<GATCQueue userEmail={userEmail} />} />
+                  <Route path="/dashboard/gatc/history"  element={<GATCHistory userEmail={userEmail} />} />
+                  <Route path="/dashboard/gatc/settings" element={<PortalSettings userRole="gatc" userEmail={userEmail} />} />
+                </Route>
 
-              {/* Keep legacy URLs working for existing users. */}
-              <Route element={<Layout userRole={userRole} onLogout={handleLogout} />}>
-                <Route path="/register-instrument" element={<RegisterInstrument />} />
-                <Route path="/my-applications"     element={<MyApplications />} />
-                <Route path="/certificates"        element={<Certificates />} />
-                <Route path="/settings"            element={<Settings />} />
-                <Route path="/legacy-dashboard"    element={<Dashboard userRole={userRole} />} />
-              </Route>
+                {/* Keep legacy URLs working for existing users. */}
+                <Route element={<Layout userRole={userRole} onLogout={handleLogout} />}>
+                  <Route path="/register-instrument" element={<RegisterInstrument />} />
+                  <Route path="/my-applications"     element={<MyApplications />} />
+                  <Route path="/certificates"        element={<Certificates />} />
+                  <Route path="/settings"            element={<Settings />} />
+                  <Route path="/legacy-dashboard"    element={<Dashboard userRole={userRole} />} />
+                </Route>
 
-              {/* Redirect /dashboard → role home */}
-              <Route path="/dashboard" element={<Navigate to={ROLE_HOME[userRole] || '/dashboard/user'} />} />
-              <Route path="*"          element={<Navigate to={ROLE_HOME[userRole] || '/dashboard/user'} />} />
-            </>
-          ) : (
-            <Route path="*" element={<Navigate to="/" />} />
-          )}
-        </Routes>
-      </Router>
-    </ThemeProvider>
+                {/* Redirect /dashboard → role home */}
+                <Route path="/dashboard" element={<Navigate to={ROLE_HOME[userRole] || '/dashboard/user'} />} />
+                <Route path="*"          element={<Navigate to={ROLE_HOME[userRole] || '/dashboard/user'} />} />
+              </>
+            ) : (
+              <Route path="*" element={<Navigate to="/" />} />
+            )}
+          </Routes>
+        </Router>
+      </ThemeProvider>
+    </LanguageProvider>
   );
 }
 

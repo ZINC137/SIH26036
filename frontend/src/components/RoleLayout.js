@@ -26,6 +26,7 @@ import AccountBalanceRoundedIcon from '@mui/icons-material/AccountBalanceRounded
 import FiberManualRecordRoundedIcon from '@mui/icons-material/FiberManualRecordRounded';
 import ShieldRoundedIcon from '@mui/icons-material/ShieldRounded';
 import { authFetch, setAuthToken } from '../config/api';
+import { useLanguage } from '../i18n/LanguageContext';
 
 const DRAWER_WIDTH = 280;
 
@@ -78,6 +79,7 @@ const ROLE_META = {
 };
 
 export default function RoleLayout({ userRole, userEmail, onLogout, navItems }) {
+  const { t, language, setLanguage, toggleLanguage } = useLanguage();
   const navigate = useNavigate();
   const location = useLocation();
   const theme = useTheme();
@@ -129,10 +131,10 @@ export default function RoleLayout({ userRole, userEmail, onLogout, navItems }) 
                 display: 'block',
               }}
             >
-              GOVERNMENT OF INDIA
+              {t('GOVERNMENT OF INDIA')}
             </Typography>
             <Typography variant="subtitle1" sx={{ color: '#FFFFFF', fontWeight: 800, lineHeight: 1.2 }}>
-              Legal Metrology
+              {t('Legal Metrology')}
             </Typography>
           </Box>
         </Box>
@@ -163,7 +165,7 @@ export default function RoleLayout({ userRole, userEmail, onLogout, navItems }) 
                 textOverflow: 'ellipsis',
               }}
             >
-              {meta.label}
+              {t(meta.label)}
             </Typography>
             <Typography
               variant="caption"
@@ -174,7 +176,7 @@ export default function RoleLayout({ userRole, userEmail, onLogout, navItems }) 
                 letterSpacing: '0.02em',
               }}
             >
-              {meta.roleTag}
+              {t(meta.roleTag)}
             </Typography>
           </Box>
         </Box>
@@ -194,7 +196,7 @@ export default function RoleLayout({ userRole, userEmail, onLogout, navItems }) 
             display: 'block',
           }}
         >
-          PORTAL NAVIGATION
+          {t('PORTAL NAVIGATION')}
         </Typography>
 
         <List disablePadding>
@@ -233,7 +235,7 @@ export default function RoleLayout({ userRole, userEmail, onLogout, navItems }) 
                   {item.icon}
                 </ListItemIcon>
                 <ListItemText
-                  primary={item.label}
+                  primary={t(item.label)}
                   sx={{
                     '& .MuiListItemText-primary': {
                       color: isActive ? '#FFFFFF !important' : 'rgba(255, 255, 255, 0.85) !important',
@@ -244,7 +246,7 @@ export default function RoleLayout({ userRole, userEmail, onLogout, navItems }) 
                 />
                 {item.badge && (
                   <Chip
-                    label={item.badge}
+                    label={t(item.badge)}
                     size="small"
                     sx={{
                       bgcolor: meta.color,
@@ -267,7 +269,7 @@ export default function RoleLayout({ userRole, userEmail, onLogout, navItems }) 
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
           <ShieldRoundedIcon sx={{ fontSize: 16, color: '#22C55E' }} />
           <Typography variant="caption" sx={{ color: '#94A3B8', fontWeight: 600, fontSize: '0.72rem' }}>
-            LM Act, 2009 Verified Session
+            {t('LM Act, 2009 Verified Session')}
           </Typography>
         </Box>
 
@@ -302,12 +304,12 @@ export default function RoleLayout({ userRole, userEmail, onLogout, navItems }) 
                 {userEmail || 'admin@example.com'}
               </Typography>
               <Typography variant="caption" sx={{ color: '#64748B', fontSize: '0.7rem', display: 'block' }}>
-                Active Session
+                {t('Active Session')}
               </Typography>
             </Box>
           </Box>
 
-          <Tooltip title="Log out of session">
+          <Tooltip title={t('Log out of session')}>
             <IconButton
               onClick={handleLogout}
               size="small"
@@ -389,10 +391,10 @@ export default function RoleLayout({ userRole, userEmail, onLogout, navItems }) 
               <Box>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <Typography variant="subtitle1" sx={{ fontWeight: 800, color: '#0F172A', fontSize: '0.98rem' }}>
-                    {meta.label}
+                    {t(meta.label)}
                   </Typography>
                   <Chip
-                    label="GOV-SECURE"
+                    label={t('GOV-SECURE')}
                     size="small"
                     sx={{
                       bgcolor: meta.bg,
@@ -406,7 +408,7 @@ export default function RoleLayout({ userRole, userEmail, onLogout, navItems }) 
                   />
                 </Box>
                 <Typography variant="caption" sx={{ color: '#64748B', display: { xs: 'none', sm: 'block' } }}>
-                  National Legal Metrology Verification System &nbsp;|&nbsp; Government of India
+                  {t('National Legal Metrology Verification System | Government of India')}
                 </Typography>
               </Box>
             </Box>
@@ -428,7 +430,7 @@ export default function RoleLayout({ userRole, userEmail, onLogout, navItems }) 
               >
                 <FiberManualRecordRoundedIcon sx={{ fontSize: 10, color: '#16A34A' }} />
                 <Typography variant="caption" sx={{ color: '#15803D', fontWeight: 700, fontSize: '0.74rem' }}>
-                  Central Node: Online
+                  {t('Central Node: Online')}
                 </Typography>
               </Box>
 
@@ -447,8 +449,68 @@ export default function RoleLayout({ userRole, userEmail, onLogout, navItems }) 
                   '&:hover': { bgcolor: '#F1F5F9', borderColor: '#CBD5E1' },
                 }}
               >
-                Portal Directory
+                {t('Portal Directory')}
               </Button>
+
+                            {/* Language Switcher */}
+              <Typography
+                variant="caption"
+                onClick={toggleLanguage}
+                data-no-translate="true"
+                translate="no"
+                id="role-language-toggle-btn"
+                title={language === 'en' ? 'हिन्दी में देखें' : 'Switch to English'}
+                sx={{
+                  bgcolor: '#F1F5F9',
+                  border: '1px solid #CBD5E1',
+                  px: 1,
+                  py: 0.4,
+                  borderRadius: '6px',
+                  color: '#334155',
+                  fontWeight: 600,
+                  fontSize: '0.75rem',
+                  cursor: 'pointer',
+                  userSelect: 'none',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  transition: 'all 0.2s ease',
+                  '&:hover': {
+                    bgcolor: '#E2E8F0',
+                  },
+                }}
+              >
+                <Box
+                  component="span"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setLanguage('en');
+                  }}
+                  sx={{
+                    color: language === 'en' ? '#0F172A' : '#64748B',
+                    fontWeight: language === 'en' ? 800 : 500,
+                    cursor: 'pointer',
+                    '&:hover': { color: '#0F172A' },
+                  }}
+                >
+                  English
+                </Box>
+                &nbsp;|&nbsp;
+                <Box
+                  component="span"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setLanguage('hi');
+                  }}
+                  sx={{
+                    color: language === 'hi' ? '#0F172A' : '#64748B',
+                    fontWeight: language === 'hi' ? 800 : 500,
+                    cursor: 'pointer',
+                    '&:hover': { color: '#0F172A' },
+                  }}
+                >
+                  हिन्दी
+                </Box>
+              </Typography>
 
               {/* Profile Avatar / Trigger */}
               <Box
@@ -480,7 +542,7 @@ export default function RoleLayout({ userRole, userEmail, onLogout, navItems }) 
                     {userEmail || 'admin@example.com'}
                   </Typography>
                   <Typography variant="caption" sx={{ color: '#64748B', fontSize: '0.68rem' }}>
-                    {meta.roleTag}
+                    {t(meta.roleTag)}
                   </Typography>
                 </Box>
               </Box>
@@ -499,10 +561,10 @@ export default function RoleLayout({ userRole, userEmail, onLogout, navItems }) 
                 }}
               >
                 <Box sx={{ px: 2, py: 1 }}>
-                  <Typography variant="caption" sx={{ color: '#64748B', display: 'block' }}>Signed in as</Typography>
+                  <Typography variant="caption" sx={{ color: '#64748B', display: 'block' }}>{t('Signed in as')}</Typography>
                   <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#0F172A' }}>{userEmail}</Typography>
                   <Chip
-                    label={meta.label}
+                    label={t(meta.label)}
                     size="small"
                     sx={{ mt: 0.75, bgcolor: meta.bg, color: meta.darkColor, fontWeight: 700, fontSize: '0.65rem' }}
                   />
