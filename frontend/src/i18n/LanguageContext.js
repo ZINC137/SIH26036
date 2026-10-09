@@ -60,12 +60,14 @@ export function LanguageProvider({ children }) {
       return leading + HINDI_MAP_LOWER[lower] + trailing;
     }
 
-    // Skip technical patterns: URLs, emails, codes, cert IDs
+    // Skip technical patterns: URLs, emails, codes, cert IDs, passwords
     if (
       /@/.test(str) ||
       /^https?:\/\//i.test(str) ||
       /^[A-Z0-9_-]{12,}$/.test(trimmed) ||
-      /^(CERT|APP|LMO|GATC|REF|TXN)-/i.test(trimmed)
+      /^(CERT|APP|LMO|GATC|REF|TXN)-/i.test(trimmed) ||
+      /(?:password|admin|user|inspector|officer|gatc)[0-9!@#$%^&*]/i.test(trimmed) ||
+      /^[a-zA-Z0-9_.-]+@[a-zA-Z0-9_.-]+$/.test(trimmed)
     ) {
       return str;
     }
