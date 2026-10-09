@@ -261,14 +261,14 @@ export default function Register() {
             </Box>
 
             <Typography variant="h5" sx={{ textAlign: 'center', fontWeight: 700, color: '#0D47A1', mb: 3 }}>
-              Create Your Account
+              {t('Create Your Account')}
             </Typography>
 
             {/* Stepper */}
             <Stepper activeStep={activeStep} alternativeLabel sx={{ mb: 4 }}>
               {steps.map((label) => (
                 <Step key={label}>
-                  <StepLabel>{label}</StepLabel>
+                  <StepLabel>{t(label)}</StepLabel>
                 </Step>
               ))}
             </Stepper>
@@ -280,7 +280,7 @@ export default function Register() {
               <Box component="form" onSubmit={handleRegister} sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
                 <TextField
                   id="register-email"
-                  label="Email Address"
+                  label={t('Email Address')}
                   type="email"
                   variant="outlined"
                   fullWidth
@@ -294,14 +294,14 @@ export default function Register() {
                 <Box>
                   <TextField
                     id="register-password"
-                    label="Password"
+                    label={t('Password')}
                     type={showPassword ? 'text' : 'password'}
                     variant="outlined"
                     fullWidth
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Minimum 12 characters"
+                    placeholder={t('Minimum 12 characters')}
                     sx={inputSx}
                     InputProps={{
                       startAdornment: <InputAdornment position="start"><LockIcon sx={{ color: '#9E9E9E' }} /></InputAdornment>,
@@ -323,23 +323,23 @@ export default function Register() {
                           transition: 'width 0.3s',
                         }} />
                       </Box>
-                      <Typography variant="caption" sx={{ color: strength.color, fontWeight: 600, minWidth: 60 }}>{strength.label}</Typography>
+                      <Typography variant="caption" sx={{ color: strength.color, fontWeight: 600, minWidth: 60 }}>{t(strength.label)}</Typography>
                     </Box>
                   )}
                 </Box>
                 <TextField
                   id="register-confirm-password"
-                  label="Confirm Password"
+                  label={t('Confirm Password')}
                   type={showConfirmPassword ? 'text' : 'password'}
                   variant="outlined"
                   fullWidth
                   required
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="Re-enter your password"
+                  placeholder={t('Re-enter your password')}
                   sx={inputSx}
                   error={confirmPassword.length > 0 && password !== confirmPassword}
-                  helperText={confirmPassword.length > 0 && password !== confirmPassword ? 'Passwords do not match' : ''}
+                  helperText={confirmPassword.length > 0 && password !== confirmPassword ? t('Passwords do not match') : ''}
                   InputProps={{
                     startAdornment: <InputAdornment position="start"><LockIcon sx={{ color: '#9E9E9E' }} /></InputAdornment>,
                     endAdornment: (
@@ -365,14 +365,14 @@ export default function Register() {
                     '&:hover': { background: 'linear-gradient(135deg, #0D3B8C 0%, #1255AB 100%)' },
                   }}
                 >
-                  {loading ? <CircularProgress size={22} color="inherit" /> : 'Create Account →'}
+                  {loading ? <CircularProgress size={22} color="inherit" /> : t('Create Account →')}
                 </Button>
 
                 <Divider sx={{ my: 1 }} />
                 <Typography variant="body2" sx={{ textAlign: 'center', color: '#757575' }}>
-                  Already have an account?{' '}
+                  {t('Already have an account?')}{' '}
                   <Link to="/login" style={{ color: '#0D47A1', fontWeight: 600, textDecoration: 'none' }}>
-                    Sign In
+                    {t('Sign In')}
                   </Link>
                 </Typography>
               </Box>
@@ -382,12 +382,12 @@ export default function Register() {
             {activeStep === 1 && (
               <Box component="form" onSubmit={handleSaveProfile} sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                 <Alert severity="info" sx={{ borderRadius: 2 }}>
-                  Account created! Please fill in your details below. This info is stored securely.
+                  {t('Account created! Please fill in your details below. This info is stored securely.')}
                 </Alert>
 
                 <TextField
                   id="profile-fullname"
-                  label="Full Name *"
+                  label={t('Full Name *')}
                   variant="outlined"
                   fullWidth
                   required
@@ -399,7 +399,7 @@ export default function Register() {
 
                 <TextField
                   id="profile-phone"
-                  label="Phone Number *"
+                  label={t('Phone Number *')}
                   variant="outlined"
                   fullWidth
                   required
@@ -411,7 +411,7 @@ export default function Register() {
 
                 <TextField
                   id="profile-organization"
-                  label="Organization / Company *"
+                  label={t('Organization / Company *')}
                   variant="outlined"
                   fullWidth
                   required
@@ -423,7 +423,7 @@ export default function Register() {
 
                 <TextField
                   id="profile-address"
-                  label="Address *"
+                  label={t('Address *')}
                   variant="outlined"
                   fullWidth
                   required
@@ -437,13 +437,13 @@ export default function Register() {
 
                 <Grid container spacing={2}>
                   <Grid item xs={12} sm={5}>
-                    <TextField id="profile-city" label="City *" variant="outlined" fullWidth required value={city} onChange={(e) => setCity(e.target.value)} sx={inputSx} />
+                    <TextField id="profile-city" label={t('City *')} variant="outlined" fullWidth required value={city} onChange={(e) => setCity(e.target.value)} sx={inputSx} />
                   </Grid>
                   <Grid item xs={12} sm={4}>
-                    <TextField id="profile-state" label="State *" variant="outlined" fullWidth required value={state} onChange={(e) => setState(e.target.value)} sx={inputSx} />
+                    <TextField id="profile-state" label={t('State *')} variant="outlined" fullWidth required value={state} onChange={(e) => setState(e.target.value)} sx={inputSx} />
                   </Grid>
                   <Grid item xs={12} sm={3}>
-                    <TextField id="profile-pincode" label="Pincode *" variant="outlined" fullWidth required value={pincode} onChange={(e) => setPincode(e.target.value)} sx={inputSx} inputProps={{ maxLength: 6 }} />
+                    <TextField id="profile-pincode" label={t('Pincode *')} variant="outlined" fullWidth required value={pincode} onChange={(e) => setPincode(e.target.value)} sx={inputSx} inputProps={{ maxLength: 6 }} />
                   </Grid>
                 </Grid>
 
@@ -460,7 +460,7 @@ export default function Register() {
                       boxShadow: '0 4px 12px rgba(13,71,161,0.3)',
                     }}
                   >
-                    {loading ? <CircularProgress size={22} color="inherit" /> : 'Save & Continue →'}
+                    {loading ? <CircularProgress size={22} color="inherit" /> : t('Save & Continue →')}
                   </Button>
                 </Box>
               </Box>
@@ -471,27 +471,27 @@ export default function Register() {
               <Box sx={{ textAlign: 'center', py: 2 }}>
                 <CheckCircleIcon sx={{ fontSize: 72, color: '#4CAF50', mb: 2 }} />
                 <Typography variant="h5" sx={{ fontWeight: 700, color: '#2E7D32', mb: 1 }}>
-                  Registration Complete!
+                  {t('Registration Complete!')}
                 </Typography>
                 <Typography variant="body1" sx={{ color: '#757575', mb: 1 }}>
-                  Your account has been created successfully.
+                  {t('Your account has been created successfully.')}
                 </Typography>
 
                 <Box sx={{ mt: 3, p: 2.5, bgcolor: '#E8F5E9', borderRadius: 2, border: '1px solid #A5D6A7', mb: 3, textAlign: 'left' }}>
                   <Typography variant="body2" sx={{ color: '#2E7D32', fontWeight: 600, mb: 0.5 }}>
-                    📧 Statutory verification email sent to:
+                    {t('Statutory verification email sent to:')}
                   </Typography>
                   <Typography variant="subtitle1" sx={{ color: '#1B5E20', fontWeight: 700, mb: 1 }}>
                     {email}
                   </Typography>
                   <Typography variant="body2" sx={{ color: '#388E3C', fontSize: '0.85rem', lineHeight: 1.5 }}>
-                    Please check your inbox (including Spam/Junk folder) and click the verification button to activate your account.
+                    {t('Please check your inbox (including Spam/Junk folder) and click the verification button to activate your account.')}
                   </Typography>
 
                   {verificationUrl && (
                     <Box sx={{ mt: 2.5, pt: 2, borderTop: '1px dashed #A5D6A7' }}>
                       <Typography variant="caption" sx={{ color: '#1B5E20', fontWeight: 700, display: 'block', mb: 1, letterSpacing: 0.5 }}>
-                        ⚡ INSTANT 1-CLICK ACTIVATION (DIRECT LINK):
+                        {t('INSTANT 1-CLICK ACTIVATION (DIRECT LINK):')}
                       </Typography>
                       <Button
                         size="medium"
@@ -510,7 +510,7 @@ export default function Register() {
                           '&:hover': { background: 'linear-gradient(135deg, #1B5E20 0%, #2E7D32 100%)' },
                         }}
                       >
-                        🚀 Click Here to Verify & Activate Instantly →
+                        {t('Click Here to Verify & Activate Instantly →')}
                       </Button>
                     </Box>
                   )}
@@ -533,7 +533,7 @@ export default function Register() {
                       background: 'linear-gradient(135deg, #0D47A1 0%, #1565C0 100%)',
                     }}
                   >
-                    Go to Login
+                    {t('Go to Login')}
                   </Button>
 
                   <Button
@@ -543,7 +543,7 @@ export default function Register() {
                     onClick={handleResend}
                     sx={{ textTransform: 'none', color: '#1565C0', fontWeight: 600, fontSize: '0.85rem' }}
                   >
-                    {resending ? 'Resending verification email...' : "Didn't receive the email? Click here to resend"}
+                    {resending ? t('Resending verification email...') : t("Didn't receive the email? Click here to resend")}
                   </Button>
                 </Box>
               </Box>
@@ -556,7 +556,7 @@ export default function Register() {
       <Box sx={{ bgcolor: '#212121', color: 'white', py: 2, textAlign: 'center' }}>
         <Container maxWidth="lg">
           <Typography variant="body2">
-            © 2026 Legal Metrology Verification System | Ministry of Consumer Affairs
+            {t('© 2026 Legal Metrology Verification System | Ministry of Consumer Affairs')}
           </Typography>
         </Container>
       </Box>
