@@ -161,4 +161,25 @@ app.listen(PORT, async () => {
     backupIntervalHours * 60 * 60 * 1000
   );
   backupInterval.unref();
+
+  // Neon Cloud PostgreSQL Keep-Alive & Auto-Reconnect
+  // Prevents Neon 5-min idle compute suspension & "Error in PostgreSQL connection: Error { kind: Closed }"
+  const dbUrl = process.env.DATABASE_URL || '';
+  if (dbUrl && !dbUrl.startsWith('file:')) {
+    const dbHeartbeat = setInterval(async () => {
+      try {
+        await prisma.$queryRaw`SELECT 1`;
+      } catch (err) {
+        console.warn('[DB Keep-Alive] Socket reset detected, refreshing Prisma connection pool:', err.message);
+        try {
+          await prisma.$disconnect();
+          await prisma.$connect();
+          console.log('[DB Keep-Alive] Reconnected successfully to Neon PostgreSQL.');
+        } catch (reconnectErr) {
+          console.error('[DB Keep-Alive] Reconnect failed:', reconnectErr.message);
+        }
+      }
+    }, 210 * 1000); // Ping every 3.5 minutes
+    dbHeartbeat.unref();
+  }
 });
