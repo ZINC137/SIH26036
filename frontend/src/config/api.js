@@ -34,14 +34,41 @@ export const getAuthHeaders = (extraHeaders = {}) => {
   return headers;
 };
 
+export const clearAuthSession = () => {
+  if (typeof window === 'undefined') return;
+  localStorage.removeItem('sessionToken');
+  localStorage.removeItem('isLoggedIn');
+  localStorage.removeItem('userRole');
+  localStorage.removeItem('userEmail');
+  sessionStorage.removeItem('sessionToken');
+  sessionStorage.removeItem('isLoggedIn');
+  sessionStorage.removeItem('userRole');
+  sessionStorage.removeItem('userEmail');
+};
+
 export const authFetch = async (url, options = {}) => {
   const fullUrl = url.startsWith('http') ? url : `${API_BASE}${url.startsWith('/') ? '' : '/'}${url}`;
   const headers = getAuthHeaders(options.headers || {});
-  return fetch(fullUrl, {
+  const res = await fetch(fullUrl, {
     ...options,
     headers,
     credentials: 'include',
   });
+  if (res.status === 401) {
+    if (
+      !url.includes('/api/auth/login') &&
+      !url.includes('/api/auth/register') &&
+      !url.includes('/api/auth/validate-certificate')
+    ) {
+      clearAuthSession();
+      if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+        window.dispatchEvent(
+          new CustomEvent('auth:unauthorized', { detail: { url, status: 401 } })
+        );
+      }
+    }
+  }
+  return res;
 };
 
 export default API_BASE;

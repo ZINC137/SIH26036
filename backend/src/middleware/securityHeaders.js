@@ -36,6 +36,13 @@ const securityHeaders = (req, res, next) => {
     res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
   }
 
+  // Defend against browser history and cache exposure on API endpoints (OWASP Recommendation)
+  if (req.path && req.path.startsWith('/api') && !req.path.startsWith('/api/rules/categories')) {
+    res.setHeader('Cache-Control', 'private, no-store, no-cache, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+  }
+
   next();
 };
 

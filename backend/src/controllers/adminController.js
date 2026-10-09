@@ -1,6 +1,7 @@
 const argon2 = require('argon2');
 const crypto = require('crypto');
 const prisma = require('../db');
+const { revokeUser } = require('../services/sessionService');
 
 // Helper to log administrative audit trail
 const recordAuditLog = async (action, actor, target, details) => {
@@ -503,6 +504,11 @@ const updateUserStatus = async (req, res) => {
       where: { id: userId },
       data: updateData,
     });
+
+    // Invalidate any active sessions for the modified/suspended user immediately
+    if (status || role) {
+      revokeUser(userId);
+    }
 
     await recordAuditLog(
       'USER_STATUS_UPDATED',
