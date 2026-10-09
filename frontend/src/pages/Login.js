@@ -562,6 +562,9 @@ export default function Login({ onLogin }) {
                     border: `1.5px solid ${active ? cfg.accentBorder : 'transparent'}`,
                     color: active ? cfg.darkColor : '#64748B',
                     transition: 'all 0.2s',
+                    minWidth: 0,
+                    width: '100%',
+                    overflow: 'hidden',
                     '&:hover': {
                       bgcolor: active ? cfg.lightBg : '#F8FAFC',
                       color: active ? cfg.darkColor : '#0F172A',
@@ -574,9 +577,14 @@ export default function Login({ onLogin }) {
                     sx={{
                       fontWeight: active ? 800 : 600,
                       fontSize: '0.72rem',
-                      lineHeight: 1.1,
+                      lineHeight: 1.15,
                       textAlign: 'center',
-                      whiteSpace: 'nowrap',
+                      display: 'block',
+                      width: '100%',
+                      whiteSpace: 'normal',
+                      wordBreak: 'break-word',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
                     }}
                   >
                     {roleKey === 'user' ? t('Citizen') : roleKey === 'lmo' ? t('LMO Officer') : roleKey === 'field_officer' ? t('Inspector') : roleKey === 'gatc' ? t('GATC Lab') : t('Admin')}
@@ -607,10 +615,10 @@ export default function Login({ onLogin }) {
                   {t('LOCAL DEMO LOGIN')} · {t(portal.roleBadge)}
                 </Typography>
                 <Typography variant="body2" sx={{ color: '#0F172A', mt: 0.5 }}>
-                  {t('Email')}: <strong>{demoCredentials[roleFromUrl]?.email}</strong>
+                  {t('Email')}: <Box component="span" translate="no" data-no-translate="true" sx={{ fontWeight: 700 }}>{demoCredentials[roleFromUrl]?.email}</Box>
                 </Typography>
                 <Typography variant="body2" sx={{ color: '#0F172A' }}>
-                  {t('Password')}: <strong>{demoCredentials[roleFromUrl]?.password}</strong>
+                  {t('Password')}: <Box component="span" translate="no" data-no-translate="true" sx={{ fontWeight: 700 }}>{demoCredentials[roleFromUrl]?.password}</Box>
                 </Typography>
               </Box>
               <Button
