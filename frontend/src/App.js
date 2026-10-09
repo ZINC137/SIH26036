@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { ThemeProvider, createTheme, CssBaseline } from '@mui/material';
 
 import { LanguageProvider } from './i18n/LanguageContext';
@@ -40,7 +40,7 @@ import AdminRules from './pages/dashboards/admin/AdminRules';
 import GATCDashboard from './pages/dashboards/GATCDashboard';
 import GATCQueue from './pages/dashboards/gatc/GATCQueue';
 import GATCHistory from './pages/dashboards/gatc/GATCHistory';
-import { authFetch, setAuthToken } from './config/api';
+import API_BASE, { authFetch, setAuthToken, clearAuthSession, getAuthToken, getAuthHeaders } from './config/api';
 
 // ── Shared sub-pages ─────────────────────────────────────────────────────────
 import PortalSettings from './pages/dashboards/shared/PortalSettings';
@@ -137,6 +137,183 @@ const theme = createTheme({
   shape: { borderRadius: 12 },
 });
 
+// ── Protected Portal Route Component ─────────────────────────────────────────
+function ProtectedPortalRoute({
+  expectedRole,
+  userRole,
+  isLoggedIn,
+  userEmail,
+  onLogout,
+  navItems,
+}) {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [denied, setDenied] = useState(false);
+  const isVerifyingRef = useRef(false);
+
+  const token = getAuthToken();
+  const localLoggedIn = typeof window !== 'undefined' && localStorage.getItem('isLoggedIn') === 'true';
+
+  // 1. Cross-tab synchronization via storage event
+  useEffect(() => {
+    const handleStorage = (event) => {
+      if (event.key === 'isLoggedIn' || event.key === 'sessionToken') {
+        if (!event.newValue || event.newValue === 'false') {
+          onLogout();
+          setDenied(true);
+          navigate(`/login?role=${expectedRole}`, { replace: true });
+        }
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, [expectedRole, navigate, onLogout]);
+
+  // 2. Custom event on 401 response from any protected API call
+  useEffect(() => {
+    const handleUnauthorized = () => {
+      onLogout();
+      setDenied(true);
+      navigate(`/login?role=${expectedRole}`, { replace: true });
+    };
+    window.addEventListener('auth:unauthorized', handleUnauthorized);
+    return () => window.removeEventListener('auth:unauthorized', handleUnauthorized);
+  }, [expectedRole, navigate, onLogout]);
+
+  // 3. Browser Back/Forward cache (bfcache) restoration detection
+  useEffect(() => {
+    const handlePageShow = async (event) => {
+      const currentToken = getAuthToken();
+      const currentLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+
+      // If restored from bfcache or session missing, force immediate verification
+      if (event.persisted || !currentToken || !currentLoggedIn) {
+        if (!currentToken || !currentLoggedIn) {
+          const mainOutlet = document.querySelector('main');
+          if (mainOutlet) mainOutlet.innerHTML = '';
+          onLogout();
+          setDenied(true);
+          window.location.replace(`/login?role=${expectedRole}`);
+          return;
+        }
+
+        try {
+          const res = await fetch(`${API_BASE}/api/auth/me`, {
+            headers: getAuthHeaders(),
+            credentials: 'include',
+            cache: 'no-store',
+          });
+          if (!res.ok) {
+            const mainOutlet = document.querySelector('main');
+            if (mainOutlet) mainOutlet.innerHTML = '';
+            onLogout();
+            setDenied(true);
+            window.location.replace(`/login?role=${expectedRole}`);
+            return;
+          }
+          const data = await res.json();
+          if (!data.user || (expectedRole && data.user.role !== expectedRole)) {
+            const mainOutlet = document.querySelector('main');
+            if (mainOutlet) mainOutlet.innerHTML = '';
+            onLogout();
+            setDenied(true);
+            window.location.replace(`/login?role=${expectedRole}`);
+          }
+        } catch {
+          const mainOutlet = document.querySelector('main');
+          if (mainOutlet) mainOutlet.innerHTML = '';
+          onLogout();
+          setDenied(true);
+          window.location.replace(`/login?role=${expectedRole}`);
+        }
+      }
+    };
+
+    window.addEventListener('pageshow', handlePageShow);
+    return () => window.removeEventListener('pageshow', handlePageShow);
+  }, [expectedRole, onLogout]);
+
+  // 4. Session and authorization revalidation on mount and route changes
+  useEffect(() => {
+    let active = true;
+
+    const verify = async () => {
+      const currentToken = getAuthToken();
+      const currentLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+
+      if (!currentToken || !currentLoggedIn) {
+        if (active) {
+          setDenied(true);
+          onLogout();
+        }
+        return;
+      }
+
+      if (isVerifyingRef.current) return;
+      isVerifyingRef.current = true;
+
+      try {
+        const res = await authFetch('/api/auth/me');
+        if (!active) return;
+        if (!res.ok) {
+          setDenied(true);
+          onLogout();
+          return;
+        }
+        const data = await res.json();
+        if (!data.user || (expectedRole && data.user.role !== expectedRole)) {
+          setDenied(true);
+          onLogout();
+          return;
+        }
+        setDenied(false);
+      } catch {
+        if (active) {
+          setDenied(true);
+          onLogout();
+        }
+      } finally {
+        isVerifyingRef.current = false;
+      }
+    };
+
+    verify();
+
+    return () => {
+      active = false;
+    };
+  }, [location.pathname, expectedRole, onLogout]);
+
+  // If not logged in or token missing, immediately redirect to portal login
+  if (!isLoggedIn || !token || !localLoggedIn || denied) {
+    return <Navigate to={`/login?role=${expectedRole}`} replace />;
+  }
+
+  // If role mismatch, redirect to user's assigned portal
+  if (userRole && userRole !== expectedRole) {
+    return <Navigate to={ROLE_HOME[userRole] || '/dashboard/user'} replace />;
+  }
+
+  return (
+    <RoleLayout
+      userRole={expectedRole}
+      userEmail={userEmail}
+      onLogout={onLogout}
+      navItems={navItems}
+    />
+  );
+}
+
+// ── Protected Legacy Route Component ─────────────────────────────────────────
+function ProtectedLegacyRoute({ userRole, isLoggedIn, onLogout }) {
+  const token = getAuthToken();
+  const localLoggedIn = typeof window !== 'undefined' && localStorage.getItem('isLoggedIn') === 'true';
+  if (!isLoggedIn || !token || !localLoggedIn) {
+    return <Navigate to="/login" replace />;
+  }
+  return <Layout userRole={userRole} onLogout={onLogout} />;
+}
+
 // ── App ──────────────────────────────────────────────────────────────────────
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(() => {
@@ -149,8 +326,26 @@ function App() {
     return localStorage.getItem('userEmail') || '';
   });
 
+  const handleLogout = () => {
+    authFetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
+    setAuthToken(null);
+    clearAuthSession();
+    setIsLoggedIn(false);
+    setUserRole(null);
+    setUserEmail('');
+  };
+
   // Check backend session on mount
-  React.useEffect(() => {
+  useEffect(() => {
+    const token = getAuthToken();
+    const localLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+    if (!token && !localLoggedIn) {
+      setIsLoggedIn(false);
+      setUserRole(null);
+      setUserEmail('');
+      return;
+    }
+
     authFetch('/api/auth/me')
       .then((res) => {
         if (res.ok) return res.json();
@@ -167,7 +362,7 @@ function App() {
         }
       })
       .catch(() => {
-        // Only reset if backend session is completely dead
+        handleLogout();
       });
   }, []);
 
@@ -179,32 +374,6 @@ function App() {
     localStorage.setItem('isLoggedIn', 'true');
     localStorage.setItem('userRole', role);
     localStorage.setItem('userEmail', email);
-  };
-
-  const handleLogout = () => {
-    authFetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
-    setAuthToken(null);
-    setIsLoggedIn(false);
-    setUserRole(null);
-    setUserEmail('');
-    localStorage.removeItem('isLoggedIn');
-    localStorage.removeItem('userRole');
-    localStorage.removeItem('userEmail');
-  };
-
-  // Helper: wrap a route group in RoleLayout with strict role validation
-  const portalLayout = (role) => {
-    if (userRole && userRole !== role) {
-      return <Navigate to={ROLE_HOME[userRole] || '/dashboard/user'} replace />;
-    }
-    return (
-      <RoleLayout
-        userRole={role}
-        userEmail={userEmail}
-        onLogout={handleLogout}
-        navItems={NAV[role]}
-      />
-    );
   };
 
   return (
@@ -219,70 +388,118 @@ function App() {
             <Route path="/register"    element={<Register />} />
             <Route path="/public"      element={<PublicDashboard />} />
 
-            {isLoggedIn ? (
-              <>
-                {/* ── USER PORTAL ─────────────────────────────────── */}
-                <Route element={portalLayout('user')}>
-                  <Route path="/dashboard/user"              element={<UserDashboard userEmail={userEmail} />} />
-                  <Route path="/dashboard/user/apply"        element={<UserApply />} />
-                  <Route path="/dashboard/user/applications" element={<UserApplications />} />
-                  <Route path="/dashboard/user/certificates" element={<UserCertificates />} />
-                  <Route path="/dashboard/user/settings"     element={<PortalSettings userRole="user" userEmail={userEmail} />} />
-                </Route>
+            {/* ── USER PORTAL ─────────────────────────────────── */}
+            <Route element={
+              <ProtectedPortalRoute
+                expectedRole="user"
+                userRole={userRole}
+                isLoggedIn={isLoggedIn}
+                userEmail={userEmail}
+                onLogout={handleLogout}
+                navItems={NAV.user}
+              />
+            }>
+              <Route path="/dashboard/user"              element={<UserDashboard userEmail={userEmail} />} />
+              <Route path="/dashboard/user/apply"        element={<UserApply />} />
+              <Route path="/dashboard/user/applications" element={<UserApplications />} />
+              <Route path="/dashboard/user/certificates" element={<UserCertificates />} />
+              <Route path="/dashboard/user/settings"     element={<PortalSettings userRole="user" userEmail={userEmail} />} />
+            </Route>
 
-                {/* ── LMO PORTAL ──────────────────────────────────── */}
-                <Route element={portalLayout('lmo')}>
-                  <Route path="/dashboard/lmo"              element={<LMODashboard userEmail={userEmail} />} />
-                  <Route path="/dashboard/lmo/pending"      element={<LMOPending />} />
-                  <Route path="/dashboard/lmo/officers"     element={<LMOOfficers />} />
-                  <Route path="/dashboard/lmo/certificates" element={<LMOCertificates />} />
-                  <Route path="/dashboard/lmo/settings"     element={<PortalSettings userRole="lmo" userEmail={userEmail} />} />
-                </Route>
+            {/* ── LMO PORTAL ──────────────────────────────────── */}
+            <Route element={
+              <ProtectedPortalRoute
+                expectedRole="lmo"
+                userRole={userRole}
+                isLoggedIn={isLoggedIn}
+                userEmail={userEmail}
+                onLogout={handleLogout}
+                navItems={NAV.lmo}
+              />
+            }>
+              <Route path="/dashboard/lmo"              element={<LMODashboard userEmail={userEmail} />} />
+              <Route path="/dashboard/lmo/pending"      element={<LMOPending />} />
+              <Route path="/dashboard/lmo/officers"     element={<LMOOfficers />} />
+              <Route path="/dashboard/lmo/certificates" element={<LMOCertificates />} />
+              <Route path="/dashboard/lmo/settings"     element={<PortalSettings userRole="lmo" userEmail={userEmail} />} />
+            </Route>
 
-                {/* ── FIELD OFFICER PORTAL ────────────────────────── */}
-                <Route element={portalLayout('field_officer')}>
-                  <Route path="/dashboard/field-officer"          element={<FieldOfficerDashboard userEmail={userEmail} />} />
-                  <Route path="/dashboard/field-officer/schedule" element={<FieldOfficerDashboard userEmail={userEmail} />} />
-                  <Route path="/dashboard/field-officer/report"   element={<FOReport />} />
-                  <Route path="/dashboard/field-officer/history"  element={<FOHistory />} />
-                  <Route path="/dashboard/field-officer/settings" element={<PortalSettings userRole="field_officer" userEmail={userEmail} />} />
-                </Route>
+            {/* ── FIELD OFFICER PORTAL ────────────────────────── */}
+            <Route element={
+              <ProtectedPortalRoute
+                expectedRole="field_officer"
+                userRole={userRole}
+                isLoggedIn={isLoggedIn}
+                userEmail={userEmail}
+                onLogout={handleLogout}
+                navItems={NAV.field_officer}
+              />
+            }>
+              <Route path="/dashboard/field-officer"          element={<FieldOfficerDashboard userEmail={userEmail} />} />
+              <Route path="/dashboard/field-officer/schedule" element={<FieldOfficerDashboard userEmail={userEmail} />} />
+              <Route path="/dashboard/field-officer/report"   element={<FOReport />} />
+              <Route path="/dashboard/field-officer/history"  element={<FOHistory />} />
+              <Route path="/dashboard/field-officer/settings" element={<PortalSettings userRole="field_officer" userEmail={userEmail} />} />
+            </Route>
 
-                {/* ── ADMIN PORTAL ────────────────────────────────── */}
-                <Route element={portalLayout('admin')}>
-                  <Route path="/dashboard/admin"           element={<AdminDashboard userEmail={userEmail} />} />
-                  <Route path="/dashboard/admin/users"     element={<AdminUsers />} />
-                  <Route path="/dashboard/admin/analytics" element={<AdminDashboard userEmail={userEmail} />} />
-                  <Route path="/dashboard/admin/rules"     element={<AdminRules />} />
-                  <Route path="/dashboard/admin/certificates" element={<AdminCertificates />} />
-                  <Route path="/dashboard/admin/logs"      element={<AdminDashboard userEmail={userEmail} />} />
-                  <Route path="/dashboard/admin/settings"  element={<PortalSettings userRole="admin" userEmail={userEmail} />} />
-                </Route>
+            {/* ── ADMIN PORTAL ────────────────────────────────── */}
+            <Route element={
+              <ProtectedPortalRoute
+                expectedRole="admin"
+                userRole={userRole}
+                isLoggedIn={isLoggedIn}
+                userEmail={userEmail}
+                onLogout={handleLogout}
+                navItems={NAV.admin}
+              />
+            }>
+              <Route path="/dashboard/admin"           element={<AdminDashboard userEmail={userEmail} />} />
+              <Route path="/dashboard/admin/users"     element={<AdminUsers />} />
+              <Route path="/dashboard/admin/analytics" element={<AdminDashboard userEmail={userEmail} />} />
+              <Route path="/dashboard/admin/rules"     element={<AdminRules />} />
+              <Route path="/dashboard/admin/certificates" element={<AdminCertificates />} />
+              <Route path="/dashboard/admin/logs"      element={<AdminDashboard userEmail={userEmail} />} />
+              <Route path="/dashboard/admin/settings"  element={<PortalSettings userRole="admin" userEmail={userEmail} />} />
+            </Route>
 
-                {/* ── GATC PORTAL ── */}
-                <Route element={portalLayout('gatc')}>
-                  <Route path="/dashboard/gatc"          element={<GATCDashboard userEmail={userEmail} />} />
-                  <Route path="/dashboard/gatc/tasks"    element={<GATCQueue userEmail={userEmail} />} />
-                  <Route path="/dashboard/gatc/history"  element={<GATCHistory userEmail={userEmail} />} />
-                  <Route path="/dashboard/gatc/settings" element={<PortalSettings userRole="gatc" userEmail={userEmail} />} />
-                </Route>
+            {/* ── GATC PORTAL ──────────────────────────────────── */}
+            <Route element={
+              <ProtectedPortalRoute
+                expectedRole="gatc"
+                userRole={userRole}
+                isLoggedIn={isLoggedIn}
+                userEmail={userEmail}
+                onLogout={handleLogout}
+                navItems={NAV.gatc}
+              />
+            }>
+              <Route path="/dashboard/gatc"          element={<GATCDashboard userEmail={userEmail} />} />
+              <Route path="/dashboard/gatc/tasks"    element={<GATCQueue userEmail={userEmail} />} />
+              <Route path="/dashboard/gatc/history"  element={<GATCHistory userEmail={userEmail} />} />
+              <Route path="/dashboard/gatc/settings" element={<PortalSettings userRole="gatc" userEmail={userEmail} />} />
+            </Route>
 
-                {/* Keep legacy URLs working for existing users. */}
-                <Route element={<Layout userRole={userRole} onLogout={handleLogout} />}>
-                  <Route path="/register-instrument" element={<RegisterInstrument />} />
-                  <Route path="/my-applications"     element={<MyApplications />} />
-                  <Route path="/certificates"        element={<Certificates />} />
-                  <Route path="/settings"            element={<Settings />} />
-                  <Route path="/legacy-dashboard"    element={<Dashboard userRole={userRole} />} />
-                </Route>
+            {/* Keep legacy URLs working for existing users. */}
+            <Route element={<ProtectedLegacyRoute userRole={userRole} isLoggedIn={isLoggedIn} onLogout={handleLogout} />}>
+              <Route path="/register-instrument" element={<RegisterInstrument />} />
+              <Route path="/my-applications"     element={<MyApplications />} />
+              <Route path="/certificates"        element={<Certificates />} />
+              <Route path="/settings"            element={<Settings />} />
+              <Route path="/legacy-dashboard"    element={<Dashboard userRole={userRole} />} />
+            </Route>
 
-                {/* Redirect /dashboard → role home */}
-                <Route path="/dashboard" element={<Navigate to={ROLE_HOME[userRole] || '/dashboard/user'} />} />
-                <Route path="*"          element={<Navigate to={ROLE_HOME[userRole] || '/dashboard/user'} />} />
-              </>
-            ) : (
-              <Route path="*" element={<Navigate to="/" />} />
-            )}
+            {/* Redirect /dashboard → role home */}
+            <Route
+              path="/dashboard"
+              element={
+                isLoggedIn && userRole ? (
+                  <Navigate to={ROLE_HOME[userRole] || '/dashboard/user'} replace />
+                ) : (
+                  <Navigate to="/login" replace />
+                )
+              }
+            />
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Router>
       </ThemeProvider>

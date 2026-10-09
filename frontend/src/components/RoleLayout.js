@@ -25,7 +25,7 @@ import LogoutRoundedIcon from '@mui/icons-material/LogoutRounded';
 import AccountBalanceRoundedIcon from '@mui/icons-material/AccountBalanceRounded';
 import FiberManualRecordRoundedIcon from '@mui/icons-material/FiberManualRecordRounded';
 import ShieldRoundedIcon from '@mui/icons-material/ShieldRounded';
-import { authFetch, setAuthToken } from '../config/api';
+import { authFetch, setAuthToken, clearAuthSession } from '../config/api';
 import { useLanguage } from '../i18n/LanguageContext';
 
 const DRAWER_WIDTH = 280;
@@ -95,9 +95,10 @@ export default function RoleLayout({ userRole, userEmail, onLogout, navItems }) 
       });
     } catch (e) {}
     setAuthToken(null);
+    clearAuthSession();
     setAnchorEl(null);
     onLogout();
-    navigate('/');
+    navigate('/login');
   };
 
   const drawerContent = (

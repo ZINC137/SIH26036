@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken');
 const prisma = require('../db');
 const { sendVerificationEmail } = require('../utils/emailService');
 const { demoPortals } = require('../config/demoPortals');
+const { revokeToken } = require('../services/sessionService');
 
 const getDemoPortalCredentials = (req, res) => {
   return res.status(200).json({
@@ -468,9 +469,10 @@ const login = async (req, res) => {
     const assignedJurisdiction = user.adminProfile?.department || user.lmoProfile?.assignedJurisdiction || user.fieldOfficerProfile?.circleZone || user.gatcProfile?.centre_name || null;
     const dscKeyId = user.lmoProfile?.dscKeyId || user.gatcProfile?.accreditation_no || null;
 
-    // Generate JWT
+    // Generate JWT with unique session identifier (jti)
+    const sessionId = crypto.randomUUID();
     const token = jwt.sign(
-      { id: user.id, email: user.email, role: user.role },
+      { id: user.id, email: user.email, role: user.role, jti: sessionId },
       process.env.JWT_SECRET,
       { expiresIn: '1d' }
     );
@@ -482,6 +484,9 @@ const login = async (req, res) => {
       sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
       maxAge: 24 * 60 * 60 * 1000, // 1 day
     });
+
+    res.setHeader('Cache-Control', 'private, no-store, no-cache, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
 
     return res.status(200).json({ 
       message: 'Logged in successfully',
@@ -505,12 +510,38 @@ const login = async (req, res) => {
 };
 
 const logout = async (req, res) => {
-  // Clear the cookie
+  try {
+    // 1. Invalidate token on the server side so it can never be reused
+    let token = req.cookies?.sessionId || req.token;
+    if (!token && req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
+      token = req.headers.authorization.split(' ')[1];
+    }
+    if (token) {
+      revokeToken(token);
+    }
+  } catch (err) {
+    console.error('Server-side token revocation notice:', err.message);
+  }
+
+  // 2. Clear HTTP-only session cookie across all environments
+  res.clearCookie('sessionId', {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+  });
   res.cookie('sessionId', '', {
     httpOnly: true,
-    expires: new Date(0), // Max-Age=0 essentially
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+    expires: new Date(0),
+    maxAge: 0,
   });
-  
+
+  // 3. Prohibit caching of logout response
+  res.setHeader('Cache-Control', 'private, no-store, no-cache, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+
   return res.status(200).json({ message: 'Logged out successfully' });
 };
 
@@ -527,8 +558,8 @@ const me = async (req, res) => {
       },
     });
 
-    if (!user) {
-      return res.status(401).json({ error: 'User session not found or account deactivated.' });
+    if (!user || user.status === 'SUSPENDED' || user.status === 'REJECTED') {
+      return res.status(401).json({ error: 'User session not found or account deactivated.', code: 'USER_DEACTIVATED' });
     }
 
     const employeeCode = user.adminProfile?.employeeCode || user.lmoProfile?.employeeCode || user.fieldOfficerProfile?.employeeCode || user.gatcProfile?.gatc_code || null;
