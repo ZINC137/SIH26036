@@ -518,7 +518,7 @@ export default function Login({ onLogin }) {
               '&:hover': { bgcolor: '#F8FAFC', borderColor: '#CBD5E1' },
             }}
           >
-            Back to Home
+            {t('Back to Home')}
           </Button>
         </Box>
       </Box>
@@ -579,7 +579,7 @@ export default function Login({ onLogin }) {
                       whiteSpace: 'nowrap',
                     }}
                   >
-                    {roleKey === 'user' ? 'Citizen' : roleKey === 'lmo' ? 'LMO Officer' : roleKey === 'field_officer' ? 'Inspector' : roleKey === 'gatc' ? 'GATC Lab' : 'Admin'}
+                    {roleKey === 'user' ? t('Citizen') : roleKey === 'lmo' ? t('LMO Officer') : roleKey === 'field_officer' ? t('Inspector') : roleKey === 'gatc' ? t('GATC Lab') : t('Admin')}
                   </Typography>
                 </Button>
               );
@@ -604,13 +604,13 @@ export default function Login({ onLogin }) {
             >
               <Box>
                 <Typography variant="caption" sx={{ color: portal.darkColor, fontWeight: 800, display: 'block' }}>
-                  LOCAL DEMO LOGIN · {portal.roleBadge}
+                  {t('LOCAL DEMO LOGIN')} · {t(portal.roleBadge)}
                 </Typography>
                 <Typography variant="body2" sx={{ color: '#0F172A', mt: 0.5 }}>
-                  Email: <strong>{demoCredentials[roleFromUrl]?.email}</strong>
+                  {t('Email')}: <strong>{demoCredentials[roleFromUrl]?.email}</strong>
                 </Typography>
                 <Typography variant="body2" sx={{ color: '#0F172A' }}>
-                  Password: <strong>{demoCredentials[roleFromUrl]?.password}</strong>
+                  {t('Password')}: <strong>{demoCredentials[roleFromUrl]?.password}</strong>
                 </Typography>
               </Box>
               <Button
@@ -624,7 +624,7 @@ export default function Login({ onLogin }) {
                   '&:hover': { bgcolor: portal.darkColor },
                 }}
               >
-                Autofill credentials
+                {t('Autofill credentials')}
               </Button>
             </Paper>
           )}
@@ -649,7 +649,7 @@ export default function Login({ onLogin }) {
             <Box sx={{ mb: 3 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
                 <Chip
-                  label={portal.roleBadge}
+                  label={t(portal.roleBadge)}
                   size="small"
                   sx={{
                     bgcolor: portal.lightBg,
@@ -674,34 +674,34 @@ export default function Login({ onLogin }) {
                   letterSpacing: '-0.02em',
                 }}
               >
-                Sign In to {portal.label}
+                {t(`Sign In to ${portal.label}`)}
               </Typography>
 
               <Typography variant="body2" sx={{ color: '#64748B', mt: 0.5, fontSize: '0.86rem' }}>
-                {portal.hint}
+                {t(portal.hint)}
               </Typography>
             </Box>
 
             {/* Verification Status Alerts from URL */}
             {verifiedParam === 'true' && (
               <Alert severity="success" sx={{ mb: 2.5, borderRadius: '12px', fontWeight: 600 }}>
-                ✅ Email verified successfully! You can now sign in with your credentials.
+                ✅ {t('Email verified successfully! You can now sign in with your credentials.')}
               </Alert>
             )}
 
             {verifiedParam === 'already' && (
               <Alert severity="info" sx={{ mb: 2.5, borderRadius: '12px', fontWeight: 600 }}>
-                ℹ️ Your email address is already verified. Please enter your credentials to log in.
+                ℹ️ {t('Your email address is already verified. Please enter your credentials to log in.')}
               </Alert>
             )}
 
             {errorParam === 'token_expired' && (
               <Alert severity="warning" sx={{ mb: 2.5, borderRadius: '12px' }}>
                 <Typography variant="body2" sx={{ fontWeight: 700, mb: 0.5 }}>
-                  ⚠️ Verification Link Expired
+                  ⚠️ {t('Verification Link Expired')}
                 </Typography>
                 <Typography variant="caption" sx={{ display: 'block', mb: 1.5, color: '#663C00' }}>
-                  Verification links expire after 24 hours. Enter your email above and click below to request a fresh link.
+                  {t('Verification links expire after 24 hours. Enter your email above and click below to request a fresh link.')}
                 </Typography>
                 <Button
                   size="small"
@@ -711,14 +711,14 @@ export default function Login({ onLogin }) {
                   disabled={resendingVerification}
                   sx={{ textTransform: 'none', fontWeight: 700, borderRadius: '8px' }}
                 >
-                  {resendingVerification ? 'Sending...' : 'Resend Verification Link'}
+                  {resendingVerification ? t('Sending...') : t('Resend Verification Link')}
                 </Button>
               </Alert>
             )}
 
             {errorParam === 'invalid_token' && (
               <Alert severity="error" sx={{ mb: 2.5, borderRadius: '12px' }}>
-                ⚠️ Invalid verification link. Please check the link in your email or request a fresh one below.
+                ⚠️ {t('Invalid verification link. Please check the link in your email or request a fresh one below.')}
               </Alert>
             )}
 
@@ -807,7 +807,7 @@ export default function Login({ onLogin }) {
                           },
                         }}
                       >
-                        Switch to {roleMismatch.actualPortalName} &amp; Sign In →
+                        {t(`Switch to ${roleMismatch.actualPortalName} & Sign In`)} →
                       </Button>
                     </Box>
                   )}
@@ -819,7 +819,7 @@ export default function Login({ onLogin }) {
             <Box component="form" onSubmit={handleLogin} sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
               <Box>
                 <Typography variant="caption" sx={{ fontWeight: 700, color: '#334155', mb: 0.75, display: 'block' }}>
-                  OFFICIAL EMAIL ADDRESS
+                  {t('OFFICIAL EMAIL ADDRESS')}
                 </Typography>
                 <TextField
                   id="login-email"
@@ -847,14 +847,14 @@ export default function Login({ onLogin }) {
 
               <Box>
                 <Typography variant="caption" sx={{ fontWeight: 700, color: '#334155', mb: 0.75, display: 'block' }}>
-                  SECURE PASSWORD
+                  {t('SECURE PASSWORD')}
                 </Typography>
                 <TextField
                   id="login-password"
                   type={showPassword ? 'text' : 'password'}
                   fullWidth
                   required
-                  placeholder="Enter your confidential password"
+                  placeholder={t('Enter your confidential password')}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   InputProps={{
@@ -907,7 +907,7 @@ export default function Login({ onLogin }) {
                   },
                 }}
               >
-                {submitting ? 'Verifying Credentials...' : `Sign In to ${portal.label}`}
+                {submitting ? t('Verifying Credentials...') : t(`Sign In to ${portal.label}`)}
               </Button>
 
               {/* ── FIELD OFFICER FIRST-TIME ACTIVATION ENTRY POINT ── */}
@@ -923,10 +923,10 @@ export default function Login({ onLogin }) {
                   }}
                 >
                   <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#6B21A8', mb: 0.5 }}>
-                    First-Time Nominated Field Inspector?
+                    {t('First-Time Nominated Field Inspector?')}
                   </Typography>
                   <Typography variant="caption" sx={{ color: '#7E22CE', display: 'block', mb: 1.5 }}>
-                    Have you received your single-use activation token after Admin Security Clearance?
+                    {t('Have you received your single-use activation token after Admin Security Clearance?')}
                   </Typography>
                   <Button
                     variant="contained"
@@ -942,7 +942,7 @@ export default function Login({ onLogin }) {
                       py: 1,
                     }}
                   >
-                    Activate Inspector Account
+                    {t('Activate Inspector Account')}
                   </Button>
                 </Box>
               )}
@@ -951,7 +951,7 @@ export default function Login({ onLogin }) {
                 <>
                   <Divider sx={{ my: 0.5 }}>
                     <Typography variant="caption" sx={{ color: '#94A3B8', fontWeight: 600 }}>
-                      OR NEW REGISTRATION
+                      {t('OR NEW REGISTRATION')}
                     </Typography>
                   </Divider>
                   <Button
@@ -970,7 +970,7 @@ export default function Login({ onLogin }) {
                       '&:hover': { bgcolor: portal.lightBg, borderColor: portal.darkColor },
                     }}
                   >
-                    Register New Instrument Owner / Citizen Account
+                    {t('Register New Instrument Owner / Citizen Account')}
                   </Button>
                 </>
               )}
@@ -980,7 +980,7 @@ export default function Login({ onLogin }) {
             <Box sx={{ mt: 4, pt: 2.5, borderTop: '1px solid #F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
               <ShieldRoundedIcon sx={{ fontSize: 16, color: '#15803D' }} />
               <Typography variant="caption" sx={{ color: '#64748B', fontWeight: 500 }}>
-                Protected by 256-Bit SSL Encryption • Official Government Gateway
+                {t('Protected by 256-Bit SSL Encryption • Official Government Gateway')}
               </Typography>
             </Box>
           </Paper>
@@ -996,7 +996,7 @@ export default function Login({ onLogin }) {
       >
         <DialogTitle sx={{ fontWeight: 800, color: '#6B21A8', display: 'flex', alignItems: 'center', gap: 1.5 }}>
           <FingerprintRoundedIcon sx={{ fontSize: 28 }} />
-          Field Officer Account Activation
+          {t('Field Officer Account Activation')}
         </DialogTitle>
         <Divider />
 
@@ -1006,14 +1006,14 @@ export default function Login({ onLogin }) {
               <CheckCircleRoundedIcon sx={{ fontSize: 40 }} />
             </Box>
             <Typography variant="h5" sx={{ fontWeight: 900, color: '#0F172A', mb: 1 }}>
-              Inspector Account Activated!
+              {t('Inspector Account Activated!')}
             </Typography>
             <Typography variant="body2" sx={{ color: '#475569', mb: 3 }}>
-              Your permanent password has been set. You can now log in to the portal using your credentials.
+              {t('Your permanent password has been set. You can now log in to the portal using your credentials.')}
             </Typography>
 
             <Paper sx={{ p: 2, bgcolor: '#F8FAFC', borderRadius: '14px', border: '1px solid #E2E8F0', textAlign: 'left', mb: 3 }}>
-              <Typography variant="caption" sx={{ color: '#64748B', display: 'block', fontWeight: 600 }}>OFFICER EMAIL:</Typography>
+              <Typography variant="caption" sx={{ color: '#64748B', display: 'block', fontWeight: 600 }}>{t('OFFICER EMAIL:')}</Typography>
               <Typography variant="body2" sx={{ fontWeight: 700, color: '#0F172A' }}>{activationSuccess.email}</Typography>
             </Paper>
 
@@ -1028,14 +1028,14 @@ export default function Login({ onLogin }) {
                 background: 'linear-gradient(135deg, #7E22CE 0%, #581C87 100%)',
               }}
             >
-              Enter Field Officer Dashboard
+              {t('Enter Field Officer Dashboard')}
             </Button>
           </DialogContent>
         ) : (
           <Box component="form" onSubmit={handleActivationSubmit}>
             <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, pt: 3 }}>
               <Alert severity="info" sx={{ borderRadius: 2 }}>
-                Statutory Onboarding: Provide your official email and the single-use token generated by Central Admin after HRMS clearance to set your permanent secure password.
+                {t('Statutory Onboarding: Provide your official email and the single-use token generated by Central Admin after HRMS clearance to set your permanent secure password.')}
               </Alert>
 
               <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
@@ -1045,7 +1045,7 @@ export default function Login({ onLogin }) {
                   startIcon={<FlashOnRoundedIcon />}
                   sx={{ color: '#6B21A8', fontWeight: 700, fontSize: '0.78rem' }}
                 >
-                  Quick Test Prefill (Neha Joshi)
+                  {t('Quick Test Prefill (Neha Joshi)')}
                 </Button>
               </Box>
 
@@ -1059,7 +1059,7 @@ export default function Login({ onLogin }) {
               <Grid container spacing={2}>
                 <Grid item xs={12} sm={6}>
                   <TextField
-                    label="Official Email Address"
+                    label={t('Official Email Address')}
                     required
                     fullWidth
                     size="small"
@@ -1070,7 +1070,7 @@ export default function Login({ onLogin }) {
                 </Grid>
                 <Grid item xs={12} sm={6}>
                   <TextField
-                    label="Single-Use Activation Token"
+                    label={t('Single-Use Activation Security Token')}
                     required
                     fullWidth
                     size="small"
@@ -1085,24 +1085,24 @@ export default function Login({ onLogin }) {
               <Grid container spacing={2}>
                 <Grid item xs={12} sm={6}>
                   <TextField
-                    label="Set Permanent Password"
+                    label={t('Set Permanent Password')}
                     type="password"
                     required
                     fullWidth
                     size="small"
-                    placeholder="Min 12 characters"
+                    placeholder={t('Minimum 12 characters')}
                     value={activationForm.newPassword}
                     onChange={(e) => setActivationForm({ ...activationForm, newPassword: e.target.value })}
                   />
                 </Grid>
                 <Grid item xs={12} sm={6}>
                   <TextField
-                    label="Confirm Permanent Password"
+                    label={t('Confirm Permanent Password')}
                     type="password"
                     required
                     fullWidth
                     size="small"
-                    placeholder="Re-enter password"
+                    placeholder={t('Re-enter your password')}
                     value={activationForm.confirmPassword}
                     onChange={(e) => setActivationForm({ ...activationForm, confirmPassword: e.target.value })}
                   />
@@ -1119,13 +1119,13 @@ export default function Login({ onLogin }) {
                 }
                 label={
                   <Typography variant="caption" sx={{ color: '#475569', fontWeight: 600 }}>
-                    I acknowledge statutory responsibility under the Legal Metrology Act for official field stamping operations.
+                    {t('I acknowledge statutory responsibility under the Legal Metrology Act for official field stamping operations.')}
                   </Typography>
                 }
               />
             </DialogContent>
             <DialogActions sx={{ p: 2.5, gap: 1 }}>
-              <Button onClick={() => setOpenActivation(false)} sx={{ color: '#757575' }}>Cancel</Button>
+              <Button onClick={() => setOpenActivation(false)} sx={{ color: '#757575' }}>{t('Cancel')}</Button>
               <Button
                 type="submit"
                 variant="contained"
@@ -1136,7 +1136,7 @@ export default function Login({ onLogin }) {
                   px: 3,
                 }}
               >
-                {activationSubmitting ? 'Activating Account...' : 'Activate Inspector Account'}
+                {activationSubmitting ? t('Activating Account...') : t('Activate Inspector Account')}
               </Button>
             </DialogActions>
           </Box>
@@ -1146,7 +1146,7 @@ export default function Login({ onLogin }) {
       {/* ── Official Footer ── */}
       <Box sx={{ bgcolor: '#06162D', color: '#94A3B8', py: 2.5, textAlign: 'center', px: 2 }}>
         <Typography variant="caption">
-          © 2026 Legal Metrology Division, Department of Consumer Affairs, Government of India. All Rights Reserved.
+          {t('© 2026 Legal Metrology Division, Department of Consumer Affairs, Government of India. All Rights Reserved.')}
         </Typography>
       </Box>
     </Box>

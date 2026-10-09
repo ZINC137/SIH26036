@@ -31,10 +31,12 @@ export function LanguageProvider({ children }) {
   const originalAttrMap = useRef(new WeakMap());
   const isMutatingRef = useRef(false);
 
+  const isDevanagari = (val) => typeof val === 'string' && /[\u0900-\u097F]/.test(val);
+
   // Helper to translate a string
   const translateString = useCallback((str) => {
     if (!str || typeof str !== 'string') return str;
-    const clean = str.replace(/\u00a0/g, ' ');
+    const clean = str.replace(/\u00a0/g, ' ').replace(/&amp;/g, '&');
     const trimmed = clean.trim();
     if (!trimmed) return str;
 
@@ -68,17 +70,104 @@ export function LanguageProvider({ children }) {
       return str;
     }
 
-    // 4. Phrase-level replacement for compound phrases / multiline text
+    // 4. Prefix / Suffix pattern checks
+    // Bullet / icon prefix: e.g. "· An LMO officer will review...", "✓ ...", "✗ ..."
+    const punctPrefixMatch = trimmed.match(/^([·•\-*–—✓✗🔬⚖️ℹ️⚠️✅]+\s*)/);
+    if (punctPrefixMatch) {
+      const prefix = punctPrefixMatch[1];
+      const rest = trimmed.slice(prefix.length).trim();
+      if (HINDI_MAP[rest]) {
+        return leading + prefix + HINDI_MAP[rest] + trailing;
+      }
+      if (HINDI_MAP_LOWER[rest.toLowerCase()]) {
+        return leading + prefix + HINDI_MAP_LOWER[rest.toLowerCase()] + trailing;
+      }
+    }
+
+    // Trailing colon: e.g. "Status:", "Mode:", "Email:"
+    if (trimmed.endsWith(':')) {
+      const rest = trimmed.slice(0, -1).trim();
+      if (HINDI_MAP[rest]) {
+        return leading + HINDI_MAP[rest] + ':' + trailing;
+      }
+      if (HINDI_MAP_LOWER[rest.toLowerCase()]) {
+        return leading + HINDI_MAP_LOWER[rest.toLowerCase()] + ':' + trailing;
+      }
+    }
+
+    // Enclosing parentheses: e.g. "(Pending LMO Sign)", "(Ineligible)"
+    if (trimmed.startsWith('(') && trimmed.endsWith(')')) {
+      const inside = trimmed.slice(1, -1).trim();
+      if (HINDI_MAP[inside]) {
+        return leading + '(' + HINDI_MAP[inside] + ')' + trailing;
+      }
+      if (HINDI_MAP_LOWER[inside.toLowerCase()]) {
+        return leading + '(' + HINDI_MAP_LOWER[inside.toLowerCase()] + ')' + trailing;
+      }
+    }
+
+    // Trailing arrows: e.g. "Create Account →", "Next Step →"
+    if (trimmed.endsWith(' →') || trimmed.endsWith(' ->')) {
+      const rest = trimmed.replace(/\s*(?:→|->)$/, '').trim();
+      if (HINDI_MAP[rest]) {
+        return leading + HINDI_MAP[rest] + ' →' + trailing;
+      }
+      if (HINDI_MAP_LOWER[rest.toLowerCase()]) {
+        return leading + HINDI_MAP_LOWER[rest.toLowerCase()] + ' →' + trailing;
+      }
+    }
+
+    // Leading arrows: e.g. "← Back", "<- Previous"
+    if (trimmed.startsWith('← ') || trimmed.startsWith('<- ')) {
+      const rest = trimmed.replace(/^(?:←|<-)\s*/, '').trim();
+      if (HINDI_MAP[rest]) {
+        return leading + '← ' + HINDI_MAP[rest] + trailing;
+      }
+      if (HINDI_MAP_LOWER[rest.toLowerCase()]) {
+        return leading + '← ' + HINDI_MAP_LOWER[rest.toLowerCase()] + trailing;
+      }
+    }
+
+    // 5. If already contains Devanagari characters, do not re-mangle
+    if (isDevanagari(trimmed)) {
+      return str;
+    }
+
+    // 6. Phrase-level replacement for compound phrases / multiline text
     let result = str;
     let modified = false;
     for (let i = 0; i < PHRASE_KEYS_DESC.length; i++) {
       const key = PHRASE_KEYS_DESC[i];
-      if (key.length < 3) continue;
+      if (!HINDI_MAP[key]) continue;
+
+      if (key === 'LMO') {
+        const lmoRegex = /(^|[^\w(])LMO([^\w)]|$)/;
+        if (lmoRegex.test(result)) {
+          result = result.replace(/(^|[^\w(])LMO([^\w)]|$)/g, (match, p1, p2) => `${p1}${HINDI_MAP[key]}${p2}`);
+          modified = true;
+        }
+        continue;
+      }
+
+      if (key === 'GATC') {
+        const gatcRegex = /(^|[^\w(])GATC([^\w)]|$)/;
+        if (gatcRegex.test(result)) {
+          result = result.replace(/(^|[^\w(])GATC([^\w)]|$)/g, (match, p1, p2) => `${p1}${HINDI_MAP[key]}${p2}`);
+          modified = true;
+        }
+        continue;
+      }
+
+      // Do NOT replace single short words like 'to', 'in', 'at', 'or', 'new' inside larger arbitrary phrases
+      if (key.length <= 3) {
+        continue;
+      }
+
       if (result.includes(key)) {
         result = result.split(key).join(HINDI_MAP[key]);
         modified = true;
       } else if (key.includes(' ')) {
-        // Try regex match with flexible whitespace (e.g. across newlines/spaces)
+        // Try regex match with flexible whitespace
         try {
           const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
           const regex = new RegExp(escaped.replace(/\s+/g, '\\s+'), 'gi');
@@ -126,8 +215,7 @@ export function LanguageProvider({ children }) {
           orig = node.nodeValue;
         } else if (
           node.nodeValue !== orig &&
-          !HINDI_MAP[node.nodeValue.trim()] &&
-          !HINDI_MAP[node.nodeValue.trim().replace(/\s+/g, ' ')]
+          !isDevanagari(node.nodeValue)
         ) {
           // If nodeValue was updated by React to a new English string
           orig = node.nodeValue;
@@ -188,8 +276,7 @@ export function LanguageProvider({ children }) {
             orig = val;
           } else if (
             val !== orig &&
-            !HINDI_MAP[val.trim()] &&
-            !HINDI_MAP[val.trim().replace(/\s+/g, ' ')]
+            !isDevanagari(val)
           ) {
             orig = val;
           }
